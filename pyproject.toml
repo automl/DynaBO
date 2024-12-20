@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 requires-python = ">=3.10"
-authors = [{ name = "AutoML Hannover", email =  "l.fehring@ai.uni-hannover.de, m.wever@aii.uni-hannover.de" }]
+authors = [{ name = "AutoML Hannover", email =  "l.fehring@ai.uni-hannover.de" }]
 readme = "README.md"
 description = "Python Boilerplate that contains all the code you need to create a Python package."
 classifiers = [
