@@ -1,0 +1,8 @@
+typing_extensions  # Better typing
+tomli
+pre-commit
+pytest==6.2.4
+coverage==4.5.4
+ruff
+mypy
+smac
