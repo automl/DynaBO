@@ -19,6 +19,7 @@ from smac import HyperparameterOptimizationFacade, Scenario
 from dynabo.smac_additions.dynmaic_prior_activation_function import DynamicPriorAcquisitionFunction
 from smac.main.smbo import SMBO
 from smac.runhistory import TrialInfo, TrialValue
+from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 
 __copyright__ = "Copyright 2021, AutoML.org Freiburg-Hannover"
 __license__ = "3-clause BSD"
@@ -211,6 +212,11 @@ if __name__ == "__main__":
         scenario,
         mlp.train,
         acquisition_function=acquisition_function,
+        acquisition_maximizer=LocalAndPriorSearch(
+            configspace=mlp.configspace,
+            prior_configspace=mlp.prior_configspace,
+            acquisition_function=acquisition_function,
+        ),
         intensifier=intensifier,
         callbacks=[StopCallback(stop_after=stop_after)],
         overwrite=True,
@@ -222,6 +228,11 @@ if __name__ == "__main__":
         scenario,
         mlp.train,
         acquisition_function=acquisition_function,
+        acquisition_maximizer=LocalAndPriorSearch(
+            configspace=mlp.configspace,
+            prior_configspace=mlp.prior_configspace,
+            acquisition_function=acquisition_function,
+        ),
         intensifier=intensifier,
         overwrite=False,
     )
