@@ -35,7 +35,9 @@ PY_EXPERIMENTER:
       resultfields:
         actual_runtime: VARCHAR(255)
         acc_virtual_runtime: VARCHAR(255)
+        acc_reasoning_runtime: VARCHAR(255)
         final_performance: VARCHAR(255)
         incumbent_trace: TEXT
         num_evaluations: VARCHAR(255)
+        num_timeouts: VARCHAR(255)
         done: VARCHAR(50)

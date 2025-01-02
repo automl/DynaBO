@@ -28,10 +28,12 @@ class YAHPOGymEvaluator:
         self.benchmark.set_instance(value=self.dataset)
 
         self.accumulated_runtime = 0
+        self.reasoning_runtime = 0
 
         self.incumbent_trace = list()
         self.incumbent_cost = None
         self.eval_counter = 0
+        self.timeout_counter = 0
 
     def train(self, config: Configuration, seed: int = 0):
         self.eval_counter += 1
@@ -42,8 +44,8 @@ class YAHPOGymEvaluator:
             def_conf[key] = value
 
         res = self.benchmark.objective_function(configuration=def_conf)
-        performance = (-1) * res[0][self.metric]
-        runtime = res[0][self.runtime_metric_name]
+        performance = round((-1) * res[0][self.metric], 6)
+        runtime = round(res[0][self.runtime_metric_name], 3)
 
 
         print("performance", performance, "runtime", runtime)
@@ -52,13 +54,14 @@ class YAHPOGymEvaluator:
             # check whether timeout is hit
             if runtime > self.internal_timeout:
                 self.accumulated_runtime += self.internal_timeout
+                self.timeout_counter += 1
                 raise Exception("Internal timeout exceeded")
 
-        self.accumulated_runtime += runtime
+        self.accumulated_runtime = round(self.accumulated_runtime + runtime, 3)
 
         if self.incumbent_cost is None or performance < self.incumbent_cost:
             self.incumbent_cost = performance
-            self.incumbent_trace.append((self.accumulated_runtime, (-1) * performance, self.eval_counter))
+            self.incumbent_trace.append((round(self.reasoning_runtime + self.accumulated_runtime, 3), (-1) * performance, self.eval_counter, def_conf))
             if self.result_processor is not None:
                 self.result_processor.process_results({
                     "incumbent_trace": json.dumps(self.incumbent_trace),
@@ -91,13 +94,15 @@ def get_yahpo_fixed_parameter_combinations(with_datasets: bool = True):
 
 
 def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator, timeout: int = 86400):
-   while evaluator.accumulated_runtime < timeout:
+   while (evaluator.accumulated_runtime+evaluator.reasoning_runtime) < timeout:
        start_ask = time.time()
        trial_info: TrialInfo = smac.ask()
        end_ask = time.time()
 
        # add runtime for ask
-       evaluator.accumulated_runtime += end_ask - start_ask
+       ask_runtime = round(end_ask - start_ask, 3)
+       print("ask runtime", ask_runtime)
+       evaluator.reasoning_runtime += ask_runtime
 
        try:
             cost, runtime = evaluator.train(dict(trial_info.config))
@@ -110,7 +115,9 @@ def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator, timeout: int
        end_tell = time.time()
 
        # add runtime for tell
-       evaluator.accumulated_runtime += end_tell - start_tell
+       tell_runtime = round(end_tell - start_tell, 3)
+       print("tell runtime", tell_runtime)
+       evaluator.reasoning_runtime += tell_runtime
 
 
 def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: dict):
@@ -144,11 +151,13 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     end_time = time.time()
 
     result = {
-        "actual_runtime": end_time - start_time,
-        "acc_virtual_runtime": eval.accumulated_runtime,
+        "actual_runtime": round(end_time - start_time, 3),
+        "acc_virtual_runtime": round(eval.accumulated_runtime + eval.reasoning_runtime, 3),
+        "acc_reasoning_runtime": round(eval.reasoning_runtime, 3),
         "final_performance": (-1) * eval.incumbent_cost,
         "incumbent_trace": json.dumps(eval.incumbent_trace),
         "num_evaluations": eval.eval_counter,
+        "num_timeouts": eval.timeout_counter,
         "done": "true"
     }
 
