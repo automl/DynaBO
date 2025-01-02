@@ -23,6 +23,10 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
     a `dynamic_init` method to set the prior information, just as the intiial prior.
     """
 
+    def __init__(self, acquisition_function, decay_beta, prior_configspace, prior_floor = 1e-12, discretize = False, discrete_bins_factor = 10):
+        super().__init__(acquisition_function, decay_beta, prior_configspace, prior_floor, discretize, discrete_bins_factor)
+        self._is_active = False # The prior is not active at the beginning
+
     def dynamic_init(
         self,
         acquisition_function: AbstractAcquisitionFunction,
@@ -32,7 +36,6 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
         discretize: bool = False,
         discrete_bins_factor: float = 10.0,
     ):
-        super().__init__()
         self._acquisition_function: AbstractAcquisitionFunction = acquisition_function
         self._functions: list[AbstractAcquisitionFunction] = []
         self._eta: float | None = None
@@ -58,3 +61,11 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
             None  # The amount of datapoints in the initial design
         )
         self._iteration_number = 1  # The amount of configurations the prior was used in the selection of configurations. It starts at 1
+        self._is_active = True 
+
+    def _compute(self, X):
+        # Only add prior if it is active
+        if self._is_active:
+            return super()._compute(X)
+        else:
+            return self._acquisition_function._compute(X)
