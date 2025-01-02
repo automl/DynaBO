@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from ConfigSpace import Configuration, ConfigurationSpace
-
+from typing import Callable
+import numpy as np
 from smac.acquisition.function import AbstractAcquisitionFunction
 from smac.acquisition.maximizer.abstract_acquisition_maximizer import (
     AbstractAcquisitionMaximizer,
@@ -42,32 +43,11 @@ class LocalAndPriorSearch(AbstractAcquisitionMaximizer):
             challengers=challengers,
             seed=seed,
         )
-        self._prior_configspace = prior_configspace
-        if uniform_configspace is not None and prior_sampling_fraction is None:
-            prior_sampling_fraction = 0.5
-        if uniform_configspace is None and prior_sampling_fraction is not None:
-            raise ValueError("If `prior_sampling_fraction` is given, `uniform_configspace` must be defined.")
-        if uniform_configspace is not None and prior_sampling_fraction is not None:
-            self._prior_random_search = PriorRandomSearch(
-                acquisition_function=acquisition_function,
-                configspace=configspace,
-                prior_configspace=prior_configspace,
-                seed=seed,
-            )
-
-            self._uniform_random_search = PriorRandomSearch(
-                acquisition_function=acquisition_function,
-                configspace=uniform_configspace,
-                prior_configspace=prior_configspace,
-                seed=seed,
-            )
-        else:
-            self._random_search = PriorRandomSearch(
-                configspace=configspace,
-                acquisition_function=acquisition_function,
-                prior_configspace=prior_configspace,
-                seed=seed,
-            )
+        self._random_search = PriorRandomSearch(
+            configspace=configspace,
+            acquisition_function=acquisition_function,
+            seed=seed,
+        )
 
         self._local_search = LocalSearch(
             configspace=configspace,
@@ -81,6 +61,9 @@ class LocalAndPriorSearch(AbstractAcquisitionMaximizer):
         self._prior_sampling_fraction = prior_sampling_fraction
         self._uniform_configspace = uniform_configspace
 
+    def dynamic_init(self, prior_configspace: ConfigurationSpace, prior_decay: Callable[[float], float] = lambda x: np.exp(-0.126 * x)) :
+        self._random_search._dynamic_init(prior_configspace, prior_decay)
+
     @property
     def acquisition_function(self) -> AbstractAcquisitionFunction | None:  # noqa: D102
         """Returns the used acquisition function."""
@@ -89,31 +72,18 @@ class LocalAndPriorSearch(AbstractAcquisitionMaximizer):
     @acquisition_function.setter
     def acquisition_function(self, acquisition_function: AbstractAcquisitionFunction) -> None:
         self._acquisition_function = acquisition_function
-        if self._uniform_configspace is not None:
-            self._prior_random_search._acquisition_function = acquisition_function
-            self._uniform_random_search._acquisition_function = acquisition_function
-        else:
-            self._random_search._acquisition_function = acquisition_function
+        self._random_search._acquisition_function = acquisition_function
         self._local_search._acquisition_function = acquisition_function
 
     @property
     def meta(self) -> dict[str, Any]:  # noqa: D102
         meta = super().meta
-        if self._uniform_configspace is None:
-            meta.update(
-                {
-                    "random_search": self._random_search.meta,
-                    "local_search": self._local_search.meta,
-                }
-            )
-        else:
-            meta.update(
-                {
-                    "prior_random_search": self._prior_random_search.meta,
-                    "uniform_random_search": self._uniform_random_search.meta,
-                    "local_search": self._local_search.meta,
-                }
-            )
+        meta.update(
+            {
+                "random_search": self._random_search.meta,
+                "local_search": self._local_search.meta,
+            }
+        )
 
         return meta
 
@@ -122,31 +92,13 @@ class LocalAndPriorSearch(AbstractAcquisitionMaximizer):
         previous_configs: list[Configuration],
         n_points: int,
     ) -> list[tuple[float, Configuration]]:
-        if self._uniform_configspace is not None and self._prior_sampling_fraction is not None:
-            # Get configurations sorted by acquisition function value
-            next_configs_by_prior_random_search_sorted = self._prior_random_search._maximize(
-                previous_configs,
-                round(n_points * self._prior_sampling_fraction),
-                _sorted=True,
-            )
-
-            # Get configurations sorted by acquisition function value
-            next_configs_by_uniform_random_search_sorted = self._uniform_random_search._maximize(
-                previous_configs,
-                round(n_points * (1 - self._prior_sampling_fraction)),
-                _sorted=True,
-            )
-            next_configs_by_random_search_sorted = (
-                next_configs_by_uniform_random_search_sorted + next_configs_by_prior_random_search_sorted
-            )
-            next_configs_by_random_search_sorted.sort(reverse=True, key=lambda x: x[0])
-        else:
-            # Get configurations sorted by acquisition function value
-            next_configs_by_random_search_sorted = self._random_search._maximize(
-                previous_configs=previous_configs,
-                n_points=n_points,
-                _sorted=True,
-            )
+        
+        # Get configurations sorted by acquisition function value
+        next_configs_by_random_search_sorted = self._random_search._maximize(
+            previous_configs=previous_configs,
+            n_points=n_points,
+            _sorted=True,
+        )
 
         # Choose the best self._local_search_iterations random configs to start the local search, and choose only
         # incumbent from previous configs

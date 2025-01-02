@@ -205,7 +205,7 @@ if __name__ == "__main__":
         scenario,
         max_config_calls=1,
     )
-    stop_after = 10
+    stop_after = 20
 
     # Create our SMAC object and pass the scenario and the train method
     smac = HyperparameterOptimizationFacade(
@@ -235,6 +235,9 @@ if __name__ == "__main__":
         ),
         intensifier=intensifier,
         overwrite=False,
+    )
+    smac2._acquisition_maximizer.dynamic_init(
+        prior_configspace=mlp.prior_configspace,
     )
 
     smac2._acquisition_function.dynamic_init(
