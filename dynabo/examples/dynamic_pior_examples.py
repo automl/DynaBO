@@ -8,7 +8,7 @@ from ConfigSpace import (
     ConfigurationSpace,
     NormalFloatHyperparameter,
     UniformIntegerHyperparameter,
-    UniformFloatHyperparameter
+    UniformFloatHyperparameter,
 )
 from sklearn.datasets import load_digits
 from sklearn.exceptions import ConvergenceWarning
@@ -16,10 +16,13 @@ from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.neural_network import MLPClassifier
 from smac.callback import Callback
 from smac import HyperparameterOptimizationFacade, Scenario
-from dynabo.smac_additions.dynmaic_prior_activation_function import DynamicPriorAcquisitionFunction
+from dynabo.smac_additions.dynmaic_prior_activation_function import (
+    DynamicPriorAcquisitionFunction,
+)
 from smac.main.smbo import SMBO
 from smac.runhistory import TrialInfo, TrialValue
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
+from dynabo.smac_additions.change_prior_callback import ChangePriorCallback
 
 __copyright__ = "Copyright 2021, AutoML.org Freiburg-Hannover"
 __license__ = "3-clause BSD"
@@ -27,18 +30,6 @@ __license__ = "3-clause BSD"
 
 digits = load_digits()
 
-class StopCallback(Callback):
-    def __init__(self, stop_after: int):
-        self._stop_after = stop_after
-
-    def on_tell_end(self, smbo: SMBO, info: TrialInfo, value: TrialValue) -> bool | None:
-        """Called after the stats are updated and the trial is added to the runhistory. Optionally, returns false
-        to gracefully stop the optimization.
-        """
-        if smbo.runhistory.finished == self._stop_after:
-            return False
-
-        return None
 
 class MLP:
     @property
@@ -104,7 +95,9 @@ class MLP:
         )
 
         # Add all hyperparameters at once:
-        cs.add([n_layer, n_neurons, activation, optimizer, batch_size, learning_rate_init])
+        cs.add(
+            [n_layer, n_neurons, activation, optimizer, batch_size, learning_rate_init]
+        )
 
         return cs
 
@@ -160,10 +153,11 @@ class MLP:
         )
 
         # Add all hyperparameters at once:
-        cs.add([n_layer, n_neurons, activation, optimizer, batch_size, learning_rate_init])
+        cs.add(
+            [n_layer, n_neurons, activation, optimizer, batch_size, learning_rate_init]
+        )
 
         return cs
-
 
     def train(self, config: Configuration, seed: int = 0) -> float:
         with warnings.catch_warnings():
@@ -180,8 +174,12 @@ class MLP:
             )
 
             # Returns the 5-fold cross validation accuracy
-            cv = StratifiedKFold(n_splits=5, random_state=seed, shuffle=True)  # to make CV splits consistent
-            score = cross_val_score(classifier, digits.data, digits.target, cv=cv, error_score="raise")
+            cv = StratifiedKFold(
+                n_splits=5, random_state=seed, shuffle=True
+            )  # to make CV splits consistent
+            score = cross_val_score(
+                classifier, digits.data, digits.target, cv=cv, error_score="raise"
+            )
 
         return 1 - np.mean(score)
 
@@ -195,7 +193,9 @@ if __name__ == "__main__":
 
     # We define the prior acquisition function, which conduct the optimization using priors over the optimum
     acquisition_function = DynamicPriorAcquisitionFunction(
-        acquisition_function=HyperparameterOptimizationFacade.get_acquisition_function(scenario),
+        acquisition_function=HyperparameterOptimizationFacade.get_acquisition_function(
+            scenario
+        ),
         prior_configspace=mlp.configspace,
         decay_beta=scenario.n_trials / 10,  # Proven solid value
     )
@@ -205,7 +205,6 @@ if __name__ == "__main__":
         scenario,
         max_config_calls=1,
     )
-    stop_after = 20
 
     # Create our SMAC object and pass the scenario and the train method
     smac = HyperparameterOptimizationFacade(
@@ -218,39 +217,8 @@ if __name__ == "__main__":
             acquisition_function=acquisition_function,
         ),
         intensifier=intensifier,
-        callbacks=[StopCallback(stop_after=stop_after)],
+        callbacks=[ChangePriorCallback({20: mlp.prior_configspace})],
         overwrite=True,
     )
 
     incumbent = smac.optimize()
-
-    smac2 = HyperparameterOptimizationFacade(
-        scenario,
-        mlp.train,
-        acquisition_function=acquisition_function,
-        acquisition_maximizer=LocalAndPriorSearch(
-            configspace=mlp.configspace,
-            prior_configspace=mlp.prior_configspace,
-            acquisition_function=acquisition_function,
-        ),
-        intensifier=intensifier,
-        overwrite=False,
-    )
-    smac2._acquisition_maximizer.dynamic_init(
-        prior_configspace=mlp.prior_configspace,
-    )
-
-    smac2._acquisition_function.dynamic_init(
-        smac._acquisition_function._acquisition_function,
-        scenario.n_trials / 10,
-        mlp.prior_configspace,
-    )
-    incumbent_2 = smac2.optimize()
-
-    # Get cost of default configuration
-    default_cost = smac2.validate(default_config)
-    print(f"Default cost: {default_cost}")
-
-    # Let's calculate the cost of the incumbent
-    incumbent_cost = smac2.validate(incumbent)
-    print(f"Default cost: {incumbent_cost}")
