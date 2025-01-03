@@ -48,7 +48,6 @@ class YAHPOGymEvaluator:
         runtime = round(res[0][self.runtime_metric_name], 3)
 
 
-        print("performance", performance, "runtime", runtime)
         # check whether internal evaluation timeout is set
         if self.internal_timeout != -1:
             # check whether timeout is hit
@@ -61,7 +60,9 @@ class YAHPOGymEvaluator:
 
         if self.incumbent_cost is None or performance < self.incumbent_cost:
             self.incumbent_cost = performance
-            self.incumbent_trace.append((round(self.reasoning_runtime + self.accumulated_runtime, 3), (-1) * performance, self.eval_counter, def_conf))
+            incumbent_tuple = (round(self.reasoning_runtime + self.accumulated_runtime, 3), (-1) * performance, self.eval_counter, def_conf)
+            print("new incumbent:", incumbent_tuple)
+            self.incumbent_trace.append(incumbent_tuple)
             if self.result_processor is not None:
                 self.result_processor.process_results({
                     "incumbent_trace": json.dumps(self.incumbent_trace),
@@ -101,7 +102,6 @@ def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator, timeout: int
 
        # add runtime for ask
        ask_runtime = round(end_ask - start_ask, 3)
-       print("ask runtime", ask_runtime)
        evaluator.reasoning_runtime += ask_runtime
 
        try:
@@ -116,7 +116,6 @@ def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator, timeout: int
 
        # add runtime for tell
        tell_runtime = round(end_tell - start_tell, 3)
-       print("tell runtime", tell_runtime)
        evaluator.reasoning_runtime += tell_runtime
 
 
