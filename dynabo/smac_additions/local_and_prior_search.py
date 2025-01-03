@@ -27,7 +27,6 @@ class LocalAndPriorSearch(AbstractAcquisitionMaximizer):
     def __init__(
         self,
         configspace: ConfigurationSpace,
-        prior_configspace: ConfigurationSpace | None = None,
         acquisition_function: AbstractAcquisitionFunction | None = None,
         challengers: int = 5000,
         max_steps: int | None = None,

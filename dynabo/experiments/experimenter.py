@@ -30,7 +30,7 @@ class YAHPOGymEvaluator:
         self.internal_timeout = internal_timeout
         self.result_processor = result_processor
 
-        self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario)
+        self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario, check=False)
         self.benchmark.set_instance(value=self.dataset)
 
         self.accumulated_runtime = 0
