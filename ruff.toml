@@ -1,0 +1,10 @@
+# ruff.toml
+
+# Specify the target Python version for compatibility.
+target-version = "py310"
+
+# Define paths and files to exclude from linting.
+exclude = ["lib/"]
+
+# Specify the line length for style rules.
+line-length = 200

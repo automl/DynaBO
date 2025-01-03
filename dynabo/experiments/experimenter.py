@@ -6,17 +6,23 @@ from ConfigSpace import Configuration
 from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
 from smac import HyperparameterOptimizationFacade, Scenario
-from smac.runhistory import TrialInfo, TrialValue, StatusType
+from smac.runhistory import StatusType, TrialInfo, TrialValue
+from yahpo_gym import benchmark_set, local_config
 
 EXP_CONFIG_FILE_PATH = "config/experiment_config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
-from yahpo_gym import benchmark_set, local_config
 
 class YAHPOGymEvaluator:
-
-    def __init__(self, scenario, dataset, internal_timeout=-1, metric="acc", runtime_metric_name="timetrain",
-                 result_processor: ResultProcessor = None):
+    def __init__(
+        self,
+        scenario,
+        dataset,
+        internal_timeout=-1,
+        metric="acc",
+        runtime_metric_name="timetrain",
+        result_processor: ResultProcessor = None,
+    ):
         self.scenario = scenario
         self.dataset = dataset
         self.metric = metric
@@ -47,7 +53,6 @@ class YAHPOGymEvaluator:
         performance = round((-1) * res[0][self.metric], 6)
         runtime = round(res[0][self.runtime_metric_name], 3)
 
-
         # check whether internal evaluation timeout is set
         if self.internal_timeout != -1:
             # check whether timeout is hit
@@ -60,13 +65,20 @@ class YAHPOGymEvaluator:
 
         if self.incumbent_cost is None or performance < self.incumbent_cost:
             self.incumbent_cost = performance
-            incumbent_tuple = (round(self.reasoning_runtime + self.accumulated_runtime, 3), (-1) * performance, self.eval_counter, def_conf)
+            incumbent_tuple = (
+                round(self.reasoning_runtime + self.accumulated_runtime, 3),
+                (-1) * performance,
+                self.eval_counter,
+                def_conf,
+            )
             print("new incumbent:", incumbent_tuple)
             self.incumbent_trace.append(incumbent_tuple)
             if self.result_processor is not None:
-                self.result_processor.process_results({
-                    "incumbent_trace": json.dumps(self.incumbent_trace),
-                })
+                self.result_processor.process_results(
+                    {
+                        "incumbent_trace": json.dumps(self.incumbent_trace),
+                    }
+                )
 
         return float(performance), float(runtime)
 
@@ -75,7 +87,17 @@ def get_yahpo_fixed_parameter_combinations(with_datasets: bool = True):
     jobs = []
 
     # Add all YAHPO-Gym Evaluations
-    for scenario in ["rbv2_ranger", "rbv2_xgboost", "rbv2_svm", "rbv2_glmnet", "lcbench", "nb301", "rbv2_aknn", "rbv2_rpart", "rbv2_super"]:
+    for scenario in [
+        "rbv2_ranger",
+        "rbv2_xgboost",
+        "rbv2_svm",
+        "rbv2_glmnet",
+        "lcbench",
+        "nb301",
+        "rbv2_aknn",
+        "rbv2_rpart",
+        "rbv2_super",
+    ]:
         bench = benchmark_set.BenchmarkSet(scenario=scenario)
 
         if "val_accuracy" in bench.config.y_names:
@@ -87,36 +109,35 @@ def get_yahpo_fixed_parameter_combinations(with_datasets: bool = True):
 
         if with_datasets:
             # create ablation and ds_tunability jobs
-            jobs += [{"scenario": scenario, "dataset": dataset, "metric": metric}
-                     for dataset in bench.instances]
+            jobs += [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in bench.instances]
         else:
             jobs += [{"scenario": scenario, "dataset": "all", "metric": metric}]
     return jobs
 
 
 def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator, timeout: int = 86400):
-   while (evaluator.accumulated_runtime+evaluator.reasoning_runtime) < timeout:
-       start_ask = time.time()
-       trial_info: TrialInfo = smac.ask()
-       end_ask = time.time()
+    while (evaluator.accumulated_runtime + evaluator.reasoning_runtime) < timeout:
+        start_ask = time.time()
+        trial_info: TrialInfo = smac.ask()
+        end_ask = time.time()
 
-       # add runtime for ask
-       ask_runtime = round(end_ask - start_ask, 3)
-       evaluator.reasoning_runtime += ask_runtime
+        # add runtime for ask
+        ask_runtime = round(end_ask - start_ask, 3)
+        evaluator.reasoning_runtime += ask_runtime
 
-       try:
+        try:
             cost, runtime = evaluator.train(dict(trial_info.config))
             trial_value = TrialValue(cost=cost, time=runtime)
-       except Exception as e:
+        except Exception:
             trial_value = TrialValue(cost=0, status=StatusType.TIMEOUT)
 
-       start_tell = time.time()
-       smac.tell(info=trial_info, value=trial_value, save=False)
-       end_tell = time.time()
+        start_tell = time.time()
+        smac.tell(info=trial_info, value=trial_value, save=False)
+        end_tell = time.time()
 
-       # add runtime for tell
-       tell_runtime = round(end_tell - start_tell, 3)
-       evaluator.reasoning_runtime += tell_runtime
+        # add runtime for tell
+        tell_runtime = round(end_tell - start_tell, 3)
+        evaluator.reasoning_runtime += tell_runtime
 
 
 def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: dict):
@@ -133,7 +154,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         dataset=dataset,
         internal_timeout=internal_timeout,
         metric=metric,
-        result_processor = result_processor
+        result_processor=result_processor,
     )
 
     start_time = time.time()
@@ -144,7 +165,11 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     elif algo == "priorband":
         pass
     elif algo == "groundtruth":
-        smac_scenario = Scenario(configspace=eval.benchmark.get_opt_space(drop_fidelity_params=True), deterministic=True, seed=seed)
+        smac_scenario = Scenario(
+            configspace=eval.benchmark.get_opt_space(drop_fidelity_params=True),
+            deterministic=True,
+            seed=seed,
+        )
         smac = HyperparameterOptimizationFacade(smac_scenario, eval.train)
         ask_tell_opt(smac=smac, evaluator=eval, timeout=timeout)
     end_time = time.time()
@@ -157,10 +182,11 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         "incumbent_trace": json.dumps(eval.incumbent_trace),
         "num_evaluations": eval.eval_counter,
         "num_timeouts": eval.timeout_counter,
-        "done": "true"
+        "done": "true",
     }
 
     result_processor.process_results(results=result)
+
 
 if __name__ == "__main__":
     local_config.init_config()
@@ -169,16 +195,22 @@ if __name__ == "__main__":
     experimenter = PyExperimenter(
         experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
         database_credential_file_path=DB_CRED_FILE_PATH,
-        use_codecarbon=False
+        use_codecarbon=False,
     )
     parser = argparse.ArgumentParser(
-        prog='DynaBO Experimenter',
-        description='This is the benchmark executor for the DynaBO paper.')
+        prog="DynaBO Experimenter",
+        description="This is the benchmark executor for the DynaBO paper.",
+    )
 
-    parser.add_argument('-s', '--setup', action='store_true', required=False)
-    parser.add_argument('-e', '--exec', action='store',
-                        help="Run the benchmark executor for a certain number of experiments.", required=False,
-                        default=0)
+    parser.add_argument("-s", "--setup", action="store_true", required=False)
+    parser.add_argument(
+        "-e",
+        "--exec",
+        action="store",
+        help="Run the benchmark executor for a certain number of experiments.",
+        required=False,
+        default=0,
+    )
 
     args = parser.parse_args()
     if args.setup:
@@ -188,9 +220,9 @@ if __name__ == "__main__":
                 "timeout_internal": [300],
                 "timeout_total": [3600],
                 "algorithm": ["groundtruth"],
-                "seed": range(2)
+                "seed": range(2),
             },
-            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations()
+            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(),
         )
 
     if args.exec != 0:

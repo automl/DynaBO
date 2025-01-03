@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
-from ConfigSpace import Configuration, ConfigurationSpace
-from typing import Callable
 import numpy as np
+from ConfigSpace import Configuration, ConfigurationSpace
 from smac.acquisition.function import AbstractAcquisitionFunction
 from smac.acquisition.maximizer.abstract_acquisition_maximizer import (
     AbstractAcquisitionMaximizer,
 )
 from smac.acquisition.maximizer.local_search import LocalSearch
-from dynabo.smac_additions.prior_random_search import PriorRandomSearch
 from smac.utils.logging import get_logger
+
+from dynabo.smac_additions.prior_random_search import PriorRandomSearch
 
 __copyright__ = "Copyright 2022, automl.org"
 __license__ = "3-clause BSD"
@@ -61,7 +61,11 @@ class LocalAndPriorSearch(AbstractAcquisitionMaximizer):
         self._prior_sampling_fraction = prior_sampling_fraction
         self._uniform_configspace = uniform_configspace
 
-    def dynamic_init(self, prior_configspace: ConfigurationSpace, prior_decay: Callable[[float], float] = lambda x: np.exp(-0.126 * x)) :
+    def dynamic_init(
+        self,
+        prior_configspace: ConfigurationSpace,
+        prior_decay: Callable[[float], float] = lambda x: np.exp(-0.126 * x),
+    ):
         self._random_search._dynamic_init(prior_configspace, prior_decay)
 
     @property
@@ -92,7 +96,6 @@ class LocalAndPriorSearch(AbstractAcquisitionMaximizer):
         previous_configs: list[Configuration],
         n_points: int,
     ) -> list[tuple[float, Configuration]]:
-        
         # Get configurations sorted by acquisition function value
         next_configs_by_random_search_sorted = self._random_search._maximize(
             previous_configs=previous_configs,

@@ -7,8 +7,6 @@ from smac.acquisition.function import (
 )
 from typing import Any
 from ConfigSpace import Configuration
-from smac.model.abstract_model import AbstractModel
-from smac.model.random_forest import AbstractRandomForest
 from smac.utils.logging import get_logger
 from ConfigSpace import ConfigurationSpace
 
@@ -23,9 +21,24 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
     a `dynamic_init` method to set the prior information, just as the intiial prior.
     """
 
-    def __init__(self, acquisition_function, decay_beta, prior_configspace, prior_floor = 1e-12, discretize = False, discrete_bins_factor = 10):
-        super().__init__(acquisition_function, decay_beta, prior_configspace, prior_floor, discretize, discrete_bins_factor)
-        self._is_active = False # The prior is not active at the beginning
+    def __init__(
+        self,
+        acquisition_function,
+        decay_beta,
+        prior_configspace,
+        prior_floor=1e-12,
+        discretize=False,
+        discrete_bins_factor=10,
+    ):
+        super().__init__(
+            acquisition_function,
+            decay_beta,
+            prior_configspace,
+            prior_floor,
+            discretize,
+            discrete_bins_factor,
+        )
+        self._is_active = False  # The prior is not active at the beginning
 
     def dynamic_init(
         self,
@@ -57,11 +70,9 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
         self._rescale = isinstance(acquisition_type, (LCB, TS))
 
         # Variables needed to adapt the weighting of the prior
-        self._initial_design_size = (
-            None  # The amount of datapoints in the initial design
-        )
+        self._initial_design_size = None  # The amount of datapoints in the initial design
         self._iteration_number = 1  # The amount of configurations the prior was used in the selection of configurations. It starts at 1
-        self._is_active = True 
+        self._is_active = True
 
     def _compute(self, X):
         # Only add prior if it is active

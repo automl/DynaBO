@@ -22,16 +22,12 @@ class ChangePriorCallback(Callback):
         return super().on_iteration_start(smbo)
 
     def set_prior(self, smbo: SMBO):
-        new_prior_configspace = self.intervention_schedule[len(smbo.runhistory)] 
+        new_prior_configspace = self.intervention_schedule[len(smbo.runhistory)]
 
-        acquisition_function_maximizer: LocalAndPriorSearch = (
-            smbo.intensifier.config_selector._acquisition_maximizer
-        )
+        acquisition_function_maximizer: LocalAndPriorSearch = smbo.intensifier.config_selector._acquisition_maximizer
         acquisition_function_maximizer.dynamic_init(new_prior_configspace)
 
-        acquisition_function: DynamicPriorAcquisitionFunction = (
-            smbo.intensifier.config_selector._acquisition_function
-        )
+        acquisition_function: DynamicPriorAcquisitionFunction = smbo.intensifier.config_selector._acquisition_function
         acquisition_function.dynamic_init(
             acquisition_function=acquisition_function._acquisition_function,
             prior_configspace=new_prior_configspace,
