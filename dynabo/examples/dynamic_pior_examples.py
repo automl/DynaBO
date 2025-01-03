@@ -7,22 +7,20 @@ from ConfigSpace import (
     Configuration,
     ConfigurationSpace,
     NormalFloatHyperparameter,
-    UniformIntegerHyperparameter,
     UniformFloatHyperparameter,
+    UniformIntegerHyperparameter,
 )
 from sklearn.datasets import load_digits
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.neural_network import MLPClassifier
-from smac.callback import Callback
 from smac import HyperparameterOptimizationFacade, Scenario
+
+from dynabo.smac_additions.change_prior_callback import ChangePriorCallback
 from dynabo.smac_additions.dynmaic_prior_activation_function import (
     DynamicPriorAcquisitionFunction,
 )
-from smac.main.smbo import SMBO
-from smac.runhistory import TrialInfo, TrialValue
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
-from dynabo.smac_additions.change_prior_callback import ChangePriorCallback
 
 __copyright__ = "Copyright 2021, AutoML.org Freiburg-Hannover"
 __license__ = "3-clause BSD"

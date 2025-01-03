@@ -72,6 +72,14 @@ docs: ## generate Sphinx HTML documentation, including API docs
 	$(BROWSER) docs/_build/html/index.html
 install: clean ## install the package to the active Python's site-packages
 	pip install -e ".[dev]"
+	pip install -r requirements.txt
+	git clone --branch 1076-fix-priorAcquisitionFunction https://github.com/automl/SMAC3.git lib/SMAC3
+	pip install -e lib/SMAC3
+	git clone https://github.com/benjamc/yahpo_gym.git lib/yahpo_gym
+	pip install -e lib/yahpo_gym/yahpo_gym
+	git clone https://github.com/slds-lmu/yahpo_data.git benchmark_data/yahpo_data
+	python scripts/patch_yahpo_configspace.py
+	pip install ConfigSpace --upgrade
 
 check:
 	pre-commit run --all-files
