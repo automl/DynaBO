@@ -8,3 +8,4 @@ mypy
 smac
 py-experimenter==1.4.2
 yahpo-gym==1.0.2
+matplotlib
