@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import Dict
 
 from ConfigSpace import ConfigurationSpace
@@ -10,12 +11,13 @@ from dynabo.smac_additions.dynmaic_prior_activation_function import (
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 
 
-class AbstractDynamicPriorCallback(Callback):
+class AbstractDynamicPriorCallback(Callback, ABC):
     def __init__(self, intervention_schedule: Dict[int, ConfigurationSpace]):
         super().__init__()
 
         self.intervention_schedule = intervention_schedule
 
+    @abstractmethod
     def on_iteration_start(self, smbo: SMBO):
         "We add prior information, before the next iteration is started."
 
