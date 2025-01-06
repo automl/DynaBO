@@ -16,7 +16,7 @@ from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.neural_network import MLPClassifier
 from smac import HyperparameterOptimizationFacade, Scenario
 
-from dynabo.smac_additions.change_prior_callback import ChangePriorCallback
+from dynabo.smac_additions.change_prior_callback import AbstractDynamicPriorCallback
 from dynabo.smac_additions.dynmaic_prior_activation_function import (
     DynamicPriorAcquisitionFunction,
 )
@@ -205,7 +205,7 @@ if __name__ == "__main__":
             acquisition_function=acquisition_function,
         ),
         intensifier=intensifier,
-        callbacks=[ChangePriorCallback({20: mlp.prior_configspace})],
+        callbacks=[AbstractDynamicPriorCallback({20: mlp.prior_configspace})],
         overwrite=True,
     )
 

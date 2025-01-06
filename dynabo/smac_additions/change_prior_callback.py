@@ -1,14 +1,16 @@
-from smac.callback import Callback
 from typing import Dict
+
 from ConfigSpace import ConfigurationSpace
+from smac.callback import Callback
 from smac.main.smbo import SMBO
-from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
+
 from dynabo.smac_additions.dynmaic_prior_activation_function import (
     DynamicPriorAcquisitionFunction,
 )
+from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 
 
-class ChangePriorCallback(Callback):
+class AbstractDynamicPriorCallback(Callback):
     def __init__(self, intervention_schedule: Dict[int, ConfigurationSpace]):
         super().__init__()
 

@@ -14,7 +14,7 @@ from smac.facade import AbstractFacade, HyperparameterOptimizationFacade
 from smac.scenario import Scenario
 
 from dynabo.experiments.experimenter import YAHPOGymEvaluator
-from dynabo.smac_additions.change_prior_callback import ChangePriorCallback
+from dynabo.smac_additions.change_prior_callback import AbstractDynamicPriorCallback
 from dynabo.smac_additions.dynmaic_prior_activation_function import DynamicPriorAcquisitionFunction
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 
@@ -225,7 +225,7 @@ if __name__ == "__main__":
             configspace=dynamic_prior_base_configuration_space,
             acquisition_function=dynamic_prior_acquisition_function,
         ),
-        callbacks=[ChangePriorCallback({10: dynamic_prior_prior_configuration_space})],
+        callbacks=[AbstractDynamicPriorCallback({10: dynamic_prior_prior_configuration_space})],
         intensifier=dynamic_prior_intensifier,
         overwrite=True,
     )
