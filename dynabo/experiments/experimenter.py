@@ -45,6 +45,13 @@ class YAHPOGymEvaluator:
         self.eval_counter += 1
         config_dict = dict(config)
 
+        if self.eval_counter % 100 == 0 and self.result_processor is not None:
+            from datetime import datetime
+            now = datetime.now()
+            self.result_processor.process_results({
+                "num_evaluations": str(self.eval_counter) + " " + now.strftime("%m/%d/%Y, %H:%M:%S")
+            })
+
         def_conf = dict(self.benchmark.get_opt_space().get_default_configuration())
         for key, value in config_dict.items():
             def_conf[key] = value
