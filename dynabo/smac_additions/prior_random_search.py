@@ -1,9 +1,24 @@
-from typing import Callable
+from typing import Callable, List
 
 import numpy as np
 from ConfigSpace import Configuration, ConfigurationSpace
 from smac.acquisition.function import AbstractAcquisitionFunction
 from smac.acquisition.maximizer import AbstractAcquisitionMaximizer
+
+
+class PriorConfigSpaceWrapper:
+    def __init__(self, configspace: ConfigurationSpace, prior_decayy: Callable[[Configuration], float]):
+        self._configspace = configspace
+        self._importance_function = prior_decayy
+        self._n_configurations_sampled = 0
+
+    def percentage(self) -> float:
+        importance = self._importance_function(self._n_configurations_sampled)
+        self._n_configurations_sampled += 1
+        return importance
+
+    def sample_configuration(self, size: int) -> List[Configuration]:
+        return self._configspace.sample_configuration(size=size)
 
 
 class PriorRandomSearch(AbstractAcquisitionMaximizer):
@@ -15,7 +30,7 @@ class PriorRandomSearch(AbstractAcquisitionMaximizer):
         seed: int = 0,
     ):
         super().__init__(configspace, acquisition_function, challengers=challengers, seed=seed)
-        self._prior_configspace = None
+        self._prior_configspace: List[PriorConfigSpaceWrapper] = list()
         self._is_active: bool = False
         self._n_active_configs: int = None
         self._prior_decay: Callable[[float], float] = None
@@ -23,12 +38,12 @@ class PriorRandomSearch(AbstractAcquisitionMaximizer):
     def _dynamic_init(
         self,
         prior_configspace: ConfigurationSpace,
-        prior_decay: Callable[[float], float] = lambda x: 0.3 * np.exp(-0.126 * x),
+        prior_decay: Callable[[float], float] = lambda x: np.exp(-0.126 * x),
     ):
-        self._prior_configspace = prior_configspace
+        decayed_prior_configspace = PriorConfigSpaceWrapper(prior_configspace, prior_decay)
+        self._prior_configspace.append(decayed_prior_configspace)
+
         self._is_active = True
-        self._n_active_configs = None
-        self._prior_decay = prior_decay
 
     def _maximize(
         self,
@@ -36,41 +51,62 @@ class PriorRandomSearch(AbstractAcquisitionMaximizer):
         n_points: int,
         _sorted: bool = False,
     ):
-        if self._is_active and self._n_active_configs is None:
-            self._n_active_configs = len(previous_configs)
-
-        if n_points > 1:
-            if self._is_active:
-                n_prior_random_configs = round(self._prior_decay(len(previous_configs) - self._n_active_configs) * n_points)
-                n_rand_configs = n_points - n_prior_random_configs
-
-                rand_configs = self._maximize_random(n_rand_configs)
-                prior_random_configs = self._maximize_prior(n_prior_random_configs)
-            else:
-                rand_configs = self._maximize_random(n_points)
-                prior_random_configs = []
+        if not self._is_active:
+            configs = self._maximize_random(n_points)
         else:
-            if self._is_active:
-                if self._rng.rand() < self._prior_decay(len(previous_configs) - self._n_active_configs):
-                    rand_configs = self._maximize_random(1)
-                    prior_random_configs = []
-                else:
-                    rand_configs = []
-                    prior_random_configs = self._maximize_prior(1)
-            else:
-                rand_configs = self._maximize_random(1)
-                prior_random_configs = []
+            importances = np.array([prior.percentage() for prior in self._prior_configspace])
+            sum_of_importances = np.sum(importances)
 
-        configs = rand_configs + prior_random_configs
+            # If we want to sample more than 90% accoridng to the priors
+            if sum_of_importances > 0.9:
+                # Normalize the importances against each other
+                normalized_importances = importances / sum_of_importances
+
+                # Only assign 90% of the points to the prior
+                normalized_importances = normalized_importances * 0.9
+
+                # Assign the rest to random search
+                rand_importance = 1 - np.sum(normalized_importances)
+
+            else:
+                normalized_importances = importances
+                rand_importance = 1 - np.sum(normalized_importances)
+
+            # If we sample more than 1 point
+            if n_points > 1:
+                configs = list()
+                for i in range(len(normalized_importances)):
+                    n_samples = int(np.round(n_points * normalized_importances[i]))
+
+                    if n_samples > 0:
+                        configs += self._maximize_prior(n_samples, self._prior_configspace[i])
+
+                n_samples = int(np.round(n_points * rand_importance))
+                configs += self._maximize_random(n_samples)
+
+            # If we sample one point
+            else:
+                # convert pdf to cdf
+                cdf = np.cumsum(normalized_importances)
+
+                # draw a random number
+                rand = np.random.rand()
+
+                if any(cdf > rand):
+                    index = np.argmax(cdf > rand)
+                    configs = self._maximize_prior(1, self._prior_configspace[index])
+
+                else:
+                    configs = self._maximize_random(1)
 
         if _sorted:
             for i in range(len(configs)):
-                configs[i].origin = "Acquisition Function Maximizer: Random Search (sorted)"
+                configs[i].origin = "Acquisition Function Maximizer: Prior Random Search"
 
             return self._sort_by_acquisition_value(configs)
         else:
             for i in range(len(configs)):
-                configs[i].origin = "Acquisition Function Maximizer: Random Search"
+                configs[i].origin = "Acquisition Function Maximizer: Prior Random Search"
 
             return [(0, configs[i]) for i in range(len(configs))]
 
@@ -86,8 +122,9 @@ class PriorRandomSearch(AbstractAcquisitionMaximizer):
     def _maximize_prior(
         self,
         n_points: int,
+        configspace: ConfigurationSpace,
     ) -> list[tuple[float, Configuration]]:
         if n_points > 1:
-            return self._prior_configspace.sample_configuration(size=n_points)
+            return configspace.sample_configuration(size=n_points)
         else:
-            return [self._prior_configspace.sample_configuration()]
+            return [configspace.sample_configuration()]

@@ -42,6 +42,8 @@ class LocalAndPriorSearch(AbstractAcquisitionMaximizer):
             challengers=challengers,
             seed=seed,
         )
+
+        # Initialize the random search with no prior configspace
         self._random_search = PriorRandomSearch(
             configspace=configspace,
             acquisition_function=acquisition_function,

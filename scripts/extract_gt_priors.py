@@ -1,6 +1,6 @@
 import os
 
-from dynabo.utils.prior_data_utils import build_prior_dataframe, create_prior_data_path, load_df, save_table
+from dynabo.utils.data_utils import build_prior_dataframe, create_prior_data_path, load_df, save_table
 
 if __name__ == "__main__":
     # save_base_table()

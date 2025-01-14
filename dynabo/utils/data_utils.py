@@ -27,11 +27,12 @@ def connect_to_database() -> PyExperimenter:
 def save_base_table():
     experimenter = connect_to_database()
     table = get_table(experimenter)
+    save_table(table)
     return table
 
 
 def save_table(table: pd.DataFrame, path: str = "benchmark_data/gt_prior_data/origin_table.csv"):
-    table.to_csv(path)
+    table.to_csv(path, index=False)
 
 
 def get_table(experimenter: PyExperimenter):
@@ -88,10 +89,10 @@ def extract_dataframe_from_column(df, column_name):
     rows = []
     for trace_list in trace_data:
         for entry in trace_list:
-            time_found, accuracy, no_evaluation, config = entry
+            time_found, score, no_evaluation, config = entry
             row = {
                 "time_found": time_found,
-                "accuracy": accuracy,
+                "score": score,
                 "no_evaluation": no_evaluation,
             }
             for key, value in config.items():
