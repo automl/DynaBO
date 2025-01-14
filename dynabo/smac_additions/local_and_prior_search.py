@@ -27,7 +27,6 @@ class LocalAndPriorSearch(AbstractAcquisitionMaximizer):
     def __init__(
         self,
         configspace: ConfigurationSpace,
-        prior_configspace: ConfigurationSpace | None = None,
         acquisition_function: AbstractAcquisitionFunction | None = None,
         challengers: int = 5000,
         max_steps: int | None = None,
@@ -43,6 +42,8 @@ class LocalAndPriorSearch(AbstractAcquisitionMaximizer):
             challengers=challengers,
             seed=seed,
         )
+
+        # Initialize the random search with no prior configspace
         self._random_search = PriorRandomSearch(
             configspace=configspace,
             acquisition_function=acquisition_function,

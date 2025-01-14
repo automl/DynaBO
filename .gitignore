@@ -107,3 +107,11 @@ ENV/
 
 # SMAC3 output
 smac3_output
+
+# PyExperimenter Database Credentials
+config/database_credentials.yml
+
+# DataFrame
+benchmark_data/yahpo_data
+benchmark_data/gt_prior_data/origin_table.csv
+benchmark_data/prior_data

@@ -2,7 +2,7 @@ import argparse
 import json
 import time
 
-from ConfigSpace import Configuration
+from ConfigSpace import Configuration, ConfigurationSpace
 from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
 from smac import HyperparameterOptimizationFacade, Scenario
@@ -30,7 +30,7 @@ class YAHPOGymEvaluator:
         self.internal_timeout = internal_timeout
         self.result_processor = result_processor
 
-        self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario)
+        self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario, check=False)
         self.benchmark.set_instance(value=self.dataset)
 
         self.accumulated_runtime = 0
@@ -88,6 +88,9 @@ class YAHPOGymEvaluator:
                 )
 
         return float(performance), float(runtime)
+
+    def get_configuration_space(self) -> ConfigurationSpace:
+        return self.benchmark.get_opt_space(drop_fidelity_params=True)
 
 
 def get_yahpo_fixed_parameter_combinations(with_datasets: bool = True):
