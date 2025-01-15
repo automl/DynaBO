@@ -5,6 +5,38 @@ from py_experimenter.result_processor import ResultProcessor
 from yahpo_gym import benchmark_set
 
 
+def get_yahpo_fixed_parameter_combinations(with_datasets: bool = True):
+    jobs = []
+
+    # Add all YAHPO-Gym Evaluations
+    for scenario in [
+        "rbv2_ranger",
+        "rbv2_xgboost",
+        "rbv2_svm",
+        "rbv2_glmnet",
+        "lcbench",
+        "nb301",
+        "rbv2_aknn",
+        "rbv2_rpart",
+        "rbv2_super",
+    ]:
+        bench = benchmark_set.BenchmarkSet(scenario=scenario)
+
+        if "val_accuracy" in bench.config.y_names:
+            metric = "val_accuracy"
+        elif "acc" in bench.config.y_names:
+            metric = "acc"
+        else:
+            metric = "unknown"
+
+        if with_datasets:
+            # create ablation and ds_tunability jobs
+            jobs += [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in bench.instances]
+        else:
+            jobs += [{"scenario": scenario, "dataset": "all", "metric": metric}]
+    return jobs
+
+
 class YAHPOGymEvaluator:
     def __init__(
         self,

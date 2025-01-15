@@ -1,0 +1,56 @@
+PY_EXPERIMENTER:
+  n_jobs: 1
+
+  Database:
+    provider: mysql
+    database: dynabo
+    table:
+      name: baseline
+      keyfields:
+        benchmarklib:
+          type: VARCHAR(255)
+          values: ['yahpogym']
+        scenario:
+          type: VARCHAR(255)
+          values: ['rbv2_ranger']
+        dataset:
+          type: VARCHAR(255)
+          values: ['1220']
+        metric:
+          type: VARCHAR(255)
+          values: ['acc']
+        timeout_total:
+          type: INT
+          values: [3600]
+        timeout_internal:
+          type: INT
+          values: [300]
+        n_trials:
+          type: INT
+          values: [200]
+        initial_design_size:
+          type: INT
+          values: [20]
+        seed:
+          type: INT
+          values:
+            start: 0
+            stop: 30
+            step: 1
+      result_timestamps: False
+      resultfields:
+        final_performance: FLOAT
+        runtime: FLOAT
+        virtual_runtime: FLOAT 
+        reasoning_runtime: FLOAT
+        n_evaluations_computed: INT
+        n_timeouts_occurred: INT
+        experiment_finished: BOOLEAN
+    logtables:
+      incumbents:
+        performance: FLOAT
+        configuration: TEXT
+        after_n_evaluations: INT
+        after_runtime: FLOAT  
+        after_virtual_runtime: FLOAT
+        after_reasoning_runtime: FLOAT

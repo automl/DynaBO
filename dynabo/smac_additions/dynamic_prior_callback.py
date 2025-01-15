@@ -1,15 +1,57 @@
 import os
 from abc import ABC, abstractmethod
+from typing import Dict
 
+import numpy as np
 import pandas as pd
+from py_experimenter.result_processor import ResultProcessor
 from smac.callback import Callback
 from smac.main.smbo import SMBO
+from smac.runhistory import TrialInfo, TrialValue
 
 from dynabo.utils.configspace_utils import build_prior_configuration_space
+from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator
+
+
+class LogIncumbentCallback(Callback):
+    def __init__(self, result_processor: ResultProcessor, evaluator: YAHPOGymEvaluator):
+        super().__init__()
+        self.result_processor = result_processor
+        self.evaluator = evaluator
+        self.incumbent_performance = float(np.infty)
+
+    def on_tell_end(self, smbo: SMBO, info: TrialInfo, value: TrialValue):
+        if self.result_processor is not None:
+            # If we have a new incumbent, we log it
+            if value.cost < self.incumbent_performance:
+                self.incumbent_performance = value.cost
+
+                self.result_processor.process_logs(
+                    {
+                        "incumbents": {
+                            "performance": value.cost,
+                            "configuration": str(dict(info.config)),
+                            "after_n_evaluations": smbo._runhistory.finished,
+                            "after_runtime": self.evaluator.accumulated_runtime,
+                            "after_virtual_runtime": self.evaluator.accumulated_runtime + self.evaluator.reasoning_runtime,
+                            "after_reasoning_runtime": self.evaluator.reasoning_runtime,
+                        }
+                    }
+                )
 
 
 class AbstractDynamicPriorCallback(Callback, ABC):
-    def __init__(self, scenario: str, dataset: str, metric: str, base_path: str, prior_every_n_iterations: int, initial_design_size: int):
+    def __init__(
+        self,
+        scenario: str,
+        dataset: str,
+        metric: str,
+        base_path: str,
+        prior_every_n_iterations: int,
+        initial_design_size: int,
+        result_processor: ResultProcessor = None,
+        evaluator: YAHPOGymEvaluator = None,
+    ):
         super().__init__()
         self.scenario = scenario
         self.dataset = dataset
@@ -17,6 +59,10 @@ class AbstractDynamicPriorCallback(Callback, ABC):
         self.base_path = base_path
         self.prior_every_n_iterations = prior_every_n_iterations
         self.initial_design_size = initial_design_size
+        self.result_processor = result_processor
+        self.evaluator = evaluator
+
+        self.incumbent_performance = float(np.infty)
 
         self.prior_data_path = self.get_prior_data_path(base_path, scenario, dataset, metric)
         self.prior_data = self.get_prior_data()
@@ -33,12 +79,13 @@ class AbstractDynamicPriorCallback(Callback, ABC):
     ) -> pd.DataFrame:
         return pd.read_csv(self.prior_data_path)
 
-    def on_iteration_start(self, smbo: SMBO):
+    def on_ask_start(self, smbo: SMBO):
         "We add prior information, before the next iteration is started."
 
         if self.intervene(smbo):
-            self.set_prior(smbo)
-        return super().on_iteration_start(smbo)
+            performance, logging_config = self.set_prior(smbo)
+            self.log_prior(smbo=smbo, performance=performance, config=logging_config)
+        return super().on_ask_start(smbo)
 
     def intervene(self, smbo: SMBO) -> bool:
         return smbo.runhistory.finished >= self.initial_design_size and smbo.runhistory.finished % self.prior_every_n_iterations == 0
@@ -48,17 +95,24 @@ class AbstractDynamicPriorCallback(Callback, ABC):
         """
         Sets a new prior on the acquisition function and configspace.
         """
-        # new_prior_configspace = self.intervention_schedule[len(smbo.runhistory)]
 
-        # acquisition_function_maximizer: LocalAndPriorSearch = smbo.intensifier.config_selector._acquisition_maximizer
-        # acquisition_function_maximizer.dynamic_init(new_prior_configspace)
-
-        # acquisition_function: DynamicPriorAcquisitionFunction = smbo.intensifier.config_selector._acquisition_function
-        # acquisition_function.dynamic_init(
-        #    acquisition_function=acquisition_function._acquisition_function,
-        #    prior_configspace=new_prior_configspace,
-        #    decay_beta=smbo._scenario.n_trials / 10,
-        # )
+    def log_prior(self, smbo: SMBO, performance: float, config: Dict):
+        """
+        Logs the prior data.
+        """
+        if self.result_processor is not None:
+            self.result_processor.process_logs(
+                {
+                    "priors": {
+                        "performance": performance,
+                        "configuration": str(config),
+                        "after_n_evaluations": smbo.runhistory.finished,
+                        "after_runtime": self.evaluator.accumulated_runtime,
+                        "after_virtual_runtime": self.evaluator.accumulated_runtime + self.evaluator.reasoning_runtime,
+                        "after_reasoning_runtime": self.evaluator.reasoning_runtime,
+                    }
+                }
+            )
 
 
 class WellPerformingPriorCallback(AbstractDynamicPriorCallback):
@@ -71,6 +125,7 @@ class WellPerformingPriorCallback(AbstractDynamicPriorCallback):
 
         # Sample from the considered configurations
         sampled_config = better_performing_configs.sample(random_state=smbo.intensifier._rng)
+        performance = sampled_config["score"].values[0]
         hyperparameter_config = sampled_config[[col for col in sampled_config.columns if col.startswith("config_")]]
         hyperparameter_config.columns = [col.replace("config_", "") for col in hyperparameter_config.columns]
         hyperparameter_config = hyperparameter_config.iloc[0].to_dict()
@@ -84,3 +139,5 @@ class WellPerformingPriorCallback(AbstractDynamicPriorCallback):
             decay_beta=smbo._scenario.n_trials / 10,
             prior_start=smbo.runhistory.finished,
         )
+
+        return performance, hyperparameter_config
