@@ -22,14 +22,13 @@ class LogIncumbentCallback(Callback):
 
     def on_tell_end(self, smbo: SMBO, info: TrialInfo, value: TrialValue):
         if self.result_processor is not None:
-            # If we have a new incumbent, we log it
             if value.cost < self.incumbent_performance:
                 self.incumbent_performance = value.cost
 
                 self.result_processor.process_logs(
                     {
                         "incumbents": {
-                            "performance": value.cost,
+                            "performance": (-1) * value.cost,
                             "configuration": str(dict(info.config)),
                             "after_n_evaluations": smbo._runhistory.finished,
                             "after_runtime": self.evaluator.accumulated_runtime,
@@ -49,6 +48,7 @@ class AbstractDynamicPriorCallback(Callback, ABC):
         base_path: str,
         prior_every_n_iterations: int,
         initial_design_size: int,
+        validate_prior: bool = False,
         result_processor: ResultProcessor = None,
         evaluator: YAHPOGymEvaluator = None,
     ):
@@ -59,6 +59,8 @@ class AbstractDynamicPriorCallback(Callback, ABC):
         self.base_path = base_path
         self.prior_every_n_iterations = prior_every_n_iterations
         self.initial_design_size = initial_design_size
+        self.validate_prior = validate_prior
+
         self.result_processor = result_processor
         self.evaluator = evaluator
 
@@ -83,9 +85,15 @@ class AbstractDynamicPriorCallback(Callback, ABC):
         "We add prior information, before the next iteration is started."
 
         if self.intervene(smbo):
+            prior_accepted = self.check_prior()
             performance, logging_config = self.set_prior(smbo)
-            self.log_prior(smbo=smbo, performance=performance, config=logging_config)
+            self.log_prior(smbo=smbo, performance=performance, config=logging_config, prior_accepted=prior_accepted)
         return super().on_ask_start(smbo)
+
+    def check_prior(self) -> bool:
+        if self.validate_prior:
+            raise NotImplementedError("Please implement the validate_prior method.")
+        return True
 
     def intervene(self, smbo: SMBO) -> bool:
         return smbo.runhistory.finished >= self.initial_design_size and smbo.runhistory.finished % self.prior_every_n_iterations == 0
@@ -96,7 +104,7 @@ class AbstractDynamicPriorCallback(Callback, ABC):
         Sets a new prior on the acquisition function and configspace.
         """
 
-    def log_prior(self, smbo: SMBO, performance: float, config: Dict):
+    def log_prior(self, smbo: SMBO, performance: float, config: Dict, prior_accepted: bool):
         """
         Logs the prior data.
         """
@@ -104,6 +112,7 @@ class AbstractDynamicPriorCallback(Callback, ABC):
             self.result_processor.process_logs(
                 {
                     "priors": {
+                        "prior_accepted": prior_accepted,
                         "performance": performance,
                         "configuration": str(config),
                         "after_n_evaluations": smbo.runhistory.finished,

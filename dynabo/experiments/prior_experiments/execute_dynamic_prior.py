@@ -54,8 +54,10 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     # Initial Design values
     initial_design_size = int(config["initial_design_size"])
 
-    # Schedule for prior
+    # Prior Values
+    prior_kind = config["prior_kind"]
     prior_every_n_trials = int(config["prior_every_n_trials"])
+    validate_prior = config["validate_prior"]
 
     evaluator: YAHPOGymEvaluator = YAHPOGymEvaluator(
         scenario=scenario,
@@ -87,16 +89,20 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         max_config_calls=1,
     )
 
-    prior_callback = WellPerformingPriorCallback(
-        scenario=evaluator.scenario,
-        dataset=evaluator.dataset,
-        metric="acc",
-        base_path="benchmark_data/prior_data",
-        prior_every_n_iterations=prior_every_n_trials,
-        initial_design_size=initial_design._n_configs,
-        result_processor=result_processor,
-        evaluator=evaluator,
-    )
+    if prior_kind == "good":
+        prior_callback = WellPerformingPriorCallback(
+            scenario=evaluator.scenario,
+            dataset=evaluator.dataset,
+            metric="acc",
+            base_path="benchmark_data/prior_data",
+            prior_every_n_iterations=prior_every_n_trials,
+            initial_design_size=initial_design._n_configs,
+            result_processor=result_processor,
+            evaluator=evaluator,
+            validate_prior=validate_prior,
+        )
+    else:
+        raise ValueError(f"Prior kind {prior_kind} not supported")
 
     incumbent_callback = LogIncumbentCallback(result_processor=result_processor, evaluator=evaluator)
 

@@ -25,6 +25,9 @@ PY_EXPERIMENTER:
         prior_every_n_trials:
           type: INT
           values: [20]
+        validate_prior:
+          type: BOOLEAN
+          values: [False]
         timeout_total:
           type: INT
           values: [3600]
@@ -61,6 +64,7 @@ PY_EXPERIMENTER:
         after_virtual_runtime: FLOAT
         after_reasoning_runtime: FLOAT
       priors:
+        prior_accepted: BOOLEAN
         performance: FLOAT
         configuration: TEXT
         after_n_evaluations: INT
