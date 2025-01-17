@@ -73,7 +73,7 @@ docs: ## generate Sphinx HTML documentation, including API docs
 install: clean ## install the package to the active Python's site-packages
 	pip install -e ".[dev]"
 	pip install -r requirements.txt
-	git clone --branch 1076-fix-priorAcquisitionFunction https://github.com/automl/SMAC3.git lib/SMAC3
+	git clone --branch development https://github.com/automl/SMAC3.git lib/SMAC3
 	pip install -e lib/SMAC3
 	git clone https://github.com/benjamc/yahpo_gym.git lib/yahpo_gym
 	pip install -e lib/yahpo_gym/yahpo_gym

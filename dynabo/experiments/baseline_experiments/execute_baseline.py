@@ -5,6 +5,7 @@ from py_experimenter.result_processor import ResultProcessor
 from smac import HyperparameterOptimizationFacade, Scenario
 from smac.acquisition.maximizer import LocalAndSortedRandomSearch
 from smac.runhistory import StatusType, TrialInfo, TrialValue
+from yahpo_gym import local_config
 
 from dynabo.smac_additions.dynamic_prior_callback import LogIncumbentCallback
 from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator
@@ -113,10 +114,13 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
 
 if __name__ == "__main__":
+    local_config.init_config()
+    local_config.set_data_path("yahpo_data")
+
     experimenter = PyExperimenter(
         experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    experimenter.fill_table_from_config()
+#    experimenter.fill_table_from_config()
     experimenter.execute(run_experiment, max_experiments=1)
