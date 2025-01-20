@@ -135,9 +135,9 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
 
 if __name__ == "__main__":
+    from yahpo_gym import local_config
     local_config.init_config()
-    local_config.set_data_path("yahpo_data")
-
+    local_config.set_data_path("benchmark_data/yahpo_data")
     experimenter = PyExperimenter(
         experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
         database_credential_file_path=DB_CRED_FILE_PATH,

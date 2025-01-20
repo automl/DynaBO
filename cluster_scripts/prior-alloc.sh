@@ -3,11 +3,11 @@
 #SBATCH --array=1-30
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu 4G
-#SBATCH -J dynamo-basleine
+#SBATCH -J dynabo-prior
 #SBATCH -p normal
 #SBATCH -A hpc-prf-intexml
-#SBATCH -e /scratch/hpc-prf-intexml/fehring/DynaBO/logs/%x_%A_%a.err
-#SBATCH -o /scratch/hpc-prf-intexml/fehring/DynaBO/logs/%x_%A_%a.out
+#SBATCH -e /scratch/hpc-prf-intexml/fehring/DynaBO/logs/%x/%A_%a.err
+#SBATCH -o /scratch/hpc-prf-intexml/fehring/DynaBO/logs/%x/%A_%a.out
 
 
 cd /scratch/hpc-prf-intexml/fehring/DynaBO

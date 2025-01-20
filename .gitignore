@@ -115,3 +115,6 @@ config/database_credentials.yml
 benchmark_data/yahpo_data
 benchmark_data/gt_prior_data/origin_table.csv
 benchmark_data/prior_data
+
+# logs
+logs

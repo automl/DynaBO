@@ -1,9 +1,9 @@
 import os
 
-from dynabo.utils.data_utils import build_prior_dataframe, create_prior_data_path, load_df, save_table
+from dynabo.utils.data_utils import build_prior_dataframe, create_prior_data_path, load_df, save_table, save_base_table
 
 if __name__ == "__main__":
-    # save_base_table()
+    save_base_table()
 
     base_df = load_df()
     base_df = base_df[base_df.status == "done"]

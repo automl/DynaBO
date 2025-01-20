@@ -12,7 +12,7 @@ def create_prior_data_path(scenario: str, dataset: str, metric: str):
 
 
 def connect_to_database() -> PyExperimenter:
-    EXP_CONFIG_FILE_PATH = "config/experiment_config.yml"
+    EXP_CONFIG_FILE_PATH = "dynabo/experiments/gt_experiments/config.yml"
     DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
     experimenter = PyExperimenter(
