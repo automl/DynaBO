@@ -99,7 +99,7 @@ class AbstractDynamicPriorCallback(Callback, ABC):
         return True
 
     def intervene(self, smbo: SMBO) -> bool:
-        return smbo.runhistory.finished >= self.initial_design_size and smbo.runhistory.finished % self.prior_every_n_iterations == 0
+        return smbo.runhistory.finished >= self.initial_design_size and (smbo.runhistory.finished - self.initial_design_size)  % self.prior_every_n_iterations == 0
 
     @abstractmethod
     def set_prior(self, smbo: SMBO):
