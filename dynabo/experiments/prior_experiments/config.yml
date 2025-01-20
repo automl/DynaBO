@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table:
-      name: dynamic_prior
+      name: dynamic_prior_dev
       keyfields:
         benchmarklib:
           type: VARCHAR(255)
@@ -24,10 +24,13 @@ PY_EXPERIMENTER:
           values: ['good']
         prior_every_n_trials:
           type: INT
-          values: [20]
+          values: [50]
         validate_prior:
           type: BOOLEAN
           values: [False]
+        prior_std_denominator:
+          type: FLOAT
+          values: [10]
         timeout_total:
           type: INT
           values: [3600]

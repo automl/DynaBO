@@ -1,10 +1,11 @@
 from typing import Dict
+
 import pandas as pd
 from ConfigSpace import ConfigurationSpace
 from ConfigSpace.hyperparameters import CategoricalHyperparameter, Constant, NormalFloatHyperparameter, NormalIntegerHyperparameter, UniformFloatHyperparameter, UniformIntegerHyperparameter
 
 
-def build_prior_configuration_space(configuration_space: ConfigurationSpace, prior: Dict[str, float]) -> ConfigurationSpace:
+def build_prior_configuration_space(configuration_space: ConfigurationSpace, prior: Dict[str, float], prior_std_denominator: float) -> ConfigurationSpace:
     configspace_name = configuration_space.name
 
     new_configuration_space = ConfigurationSpace(name=f"{configspace_name}_prior")
@@ -31,7 +32,7 @@ def build_prior_configuration_space(configuration_space: ConfigurationSpace, pri
                     lower=hyperparameter.lower,
                     upper=hyperparameter.upper,
                     mu=optimum_choice,
-                    sigma=(hyperparameter.upper - hyperparameter.lower) / 2,
+                    sigma=(hyperparameter.upper - hyperparameter.lower) / prior_std_denominator,
                     log=hyperparameter.log,
                 )
             else:
@@ -50,7 +51,7 @@ def build_prior_configuration_space(configuration_space: ConfigurationSpace, pri
                     lower=hyperparameter.lower,
                     upper=hyperparameter.upper,
                     mu=optimum_choice,
-                    sigma=(hyperparameter.upper - hyperparameter.lower) / 2,
+                    sigma=(hyperparameter.upper - hyperparameter.lower) / prior_std_denominator,
                     log=hyperparameter.log,
                 )
             else:

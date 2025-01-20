@@ -1,3 +1,4 @@
+import os
 import time
 
 from py_experimenter.experimenter import PyExperimenter
@@ -58,6 +59,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     # Prior Values
     prior_kind = config["prior_kind"]
     prior_every_n_trials = int(config["prior_every_n_trials"])
+    prior_std_denominator = float(config["prior_std_denominator"])
     validate_prior = config["validate_prior"]
 
     evaluator: YAHPOGymEvaluator = YAHPOGymEvaluator(
@@ -97,6 +99,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             metric="acc",
             base_path="benchmark_data/prior_data",
             prior_every_n_iterations=prior_every_n_trials,
+            prior_std_denominator=prior_std_denominator,
             initial_design_size=initial_design._n_configs,
             result_processor=result_processor,
             evaluator=evaluator,
@@ -135,13 +138,15 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
 
 if __name__ == "__main__":
-    from yahpo_gym import local_config
-    local_config.init_config()
-    local_config.set_data_path("benchmark_data/yahpo_data")
+    if "Desktop" not in os.getcwd():
+        from yahpo_gym import local_config
+
+        local_config.init_config()
+        local_config.set_data_path("benchmark_data/yahpo_data")
     experimenter = PyExperimenter(
         experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    # experimenter.fill_table_from_config()
+    experimenter.fill_table_from_config()
     experimenter.execute(run_experiment, max_experiments=1)

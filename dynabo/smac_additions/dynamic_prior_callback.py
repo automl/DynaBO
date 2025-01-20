@@ -47,6 +47,7 @@ class AbstractDynamicPriorCallback(Callback, ABC):
         metric: str,
         base_path: str,
         prior_every_n_iterations: int,
+        prior_std_denominator: float,
         initial_design_size: int,
         validate_prior: bool = False,
         result_processor: ResultProcessor = None,
@@ -58,6 +59,7 @@ class AbstractDynamicPriorCallback(Callback, ABC):
         self.metric = metric
         self.base_path = base_path
         self.prior_every_n_iterations = prior_every_n_iterations
+        self.prior_std_denominator = prior_std_denominator
         self.initial_design_size = initial_design_size
         self.validate_prior = validate_prior
 
@@ -140,7 +142,7 @@ class WellPerformingPriorCallback(AbstractDynamicPriorCallback):
         hyperparameter_config = hyperparameter_config.iloc[0].to_dict()
 
         origin_configspace = smbo._configspace
-        prior_configspace = build_prior_configuration_space(origin_configspace, hyperparameter_config)
+        prior_configspace = build_prior_configuration_space(origin_configspace, hyperparameter_config, prior_std_denominator=self.prior_std_denominator)
         smbo.intensifier.config_selector._acquisition_maximizer.dynamic_init(prior_configspace)
         smbo.intensifier.config_selector._acquisition_function.dynamic_init(
             acquisition_function=smbo.intensifier.config_selector._acquisition_function._acquisition_function,
