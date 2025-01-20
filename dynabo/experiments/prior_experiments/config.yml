@@ -30,7 +30,7 @@ PY_EXPERIMENTER:
           values: [False]
         prior_std_denominator:
           type: FLOAT
-          values: [10]
+          values: [2]
         timeout_total:
           type: INT
           values: [3600]

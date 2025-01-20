@@ -148,5 +148,5 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    experimenter.fill_table_from_config()
+    # experimenter.fill_table_from_config()
     experimenter.execute(run_experiment, max_experiments=1)

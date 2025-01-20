@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -t 8:00:00
-#SBATCH --array=1-30
+#SBATCH --array=1-40
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu 4G
 #SBATCH -J dynabo-prior

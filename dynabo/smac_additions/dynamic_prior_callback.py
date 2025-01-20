@@ -85,6 +85,7 @@ class AbstractDynamicPriorCallback(Callback, ABC):
 
     def on_ask_start(self, smbo: SMBO):
         "We add prior information, before the next iteration is started."
+        smbo.intensifier.config_selector._acquisition_function.current_config_nuber = smbo.runhistory.finished
 
         if self.intervene(smbo):
             prior_accepted = self.check_prior()
