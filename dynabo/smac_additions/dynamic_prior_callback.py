@@ -1,6 +1,6 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Dict, Tuple
 
 import numpy as np
 import pandas as pd
@@ -72,6 +72,9 @@ class AbstractDynamicPriorCallback(Callback, ABC):
         self.prior_data_path = self.get_prior_data_path(base_path, scenario, dataset, metric)
         self.prior_data = self.get_prior_data()
 
+        # Number of the prior
+        self.prior_number = 0
+
     @staticmethod
     def get_prior_data_path(base_path, scenario: str, dataset: str, metric: str) -> str:
         """
@@ -112,10 +115,12 @@ class AbstractDynamicPriorCallback(Callback, ABC):
     def intervene(self, smbo: SMBO) -> bool:
         return smbo.runhistory.finished >= self.initial_design_size and (smbo.runhistory.finished - self.initial_design_size) % self.prior_every_n_iterations == 0
 
-    def construct_prior(self, smbo: SMBO):
+    def construct_prior(self, smbo: SMBO) -> Tuple[ConfigurationSpace, ConfigurationSpace, float, Dict]:
         """
         Sets a new prior on the acquisition function and configspace.
         """
+        self.prior_number += 1
+
         current_incumbent = smbo.intensifier.get_incumbent()
         incumbent_performance = (-1) * smbo.runhistory.get_cost(current_incumbent)
 
@@ -126,7 +131,7 @@ class AbstractDynamicPriorCallback(Callback, ABC):
         hyperparameter_config = hyperparameter_config.iloc[0].to_dict()
 
         origin_configspace = smbo._configspace
-        prior_configspace = build_prior_configuration_space(origin_configspace, hyperparameter_config, prior_std_denominator=self.prior_std_denominator)
+        prior_configspace = build_prior_configuration_space(origin_configspace, hyperparameter_config, prior_std_denominator=self.prior_std_denominator * self.prior_number)
 
         return prior_configspace, origin_configspace, performance, hyperparameter_config
 
