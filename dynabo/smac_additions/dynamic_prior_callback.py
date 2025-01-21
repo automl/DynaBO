@@ -4,6 +4,7 @@ from typing import Dict
 
 import numpy as np
 import pandas as pd
+from ConfigSpace import ConfigurationSpace
 from py_experimenter.result_processor import ResultProcessor
 from smac.callback import Callback
 from smac.main.smbo import SMBO
@@ -88,23 +89,60 @@ class AbstractDynamicPriorCallback(Callback, ABC):
         smbo.intensifier.config_selector._acquisition_function.current_config_nuber = smbo.runhistory.finished
 
         if self.intervene(smbo):
-            prior_accepted = self.check_prior()
-            performance, logging_config = self.set_prior(smbo)
+            prior_configspace, origin_configpsace, performance, logging_config = self.construct_prior(smbo)
+            prior_accepted = self.check_prior(smbo, prior_configspace, origin_configpsace)
+            if prior_accepted:
+                self.set_prior(prior_configspace)
+
             self.log_prior(smbo=smbo, performance=performance, config=logging_config, prior_accepted=prior_accepted)
         return super().on_ask_start(smbo)
 
-    def check_prior(self) -> bool:
+    def check_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace, origin_configpsace: ConfigurationSpace) -> bool:
         if self.validate_prior:
+            # Sample configurations according to both the prior and the standard configpsace
+            # prior_configs = prior_configspace.sample_configuration(1000)
+            # origin_configs = origin_configpsace.sample_configuration(1000)
+
+            # mannwhitneyu()
+
+            # Do Man Whitney U Test, to determien whether or not we use the prior
             raise NotImplementedError("Please implement the validate_prior method.")
         return True
 
     def intervene(self, smbo: SMBO) -> bool:
-        return smbo.runhistory.finished >= self.initial_design_size and (smbo.runhistory.finished - self.initial_design_size)  % self.prior_every_n_iterations == 0
+        return smbo.runhistory.finished >= self.initial_design_size and (smbo.runhistory.finished - self.initial_design_size) % self.prior_every_n_iterations == 0
 
-    @abstractmethod
-    def set_prior(self, smbo: SMBO):
+    def construct_prior(self, smbo: SMBO):
         """
         Sets a new prior on the acquisition function and configspace.
+        """
+        current_incumbent = smbo.intensifier.get_incumbent()
+        incumbent_performance = (-1) * smbo.runhistory.get_cost(current_incumbent)
+
+        sampled_config = self.sample_prior(smbo, incumbent_performance)
+        performance = sampled_config["score"].values[0]
+        hyperparameter_config = sampled_config[[col for col in sampled_config.columns if col.startswith("config_")]]
+        hyperparameter_config.columns = [col.replace("config_", "") for col in hyperparameter_config.columns]
+        hyperparameter_config = hyperparameter_config.iloc[0].to_dict()
+
+        origin_configspace = smbo._configspace
+        prior_configspace = build_prior_configuration_space(origin_configspace, hyperparameter_config, prior_std_denominator=self.prior_std_denominator)
+
+        return prior_configspace, origin_configspace, performance, hyperparameter_config
+
+    def set_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace):
+        smbo.intensifier.config_selector._acquisition_maximizer.dynamic_init(prior_configspace)
+        smbo.intensifier.config_selector._acquisition_function.dynamic_init(
+            acquisition_function=smbo.intensifier.config_selector._acquisition_function._acquisition_function,
+            prior_configspace=prior_configspace,
+            decay_beta=smbo._scenario.n_trials / 10,
+            prior_start=smbo.runhistory.finished,
+        )
+
+    @abstractmethod
+    def sample_prior(self, smbo: SMBO, incumbent_performance: float) -> pd.DataFrame:
+        """
+        Samples a prior from the prior data.
         """
 
     def log_prior(self, smbo: SMBO, performance: float, config: Dict, prior_accepted: bool):
@@ -128,28 +166,32 @@ class AbstractDynamicPriorCallback(Callback, ABC):
 
 
 class WellPerformingPriorCallback(AbstractDynamicPriorCallback):
-    def set_prior(self, smbo: SMBO):
-        current_incumbent = smbo.intensifier.get_incumbent()
-        incumbent_performance = (-1) * smbo.runhistory.get_cost(current_incumbent)
-
+    def sample_prior(self, smbo, incumbent_performance):
         # Select all configurations that have a better performance than the incumbent
         better_performing_configs = self.prior_data[self.prior_data["score"] > incumbent_performance]
 
         # Sample from the considered configurations
         sampled_config = better_performing_configs.sample(random_state=smbo.intensifier._rng)
-        performance = sampled_config["score"].values[0]
-        hyperparameter_config = sampled_config[[col for col in sampled_config.columns if col.startswith("config_")]]
-        hyperparameter_config.columns = [col.replace("config_", "") for col in hyperparameter_config.columns]
-        hyperparameter_config = hyperparameter_config.iloc[0].to_dict()
+        return sampled_config
 
-        origin_configspace = smbo._configspace
-        prior_configspace = build_prior_configuration_space(origin_configspace, hyperparameter_config, prior_std_denominator=self.prior_std_denominator)
-        smbo.intensifier.config_selector._acquisition_maximizer.dynamic_init(prior_configspace)
-        smbo.intensifier.config_selector._acquisition_function.dynamic_init(
-            acquisition_function=smbo.intensifier.config_selector._acquisition_function._acquisition_function,
-            prior_configspace=prior_configspace,
-            decay_beta=smbo._scenario.n_trials / 10,
-            prior_start=smbo.runhistory.finished,
-        )
 
-        return performance, hyperparameter_config
+class MediumPriorCallback(AbstractDynamicPriorCallback):
+    def sample_prior(self, smbo, incumbent_performance):
+        # Select all configurations that have a better performance than the incumbent
+        sampled_config = self.prior_data.sample(random_state=smbo.intensifier._rng)
+        return sampled_config
+
+
+class MissleadingPriorCallback(AbstractDynamicPriorCallback):
+    def sample_prior(self, smbo, incumbent_performance):
+        # Select all configurations that have a better performance than the incumbent
+        better_performing_configs = self.prior_data[self.prior_data["score"] < incumbent_performance]
+
+        # Sample from the considered configurations
+        sampled_config = better_performing_configs.sample(random_state=smbo.intensifier._rng)
+        return sampled_config
+
+
+class DeceivingPriorCallback(AbstractDynamicPriorCallback):
+    def sample_prior(self, smbo, incumbent_performance):
+        raise NotImplementedError("Please implement the sample_prior method.")

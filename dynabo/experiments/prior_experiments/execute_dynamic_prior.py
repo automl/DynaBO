@@ -7,7 +7,7 @@ from smac import HyperparameterOptimizationFacade, Scenario
 from smac.runhistory import StatusType, TrialInfo, TrialValue
 from yahpo_gym import local_config
 
-from dynabo.smac_additions.dynamic_prior_callback import LogIncumbentCallback, WellPerformingPriorCallback
+from dynabo.smac_additions.dynamic_prior_callback import DeceivingPriorCallback, LogIncumbentCallback, MediumPriorCallback, MissleadingPriorCallback, WellPerformingPriorCallback
 from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator
@@ -94,6 +94,45 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
     if prior_kind == "good":
         prior_callback = WellPerformingPriorCallback(
+            scenario=evaluator.scenario,
+            dataset=evaluator.dataset,
+            metric="acc",
+            base_path="benchmark_data/prior_data",
+            prior_every_n_iterations=prior_every_n_trials,
+            prior_std_denominator=prior_std_denominator,
+            initial_design_size=initial_design._n_configs,
+            result_processor=result_processor,
+            evaluator=evaluator,
+            validate_prior=validate_prior,
+        )
+    elif prior_kind == "medium":
+        prior_callback = MediumPriorCallback(
+            scenario=evaluator.scenario,
+            dataset=evaluator.dataset,
+            metric="acc",
+            base_path="benchmark_data/prior_data",
+            prior_every_n_iterations=prior_every_n_trials,
+            prior_std_denominator=prior_std_denominator,
+            initial_design_size=initial_design._n_configs,
+            result_processor=result_processor,
+            evaluator=evaluator,
+            validate_prior=validate_prior,
+        )
+    elif prior_kind == "missleading":
+        prior_callback = MissleadingPriorCallback(
+            scenario=evaluator.scenario,
+            dataset=evaluator.dataset,
+            metric="acc",
+            base_path="benchmark_data/prior_data",
+            prior_every_n_iterations=prior_every_n_trials,
+            prior_std_denominator=prior_std_denominator,
+            initial_design_size=initial_design._n_configs,
+            result_processor=result_processor,
+            evaluator=evaluator,
+            validate_prior=validate_prior,
+        )
+    elif prior_kind == "deceiving":
+        prior_callback = DeceivingPriorCallback(
             scenario=evaluator.scenario,
             dataset=evaluator.dataset,
             metric="acc",
