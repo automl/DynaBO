@@ -39,7 +39,6 @@ class YAHPOGymEvaluator:
 
         if self.eval_counter % 100 == 0 and self.result_processor is not None:
             from datetime import datetime
-
             now = datetime.now()
             self.result_processor.process_results({"num_evaluations": str(self.eval_counter) + " " + now.strftime("%m/%d/%Y, %H:%M:%S")})
 
@@ -69,13 +68,13 @@ class YAHPOGymEvaluator:
                 self.eval_counter,
                 def_conf,
             )
-            print("new incumbent:", incumbent_tuple)
             self.incumbent_trace.append(incumbent_tuple)
             if self.result_processor is not None:
-                self.result_processor.process_results(
-                    {
+                data ={
                         "incumbent_trace": json.dumps(self.incumbent_trace),
                     }
+                self.result_processor.process_results(
+                    data
                 )
 
         return float(performance), float(runtime)

@@ -19,15 +19,15 @@ def get_yahpo_fixed_parameter_combinations(with_datasets: bool = True):
 
     # Add all YAHPO-Gym Evaluations
     for scenario in [
-        "rbv2_ranger",
-        "rbv2_xgboost",
-        "rbv2_svm",
-        "rbv2_glmnet",
+        # "rbv2_ranger",
+        # "rbv2_xgboost",
+        # "rbv2_svm",
+        # "rbv2_glmnet",
         "lcbench",
-        "nb301",
-        "rbv2_aknn",
-        "rbv2_rpart",
-        "rbv2_super",
+        # "nb301",
+        # "rbv2_aknn",
+        # "rbv2_rpart",
+        # "rbv2_super",
     ]:
         bench = benchmark_set.BenchmarkSet(scenario=scenario)
 
@@ -85,6 +85,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         dataset=dataset,
         internal_timeout=internal_timeout,
         metric=metric,
+        runtime_metric_name="time" if scenario == "lcbench" else "timetrain",
         result_processor=result_processor,
     )
 
