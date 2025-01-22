@@ -1,3 +1,4 @@
+import os
 import time
 
 from py_experimenter.experimenter import PyExperimenter
@@ -8,7 +9,7 @@ from smac.runhistory import StatusType, TrialInfo, TrialValue
 from yahpo_gym import local_config
 
 from dynabo.smac_additions.dynamic_prior_callback import LogIncumbentCallback
-from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator
+from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, get_yahpo_fixed_parameter_combinations
 
 EXP_CONFIG_FILE_PATH = "dynabo/experiments/baseline_experiments/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
@@ -59,6 +60,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         dataset=dataset,
         internal_timeout=internal_timeout,
         metric=metric,
+        runtime_metric_name="timetrain" if scenario != "lcbench" else "time",
     )
 
     configuration_space = evaluator.benchmark.get_opt_space(drop_fidelity_params=True)
@@ -114,14 +116,32 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
 
 if __name__ == "__main__":
-    from yahpo_gym import local_config
-    local_config.init_config()
-    local_config.set_data_path("benchmark_data/yahpo_data")
+    if "Desktop" not in os.getcwd():
+        from yahpo_gym import local_config
+
+        local_config.init_config()
+        local_config.set_data_path("benchmark_data/yahpo_data")
 
     experimenter = PyExperimenter(
         experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    # experimenter.fill_table_from_config()
-    experimenter.execute(run_experiment, max_experiments=1)
+    fill = True
+    if fill:
+        experimenter.fill_table_from_combination(
+            parameters={
+                "benchmarklib": ["yahpogym"],
+                "prior_kind": ["good"],
+                "prior_every_n_trials": [50],
+                "validate_prior": [False],
+                "prior_std_denominator": 5,
+                "timeout_total": [86400],
+                "timeout_internal": [1200],
+                "n_trials": [200],
+                "initial_design_size": [20],
+                "seed": range(30),
+            },
+            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(),
+        )
+    # experimenter.execute(run_experiment, max_experiments=1)
