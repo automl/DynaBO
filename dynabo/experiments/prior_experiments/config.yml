@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table:
-      name: dynamic_prior_dev
+      name: lcbench_prior
       keyfields:
         benchmarklib:
           type: VARCHAR(255)
@@ -30,7 +30,7 @@ PY_EXPERIMENTER:
           values: [False]
         prior_std_denominator:
           type: FLOAT
-          values: [2]
+          values: [5]
         timeout_total:
           type: INT
           values: [3600]
@@ -68,6 +68,7 @@ PY_EXPERIMENTER:
         after_reasoning_runtime: FLOAT
       priors:
         prior_accepted: BOOLEAN
+        no_superior_configuration: BOOLEAN
         performance: FLOAT
         configuration: TEXT
         after_n_evaluations: INT
