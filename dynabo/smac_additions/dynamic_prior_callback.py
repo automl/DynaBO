@@ -1,6 +1,6 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -93,11 +93,16 @@ class AbstractDynamicPriorCallback(Callback, ABC):
 
         if self.intervene(smbo):
             prior_configspace, origin_configpsace, performance, logging_config = self.construct_prior(smbo)
-            prior_accepted = self.check_prior(smbo, prior_configspace, origin_configpsace)
-            if prior_accepted:
-                self.set_prior(prior_configspace)
 
-            self.log_prior(smbo=smbo, performance=performance, config=logging_config, prior_accepted=prior_accepted)
+            if prior_configspace is not None:
+                prior_accepted = self.check_prior(smbo, prior_configspace, origin_configpsace)
+                if prior_accepted:
+                    self.set_prior(smbo, prior_configspace)
+                self.log_prior(smbo=smbo, performance=performance, config=logging_config, prior_accepted=prior_accepted)
+            else:
+                prior_accepted = False
+                self.log_no_prior()
+
         return super().on_ask_start(smbo)
 
     def check_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace, origin_configpsace: ConfigurationSpace) -> bool:
@@ -125,6 +130,10 @@ class AbstractDynamicPriorCallback(Callback, ABC):
         incumbent_performance = (-1) * smbo.runhistory.get_cost(current_incumbent)
 
         sampled_config = self.sample_prior(smbo, incumbent_performance)
+
+        if sampled_config is None:
+            return None, None, None, None
+
         performance = sampled_config["score"].values[0]
         hyperparameter_config = sampled_config[[col for col in sampled_config.columns if col.startswith("config_")]]
         hyperparameter_config.columns = [col.replace("config_", "") for col in hyperparameter_config.columns]
@@ -159,6 +168,7 @@ class AbstractDynamicPriorCallback(Callback, ABC):
                 {
                     "priors": {
                         "prior_accepted": prior_accepted,
+                        "no_superior_configuration": False,
                         "performance": performance,
                         "configuration": str(config),
                         "after_n_evaluations": smbo.runhistory.finished,
@@ -169,11 +179,24 @@ class AbstractDynamicPriorCallback(Callback, ABC):
                 }
             )
 
+    def log_no_prior(self):
+        if self.result_processor is not None:
+            self.result_processor.process_logs(
+                {
+                    "priors": {
+                        "no_superior_configuration": True,
+                    }
+                }
+            )
+
 
 class WellPerformingPriorCallback(AbstractDynamicPriorCallback):
-    def sample_prior(self, smbo, incumbent_performance):
+    def sample_prior(self, smbo, incumbent_performance) -> Optional[pd.DataFrame]:
         # Select all configurations that have a better performance than the incumbent
         better_performing_configs = self.prior_data[self.prior_data["score"] > incumbent_performance]
+
+        if better_performing_configs.empty:
+            return None
 
         # Sample from the considered configurations
         sampled_config = better_performing_configs.sample(random_state=smbo.intensifier._rng)
@@ -181,14 +204,14 @@ class WellPerformingPriorCallback(AbstractDynamicPriorCallback):
 
 
 class MediumPriorCallback(AbstractDynamicPriorCallback):
-    def sample_prior(self, smbo, incumbent_performance):
+    def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
         # Select all configurations that have a better performance than the incumbent
         sampled_config = self.prior_data.sample(random_state=smbo.intensifier._rng)
         return sampled_config
 
 
 class MissleadingPriorCallback(AbstractDynamicPriorCallback):
-    def sample_prior(self, smbo, incumbent_performance):
+    def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
         # Select all configurations that have a better performance than the incumbent
         better_performing_configs = self.prior_data[self.prior_data["score"] < incumbent_performance]
 
@@ -198,5 +221,5 @@ class MissleadingPriorCallback(AbstractDynamicPriorCallback):
 
 
 class DeceivingPriorCallback(AbstractDynamicPriorCallback):
-    def sample_prior(self, smbo, incumbent_performance):
+    def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
         raise NotImplementedError("Please implement the sample_prior method.")

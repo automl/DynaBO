@@ -10,14 +10,14 @@ from yahpo_gym import local_config
 from dynabo.smac_additions.dynamic_prior_callback import DeceivingPriorCallback, LogIncumbentCallback, MediumPriorCallback, MissleadingPriorCallback, WellPerformingPriorCallback
 from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
-from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator
+from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, get_yahpo_fixed_parameter_combinations
 
 EXP_CONFIG_FILE_PATH = "dynabo/experiments/prior_experiments/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
 
 def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: YAHPOGymEvaluator, result_processor: ResultProcessor, timeout: int):
-    while (evaluator.accumulated_runtime + evaluator.reasoning_runtime) < timeout and smac.runhistory.finished < smac.scenario.n_trials:
+    while smac.runhistory.finished < smac.scenario.n_trials:
         start_ask = time.time()
         trial_info: TrialInfo = smac.ask()
         end_ask = time.time()
@@ -67,6 +67,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         dataset=dataset,
         internal_timeout=internal_timeout,
         metric=metric,
+        runtime_metric_name="timetrain" if scenario != "lcbench" else "time",
     )
 
     configuration_space = evaluator.benchmark.get_opt_space(drop_fidelity_params=True)
@@ -96,7 +97,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         prior_callback = WellPerformingPriorCallback(
             scenario=evaluator.scenario,
             dataset=evaluator.dataset,
-            metric="acc",
+            metric=metric,
             base_path="benchmark_data/prior_data",
             prior_every_n_iterations=prior_every_n_trials,
             prior_std_denominator=prior_std_denominator,
@@ -187,5 +188,21 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    # experimenter.fill_table_from_config()
+    fill = False
+    if fill:
+        experimenter.fill_table_from_combination(
+            parameters={
+                "benchmarklib": ["yahpogym"],
+                "prior_kind": ["good"],
+                "prior_every_n_trials": [50],
+                "validate_prior": [False],
+                "prior_std_denominator": 5,
+                "timeout_total": [86400],
+                "timeout_internal": [1200],
+                "n_trials": [200],
+                "initial_design_size": [20],
+                "seed": range(30),
+            },
+            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(),
+        )
     experimenter.execute(run_experiment, max_experiments=1)
