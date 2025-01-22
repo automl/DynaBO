@@ -6,11 +6,13 @@ from py_experimenter.result_processor import ResultProcessor
 from smac import HyperparameterOptimizationFacade, Scenario
 from smac.runhistory import StatusType, TrialInfo, TrialValue
 from yahpo_gym import local_config
+import numpy as np
 
 from dynabo.smac_additions.dynamic_prior_callback import DeceivingPriorCallback, LogIncumbentCallback, MediumPriorCallback, MissleadingPriorCallback, WellPerformingPriorCallback
 from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, get_yahpo_fixed_parameter_combinations
+from dynabo.utils.cluster_utils import intiialise_experiments
 
 EXP_CONFIG_FILE_PATH = "dynabo/experiments/prior_experiments/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
@@ -178,11 +180,8 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
 
 if __name__ == "__main__":
-    if "Desktop" not in os.getcwd():
-        from yahpo_gym import local_config
+    intiialise_experiments()
 
-        local_config.init_config()
-        local_config.set_data_path("benchmark_data/yahpo_data")
     experimenter = PyExperimenter(
         experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
         database_credential_file_path=DB_CRED_FILE_PATH,

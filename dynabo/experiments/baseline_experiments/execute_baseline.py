@@ -10,6 +10,7 @@ from yahpo_gym import local_config
 
 from dynabo.smac_additions.dynamic_prior_callback import LogIncumbentCallback
 from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, get_yahpo_fixed_parameter_combinations
+from dynabo.utils.cluster_utils import intiialise_experiments
 
 EXP_CONFIG_FILE_PATH = "dynabo/experiments/baseline_experiments/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
@@ -116,18 +117,14 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
 
 if __name__ == "__main__":
-    if "Desktop" not in os.getcwd():
-        from yahpo_gym import local_config
-
-        local_config.init_config()
-        local_config.set_data_path("benchmark_data/yahpo_data")
+    intiialise_experiments()
 
     experimenter = PyExperimenter(
         experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = True
+    fill = False
     if fill:
         experimenter.fill_table_from_combination(
             parameters={
@@ -144,4 +141,4 @@ if __name__ == "__main__":
             },
             fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(),
         )
-    # experimenter.execute(run_experiment, max_experiments=1)
+    experimenter.execute(run_experiment, max_experiments=1)
