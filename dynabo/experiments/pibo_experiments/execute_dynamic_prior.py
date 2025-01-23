@@ -8,7 +8,7 @@ from smac.runhistory import StatusType, TrialInfo, TrialValue
 from yahpo_gym import local_config
 import numpy as np
 
-from dynabo.smac_additions.dynamic_prior_callback import DynaBODeceivingPriorCallback, LogIncumbentCallback, DynaBOMediumPriorCallback, DynaBOMissleadingPriorCallback, DynaBOWellPerformingPriorCallback
+from dynabo.smac_additions.dynamic_prior_callback import LogIncumbentCallback, PiBOAbstractCallback, PiBOWellPerformingPriorCallback, PiBOMediumPriorCallback, PiBOMissleadingPriorCallback, PiBODeceivingPriorCallback
 from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, get_yahpo_fixed_parameter_combinations
@@ -96,7 +96,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     )
 
     if prior_kind == "good":
-        prior_callback = DynaBOWellPerformingPriorCallback(
+        prior_callback = PiBOWellPerformingPriorCallback(
             scenario=evaluator.scenario,
             dataset=evaluator.dataset,
             metric=metric,
@@ -109,7 +109,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             validate_prior=validate_prior,
         )
     elif prior_kind == "medium":
-        prior_callback = DynaBOMediumPriorCallback(
+        prior_callback = PiBOMediumPriorCallback(
             scenario=evaluator.scenario,
             dataset=evaluator.dataset,
             metric="acc",
@@ -122,7 +122,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             validate_prior=validate_prior,
         )
     elif prior_kind == "missleading":
-        prior_callback = DynaBOMissleadingPriorCallback(
+        prior_callback = PiBOMissleadingPriorCallback(
             scenario=evaluator.scenario,
             dataset=evaluator.dataset,
             metric="acc",
@@ -135,7 +135,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             validate_prior=validate_prior,
         )
     elif prior_kind == "deceiving":
-        prior_callback = DynaBODeceivingPriorCallback(
+        prior_callback = PiBODeceivingPriorCallback(
             scenario=evaluator.scenario,
             dataset=evaluator.dataset,
             metric="acc",
