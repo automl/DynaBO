@@ -8,7 +8,7 @@ from smac.runhistory import StatusType, TrialInfo, TrialValue
 from yahpo_gym import local_config
 import numpy as np
 
-from dynabo.smac_additions.dynamic_prior_callback import DeceivingPriorCallback, LogIncumbentCallback, MediumPriorCallback, MissleadingPriorCallback, WellPerformingPriorCallback
+from dynabo.smac_additions.dynamic_prior_callback import DynaBODeceivingPriorCallback, LogIncumbentCallback, DynaBOMediumPriorCallback, DynaBOMissleadingPriorCallback, DynaBOWellPerformingPriorCallback
 from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, get_yahpo_fixed_parameter_combinations
@@ -96,7 +96,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     )
 
     if prior_kind == "good":
-        prior_callback = WellPerformingPriorCallback(
+        prior_callback = DynaBOWellPerformingPriorCallback(
             scenario=evaluator.scenario,
             dataset=evaluator.dataset,
             metric=metric,
@@ -109,7 +109,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             validate_prior=validate_prior,
         )
     elif prior_kind == "medium":
-        prior_callback = MediumPriorCallback(
+        prior_callback = DynaBOMediumPriorCallback(
             scenario=evaluator.scenario,
             dataset=evaluator.dataset,
             metric="acc",
@@ -122,7 +122,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             validate_prior=validate_prior,
         )
     elif prior_kind == "missleading":
-        prior_callback = MissleadingPriorCallback(
+        prior_callback = DynaBOMissleadingPriorCallback(
             scenario=evaluator.scenario,
             dataset=evaluator.dataset,
             metric="acc",
@@ -135,7 +135,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             validate_prior=validate_prior,
         )
     elif prior_kind == "deceiving":
-        prior_callback = DeceivingPriorCallback(
+        prior_callback = DynaBODeceivingPriorCallback(
             scenario=evaluator.scenario,
             dataset=evaluator.dataset,
             metric="acc",
@@ -187,7 +187,7 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = False
+    fill = True
     if fill:
         experimenter.fill_table_from_combination(
             parameters={

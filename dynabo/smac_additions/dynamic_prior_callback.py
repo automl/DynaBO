@@ -40,7 +40,7 @@ class LogIncumbentCallback(Callback):
                 )
 
 
-class AbstractDynamicPriorCallback(Callback, ABC):
+class AbstractPriorCallback(Callback, ABC):
     def __init__(
         self,
         scenario: str,
@@ -117,8 +117,9 @@ class AbstractDynamicPriorCallback(Callback, ABC):
             raise NotImplementedError("Please implement the validate_prior method.")
         return True
 
+    @abstractmethod
     def intervene(self, smbo: SMBO) -> bool:
-        return smbo.runhistory.finished >= self.initial_design_size and (smbo.runhistory.finished - self.initial_design_size) % self.prior_every_n_iterations == 0
+        pass
 
     def construct_prior(self, smbo: SMBO) -> Tuple[ConfigurationSpace, ConfigurationSpace, float, Dict]:
         """
@@ -188,29 +189,76 @@ class AbstractDynamicPriorCallback(Callback, ABC):
                     }
                 }
             )
+    
+class DynaBOAbstractPriorCallback(AbstractPriorCallback):
+    def intervene(self, smbo: SMBO) -> bool:
+        return smbo.runhistory.finished >= self.initial_design_size and (smbo.runhistory.finished - self.initial_design_size) % self.prior_every_n_iterations == 0
 
 
-class WellPerformingPriorCallback(AbstractDynamicPriorCallback):
+class PiBOAbstractCallback(DynaBOAbstractPriorCallback):
+    def intervene(self, smbo):
+        return smbo.runhistory.finished == self.initial_design_size and (smbo.runhistory.finished - self.initial_design_size) % self.prior_every_n_iterations == 0
+
+
+class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback):
     def sample_prior(self, smbo, incumbent_performance) -> Optional[pd.DataFrame]:
         # Select all configurations that have a better performance than the incumbent
+        # Chekc whether the valeus are sorted
         better_performing_configs = self.prior_data[self.prior_data["score"] > incumbent_performance]
+        
 
         if better_performing_configs.empty:
             return None
+        n = len(better_performing_configs)
+        
+        # Generate exponential samples and map them to valid indices
+        raw_samples = smbo.intensifier._rng.exponential(scale = 5, size=1)
+        indices = np.round(raw_samples).astype(int)
+        indices = np.clip(indices, 0, n - 1)  # Ensure indices are within bounds
 
-        # Sample from the considered configurations
-        sampled_config = better_performing_configs.sample(random_state=smbo.intensifier._rng)
+        return better_performing_configs.iloc[indices]
+
+class PiBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback):
+    def sample_prior(self, smbo, incumbent_performance) -> Optional[pd.DataFrame]:
+        # Select all configurations that have a better performance than the incumbent
+        # Chekc whether the valeus are sorted
+        better_performing_configs = self.prior_data[self.prior_data["score"] > incumbent_performance]
+        
+
+        if better_performing_configs.empty:
+            return None
+        n = len(better_performing_configs)
+        
+        # Generate exponential samples and map them to valid indices
+        raw_samples = smbo.intensifier._rng.exponential(scale = 5, size=1)
+        indices = np.round(raw_samples).astype(int)
+        indices = np.clip(indices, 0, n - 1)  # Ensure indices are within bounds
+
+        return better_performing_configs.iloc[indices]
+
+class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback):
+    def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
+        # Select all configurations that have a better performance than the incumbent
+        sampled_config = self.prior_data.sample(random_state=smbo.intensifier._rng)
         return sampled_config
-
-
-class MediumPriorCallback(AbstractDynamicPriorCallback):
+    
+class PiBOMediumPriorCallback(DynaBOAbstractPriorCallback):
     def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
         # Select all configurations that have a better performance than the incumbent
         sampled_config = self.prior_data.sample(random_state=smbo.intensifier._rng)
         return sampled_config
 
 
-class MissleadingPriorCallback(AbstractDynamicPriorCallback):
+class DynaBOMissleadingPriorCallback(DynaBOAbstractPriorCallback):
+    def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
+        # Select all configurations that have a better performance than the incumbent
+        better_performing_configs = self.prior_data[self.prior_data["score"] < incumbent_performance]
+
+        # Sample from the considered configurations
+        sampled_config = better_performing_configs.sample(random_state=smbo.intensifier._rng)
+        return sampled_config
+    
+class PiBOMissleadingPriorCallback(DynaBOAbstractPriorCallback):
     def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
         # Select all configurations that have a better performance than the incumbent
         better_performing_configs = self.prior_data[self.prior_data["score"] < incumbent_performance]
@@ -220,6 +268,10 @@ class MissleadingPriorCallback(AbstractDynamicPriorCallback):
         return sampled_config
 
 
-class DeceivingPriorCallback(AbstractDynamicPriorCallback):
+class DynaBODeceivingPriorCallback(DynaBOAbstractPriorCallback):
+    def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
+        raise NotImplementedError("Please implement the sample_prior method.")
+
+class PiBODeceivingPriorCallback(DynaBOAbstractPriorCallback):
     def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
         raise NotImplementedError("Please implement the sample_prior method.")

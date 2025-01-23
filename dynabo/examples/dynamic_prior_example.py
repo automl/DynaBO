@@ -8,7 +8,7 @@ from smac.facade import HyperparameterOptimizationFacade
 from smac.scenario import Scenario
 
 from dynabo.experiments.gt_experiments.execute_gt import YAHPOGymEvaluator
-from dynabo.smac_additions.dynamic_prior_callback import WellPerformingPriorCallback
+from dynabo.smac_additions.dynamic_prior_callback import DynaBOWellPerformingPriorCallback
 from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         max_config_calls=1,
     )
 
-    prior_callback = WellPerformingPriorCallback(
+    prior_callback = DynaBOWellPerformingPriorCallback(
         scenario=evaluator.scenario,
         dataset=evaluator.dataset,
         metric="acc",

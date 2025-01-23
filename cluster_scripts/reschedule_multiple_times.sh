@@ -26,7 +26,7 @@ SUBMITTED_PRIOR_JOBS=0
 jobs_scheduled_or_running() {
     local job_count
     job_count=$(squeue -u $USER | wc -l)
-    [ "$job_count" -gt 3 ]
+    [ "$job_count" -gt 4 ]
 }
 
 # Infinite loop to monitor and submit jobs
@@ -41,7 +41,7 @@ while true; do
         echo "Jobs are already scheduled or running. No jobs submitted."
     else
         echo "No jobs currently scheduled or running. Submitting jobs..."
-        sbatch $BASELINE_SCRIPT
+        #sbatch $BASELINE_SCRIPT
         SUBMITTED_BASELINE_JOBS=$(( SUBMITTED_BASELINE_JOBS + 150 ))
         sbatch $PRIOR_SCRIPT
         SUBMITTED_PRIOR_JOBS=$(( SUBMITTED_PRIOR_JOBS + 150 ))
