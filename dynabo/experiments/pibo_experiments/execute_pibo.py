@@ -17,7 +17,7 @@ from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 from dynabo.utils.cluster_utils import intiialise_experiments
 from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, get_yahpo_fixed_parameter_combinations
 
-EXP_CONFIG_FILE_PATH = "dynabo/experiments/prior_experiments/config.yml"
+EXP_CONFIG_FILE_PATH = "dynabo/experiments/pibo_experiments/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
 
@@ -103,7 +103,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         PriorCallbackClass = PiBOWellPerformingPriorCallback
     elif prior_kind == "medium":
         PriorCallbackClass = PiBOMediumPriorCallback
-    elif prior_kind == "missleading":
+    elif prior_kind == "misleading":
         PriorCallbackClass = PiBOMisleadingPriorCallback
     elif prior_kind == "deceiving":
         PriorCallbackClass = PiBODeceivingPriorCallback
@@ -161,12 +161,12 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = True
+    fill = False
     if fill:
         experimenter.fill_table_from_combination(
             parameters={
                 "benchmarklib": ["yahpogym"],
-                "prior_kind": ["good"],
+                "prior_kind": ["good", "medium", "misleading"],
                 "prior_every_n_trials": [50],
                 "validate_prior": [False],
                 "prior_std_denominator": 5,
