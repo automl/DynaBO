@@ -118,3 +118,5 @@ benchmark_data/prior_data
 
 # logs
 logs
+dynabo/plots/*.csv
+dynabo/plots/lcbench/*.png
