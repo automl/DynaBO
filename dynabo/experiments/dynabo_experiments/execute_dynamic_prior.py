@@ -1,20 +1,23 @@
-import os
 import time
 
 from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
 from smac import HyperparameterOptimizationFacade, Scenario
 from smac.runhistory import StatusType, TrialInfo, TrialValue
-from yahpo_gym import local_config
-import numpy as np
 
-from dynabo.smac_additions.dynamic_prior_callback import DynaBODeceivingPriorCallback, LogIncumbentCallback, DynaBOMediumPriorCallback, DynaBOMissleadingPriorCallback, DynaBOWellPerformingPriorCallback
+from dynabo.smac_additions.dynamic_prior_callback import (
+    DynaBODeceivingPriorCallback,
+    DynaBOMediumPriorCallback,
+    DynaBOMisleadingPriorCallback,
+    DynaBOWellPerformingPriorCallback,
+    LogIncumbentCallback,
+)
 from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
-from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, get_yahpo_fixed_parameter_combinations
 from dynabo.utils.cluster_utils import intiialise_experiments
+from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, get_yahpo_fixed_parameter_combinations
 
-EXP_CONFIG_FILE_PATH = "dynabo/experiments/prior_experiments/config.yml"
+EXP_CONFIG_FILE_PATH = "dynabo/experiments/dynabo_experiments/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
 
@@ -63,6 +66,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     prior_every_n_trials = int(config["prior_every_n_trials"])
     prior_std_denominator = float(config["prior_std_denominator"])
     validate_prior = config["validate_prior"]
+    prior_sampling_weight = config["prior_sampling_weight"]
 
     evaluator: YAHPOGymEvaluator = YAHPOGymEvaluator(
         scenario=scenario,
@@ -96,59 +100,29 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     )
 
     if prior_kind == "good":
-        prior_callback = DynaBOWellPerformingPriorCallback(
-            scenario=evaluator.scenario,
-            dataset=evaluator.dataset,
-            metric=metric,
-            base_path="benchmark_data/prior_data",
-            prior_every_n_iterations=prior_every_n_trials,
-            prior_std_denominator=prior_std_denominator,
-            initial_design_size=initial_design._n_configs,
-            result_processor=result_processor,
-            evaluator=evaluator,
-            validate_prior=validate_prior,
-        )
+        PriorCallbackClass = DynaBOWellPerformingPriorCallback
     elif prior_kind == "medium":
-        prior_callback = DynaBOMediumPriorCallback(
-            scenario=evaluator.scenario,
-            dataset=evaluator.dataset,
-            metric="acc",
-            base_path="benchmark_data/prior_data",
-            prior_every_n_iterations=prior_every_n_trials,
-            prior_std_denominator=prior_std_denominator,
-            initial_design_size=initial_design._n_configs,
-            result_processor=result_processor,
-            evaluator=evaluator,
-            validate_prior=validate_prior,
-        )
+        PriorCallbackClass = DynaBOMediumPriorCallback
     elif prior_kind == "missleading":
-        prior_callback = DynaBOMissleadingPriorCallback(
-            scenario=evaluator.scenario,
-            dataset=evaluator.dataset,
-            metric="acc",
-            base_path="benchmark_data/prior_data",
-            prior_every_n_iterations=prior_every_n_trials,
-            prior_std_denominator=prior_std_denominator,
-            initial_design_size=initial_design._n_configs,
-            result_processor=result_processor,
-            evaluator=evaluator,
-            validate_prior=validate_prior,
-        )
+        PriorCallbackClass = DynaBOMisleadingPriorCallback
     elif prior_kind == "deceiving":
-        prior_callback = DynaBODeceivingPriorCallback(
-            scenario=evaluator.scenario,
-            dataset=evaluator.dataset,
-            metric="acc",
-            base_path="benchmark_data/prior_data",
-            prior_every_n_iterations=prior_every_n_trials,
-            prior_std_denominator=prior_std_denominator,
-            initial_design_size=initial_design._n_configs,
-            result_processor=result_processor,
-            evaluator=evaluator,
-            validate_prior=validate_prior,
-        )
+        PriorCallbackClass = DynaBODeceivingPriorCallback
     else:
         raise ValueError(f"Prior kind {prior_kind} not supported")
+
+    prior_callback = PriorCallbackClass(
+        scenario=evaluator.scenario,
+        dataset=evaluator.dataset,
+        metric=metric,
+        base_path="benchmark_data/prior_data",
+        prior_every_n_iterations=prior_every_n_trials,
+        prior_std_denominator=prior_std_denominator,
+        prior_sampling_weight=prior_sampling_weight,
+        initial_design_size=initial_design._n_configs,
+        result_processor=result_processor,
+        evaluator=evaluator,
+        validate_prior=validate_prior,
+    )
 
     incumbent_callback = LogIncumbentCallback(result_processor=result_processor, evaluator=evaluator)
 
@@ -187,15 +161,16 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = True
+    fill = False
     if fill:
         experimenter.fill_table_from_combination(
             parameters={
                 "benchmarklib": ["yahpogym"],
-                "prior_kind": ["good"],
+                "prior_kind": ["good", "medium", "missleading"],
                 "prior_every_n_trials": [50],
                 "validate_prior": [False],
                 "prior_std_denominator": 5,
+                "prior_sampling_weight": [0.3],
                 "timeout_total": [86400],
                 "timeout_internal": [1200],
                 "n_trials": [200],
