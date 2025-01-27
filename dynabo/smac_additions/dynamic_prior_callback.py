@@ -105,15 +105,16 @@ class AbstractPriorCallback(Callback, ABC):
         if self.intervene(smbo):
             prior_configspace, origin_configpsace, performance, logging_config = self.construct_prior(smbo)
 
-            prior_accepted, prior_mean_acq_value, origin_mean_acq_value = self.accept_prior(smbo, prior_configspace, origin_configpsace)
+            if prior_configspace is not None:
+                prior_accepted, prior_mean_acq_value, origin_mean_acq_value = self.accept_prior(smbo, prior_configspace, origin_configpsace)
 
-            if prior_accepted:
-                self.set_prior(smbo, prior_configspace)
-            self.log_prior(
-                smbo=smbo, performance=performance, config=logging_config, prior_accepted=prior_accepted, prior_mean_acq_value=prior_mean_acq_value, origin_mean_acq_value=origin_mean_acq_value
-            )
-        else:
-            self.log_no_prior()
+                if prior_accepted:
+                    self.set_prior(smbo, prior_configspace)
+                self.log_prior(
+                    smbo=smbo, performance=performance, config=logging_config, prior_accepted=prior_accepted, prior_mean_acq_value=prior_mean_acq_value, origin_mean_acq_value=origin_mean_acq_value
+                )
+            else:
+                self.log_no_prior()
 
         return super().on_ask_start(smbo)
 

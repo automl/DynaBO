@@ -43,7 +43,8 @@ def get_yahpo_fixed_parameter_combinations(with_datasets: bool = True, medium_an
 
 def get_medium_and_hard_datasets(scenario: str):
     prior_df = pd.read_csv("benchmark_data/gt_prior_data/origin_table.csv")
-    medium_df = prior_df[((prior_df["difficulty"] == "medium") | (prior_df["difficulty"] == "hard")) & (prior_df["scenario"] == scenario)]
+    medium_df = prior_df[((prior_df["difficulty"] == "medium") | (prior_df["difficulty"] == "hard")) & (prior_df["scenario"] == scenario)]  #
+    medium_df = medium_df[medium_df["prior_trace"].notna()]
     return medium_df["dataset"].unique().tolist()
 
 
