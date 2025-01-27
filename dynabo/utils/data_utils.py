@@ -47,7 +47,7 @@ def get_experiment(df: pd.DataFrame, scenario: str, dataset: str, metric: str):
     return df[(df.scenario == scenario) & (df.dataset == dataset) & (df.metric == metric)]
 
 
-def build_prior_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+def build_prior_dataframe(df: pd.DataFrame, trace_column="prior_trace") -> pd.DataFrame:
     """
     Given a dataframe, that is allready reduced to just one scenarion, dataset, metric combiantion, this function
     extracts the columns encoded in `incumbent_trace` into seperate columns.
@@ -55,10 +55,10 @@ def build_prior_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     seed_dfs = {}
     for seed in df["seed"].unique():
         seed_df = df[df.seed == seed]
-        extracted_df = extract_dataframe_from_column(seed_df, "incumbent_trace")
+        extracted_df = extract_dataframe_from_column(seed_df, trace_column)
 
         # Create Multiple lines in the seed_df for each entry in the extracted_df
-        seed_df = seed_df.drop(columns=["incumbent_trace"])
+        seed_df = seed_df.drop(columns=[trace_column])
         assert len(seed_df) == 1
         seed_df = pd.concat([seed_df] * len(extracted_df), ignore_index=True)
 

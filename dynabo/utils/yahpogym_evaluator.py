@@ -1,24 +1,25 @@
 import json
 
+import pandas as pd
 from ConfigSpace import Configuration, ConfigurationSpace
 from py_experimenter.result_processor import ResultProcessor
 from yahpo_gym import benchmark_set
 
 
-def get_yahpo_fixed_parameter_combinations(with_datasets: bool = True):
+def get_yahpo_fixed_parameter_combinations(with_datasets: bool = True, medium_and_hard: bool = False):
     jobs = []
 
     # Add all YAHPO-Gym Evaluations
     for scenario in [
-        # "rbv2_ranger",
-        # "rbv2_xgboost",
-        # "rbv2_svm",
-        # "rbv2_glmnet",
+        "rbv2_ranger",
+        "rbv2_xgboost",
+        "rbv2_svm",
+        "rbv2_glmnet",
         "lcbench",
-        # "nb301",
-        # "rbv2_aknn",
-        # "rbv2_rpart",
-        # rbv2_super,
+        "nb301",
+        "rbv2_aknn",
+        "rbv2_rpart",
+        "rbv2_super",
     ]:
         bench = benchmark_set.BenchmarkSet(scenario=scenario)
 
@@ -32,9 +33,18 @@ def get_yahpo_fixed_parameter_combinations(with_datasets: bool = True):
         if with_datasets:
             # create ablation and ds_tunability jobs
             jobs += [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in bench.instances]
+        elif medium_and_hard:
+            medium_df = get_medium_and_hard_datasets(scenario)
+            jobs += [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in medium_df]
         else:
             jobs += [{"scenario": scenario, "dataset": "all", "metric": metric}]
     return jobs
+
+
+def get_medium_and_hard_datasets(scenario: str):
+    prior_df = pd.read_csv("benchmark_data/gt_prior_data/origin_table.csv")
+    medium_df = prior_df[((prior_df["difficulty"] == "medium") | (prior_df["difficulty"] == "hard")) & (prior_df["scenario"] == scenario)]
+    return medium_df["dataset"].unique().tolist()
 
 
 class YAHPOGymEvaluator:

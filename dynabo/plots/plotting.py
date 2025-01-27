@@ -17,18 +17,16 @@ pibo_incumbent = pd.read_csv("dynabo/plots/pibo_incumbent.csv")
 pibo_priors = pd.read_csv("dynabo/plots/pibo_priors.csv")
 
 
-def merge_df(df: pd.DataFrame, incumbents: pd.DataFrame, priors: Optional[pd.DataFrame]) -> pd.DataFrame:
+def merge_df(df: pd.DataFrame, incumbents: pd.DataFrame, priors: Optional[pd.DataFrame]) -> Tuple[pd.DataFrame, Optional[pd.DataFrame]]:
     incumbents = incumbents.drop(columns=["ID"])
+    incumbent_df = df.merge(incumbents, left_on="ID", right_on="experiment_id")
     if priors is not None:
         priors = priors.drop(columns=["ID"])
-        priors = priors[["experiment_id", "after_n_evaluations", "performance"]]
-        priors.columns = ["experiment_id", "after_n_evaluations", "prior_performance"]
+        prior_df = df.merge(priors, left_on="ID", right_on="experiment_id")
+    else:
+        prior_df = None
 
-    df = df.merge(incumbents, left_on="ID", right_on="experiment_id")
-    if priors is not None:
-        df = df.merge(priors, on=["experiment_id", "after_n_evaluations"], how="left")
-
-    return df
+    return incumbent_df, prior_df
 
 
 def plot_subset(baseline_data: pd.DataFrame, dynabo_data: pd.DataFrame, pibo_data: pd.DataFrame, scenario_dataset: List[Tuple[str, str]]):
@@ -38,18 +36,63 @@ def plot_subset(baseline_data: pd.DataFrame, dynabo_data: pd.DataFrame, pibo_dat
     plt.show()
 
 
-def plot_run(baseline_data: pd.DataFrame, dynabo_data: pd.DataFrame, pibo_data: pd.DataFrame, scenario: str, dataset: str, prior_kind: str, ax: plt.Axes, min_ntrials=1, max_ntrials=200):
-    relevant_baseline, relevant_dynabo, relevant_pibo = select_relevant_data(baseline_data, dynabo_data, pibo_data, scenario, dataset, prior_kind)
-    relevant_baseline = fill_df(relevant_baseline, min_ntrials)
-    relevant_dynabo = fill_df(relevant_dynabo, min_ntrials)
-    relevant_pibo = fill_df(relevant_pibo, min_ntrials)
+def plot_run(
+    baseline_data: pd.DataFrame,
+    dynabo_incumbent_data: pd.DataFrame,
+    dynabo_prior_data,
+    pibo_incumbent_data: pd.DataFrame,
+    pibo_prior_data,
+    scenario: str,
+    dataset: str,
+    prior_kind: str,
+    ax: plt.Axes,
+    min_ntrials=1,
+    max_ntrials=200,
+):
+    relevant_baseline, relevant_dynabo_incumbents, relevant_dynabo_priors, relevant_pibo_incumbents, relevant_pibo_priors = select_relevant_data(
+        baseline_data, dynabo_incumbent_data, dynabo_prior_data, pibo_incumbent_data, pibo_prior_data, scenario, dataset, prior_kind
+    )
+    plot_baseline_incumbents_df = fill_df(relevant_baseline, min_ntrials)
+    plot_dynabo_incubments_df = fill_df(relevant_dynabo_incumbents, min_ntrials)
+    plot_pibo_incumbents_df = fill_df(relevant_pibo_incumbents, min_ntrials)
 
-    ax.plot(relevant_baseline["after_n_evaluations"], relevant_baseline["avg_performance"], label="baseline")
-    ax.fill_between(relevant_baseline["after_n_evaluations"], relevant_baseline["percentile_lower"], relevant_baseline["percentile_upper"], alpha=0.2)
-    ax.plot(relevant_dynabo["after_n_evaluations"], relevant_dynabo["avg_performance"], label="dynabo")
-    ax.fill_between(relevant_dynabo["after_n_evaluations"], relevant_dynabo["percentile_lower"], relevant_dynabo["percentile_upper"], alpha=0.2)
-    ax.plot(relevant_pibo["after_n_evaluations"], relevant_pibo["avg_performance"], label="pibo")
-    ax.fill_between(relevant_pibo["after_n_evaluations"], relevant_pibo["percentile_lower"], relevant_pibo["percentile_upper"], alpha=0.2)
+    dynabo_priors = get_priors(relevant_dynabo_priors)
+    pibo_priors = get_priors(relevant_pibo_priors)
+
+    ax.plot(plot_baseline_incumbents_df["after_n_evaluations"], plot_baseline_incumbents_df["avg_performance"], label="baseline")
+    ax.fill_between(plot_baseline_incumbents_df["after_n_evaluations"], plot_baseline_incumbents_df["percentile_lower"], plot_baseline_incumbents_df["percentile_upper"], alpha=0.2)
+    ax.plot(plot_dynabo_incubments_df["after_n_evaluations"], plot_dynabo_incubments_df["avg_performance"], label="dynabo")
+    ax.fill_between(plot_dynabo_incubments_df["after_n_evaluations"], plot_dynabo_incubments_df["percentile_lower"], plot_dynabo_incubments_df["percentile_upper"], alpha=0.2)
+    ax.plot(plot_pibo_incumbents_df["after_n_evaluations"], plot_pibo_incumbents_df["avg_performance"], label="pibo")
+    ax.fill_between(plot_pibo_incumbents_df["after_n_evaluations"], plot_pibo_incumbents_df["percentile_lower"], plot_pibo_incumbents_df["percentile_upper"], alpha=0.2)
+
+    ax.scatter(dynabo_priors["after_n_evaluations"], dynabo_priors["avg_prior_avg_performance"], label="dynabo_prior", color="red")
+    ax.errorbar(
+        dynabo_priors["after_n_evaluations"],
+        dynabo_priors["avg_prior_avg_performance"],
+        yerr=[
+            dynabo_priors["avg_prior_avg_performance"] - dynabo_priors["percentile_lower"],
+            dynabo_priors["percentile_upper"] - dynabo_priors["avg_prior_avg_performance"],
+        ],
+        fmt="none",  # Don't plot additional points
+        ecolor="red",  # Color of the error bars
+        capsize=3,  # Add small caps to error bars
+        alpha=0.5,  # Transparency for aesthetics
+    )
+    ax.scatter(pibo_priors["after_n_evaluations"], pibo_priors["avg_prior_avg_performance"], label="pibo_prior", color="red")
+    ax.errorbar(
+        pibo_priors["after_n_evaluations"],
+        pibo_priors["avg_prior_avg_performance"],
+        yerr=[
+            pibo_priors["avg_prior_avg_performance"] - pibo_priors["percentile_lower"],
+            pibo_priors["percentile_upper"] - pibo_priors["avg_prior_avg_performance"],
+        ],
+        fmt="none",
+        ecolor="blue",
+        capsize=3,
+        alpha=0.5,
+    )
+
     return ax
 
 
@@ -90,6 +133,28 @@ def fill_df(iterator_df: pd.DataFrame, max_trials=200, x_axis_column: str = "aft
     return new_df
 
 
+def get_priors(df: pd.DataFrame):
+    df = df[df["performance"].notnull()]
+    df = df[["experiment_id", "after_n_evaluations", "after_runtime", "after_virtual_runtime", "after_reasoning_runtime", "performance"]]
+
+    percentile_bounds = list()
+
+    for n_trials in sorted(df["after_n_evaluations"].unique()):
+        relevant_df = df[df["after_n_evaluations"] == n_trials]
+        after_runtime = relevant_df["after_runtime"].max()
+        after_virtual_runtime = relevant_df["after_virtual_runtime"].max()
+        after_reasoning_runtime = relevant_df["after_reasoning_runtime"].max()
+        avg_prior_performance = relevant_df["performance"].dropna().mean()
+        percentile_upper = np.percentile(relevant_df["performance"], 95)
+        percentile_lower = np.percentile(relevant_df["performance"], 5)
+        percentile_bounds.append([n_trials, after_runtime, after_virtual_runtime, after_reasoning_runtime, avg_prior_performance, percentile_upper, percentile_lower])
+
+    percentile_bounds = pd.DataFrame(
+        percentile_bounds, columns=["after_n_evaluations", "after_runtime", "after_virtual_runtime", "after_reasoning_runtime", "avg_prior_avg_performance", "percentile_upper", "percentile_lower"]
+    )
+    return percentile_bounds
+
+
 def find_last(df: pd.DataFrame, experiment_id: int, column: str, current: int):
     last_trial = df[(df["experiment_id"] == experiment_id) & (df[column] < current)]
     if len(last_trial) == 0:
@@ -100,32 +165,39 @@ def find_last(df: pd.DataFrame, experiment_id: int, column: str, current: int):
         return df
 
 
-def select_relevant_data(baseline_data: pd.DataFrame, dynabo_data: pd.DataFrame, pibo_data: pd.DataFrame, scenario: str, dataset: str, prior_kind):
+def select_relevant_data(
+    baseline_data: pd.DataFrame, dynabo_incumbent_data: pd.DataFrame, dynabo_prior_data, pibo_incumbent_data: pd.DataFrame, pibo_prior_data: pd.DataFrame, scenario: str, dataset: str, prior_kind
+):
     relevant_baseline = baseline_data[(baseline_data["scenario"] == scenario) & (baseline_data["dataset"] == dataset)]
-    relevant_dynabo = dynabo_data[(dynabo_data["scenario"] == scenario) & (dynabo_data["dataset"] == dataset) & (dynabo_data["prior_kind"] == prior_kind)]
-    relevant_pibo = pibo_data[(pibo_data["scenario"] == scenario) & (pibo_data["dataset"] == dataset) & (pibo_data["prior_kind"] == prior_kind)]
-    return relevant_baseline, relevant_dynabo, relevant_pibo
+    relevant_dynabo_incumbents = dynabo_incumbent_data[
+        (dynabo_incumbent_data["scenario"] == scenario) & (dynabo_incumbent_data["dataset"] == dataset) & (dynabo_incumbent_data["prior_kind"] == prior_kind)
+    ]
+    relevant_dynabo_prior = dynabo_prior_data[(dynabo_prior_data["scenario"] == scenario) & (dynabo_prior_data["dataset"] == dataset) & (dynabo_prior_data["prior_kind"] == prior_kind)]
+    relevant_pibo_incumbents = pibo_incumbent_data[(pibo_incumbent_data["scenario"] == scenario) & (pibo_incumbent_data["dataset"] == dataset) & (pibo_incumbent_data["prior_kind"] == prior_kind)]
+    relevant_pibo_prior = pibo_prior_data[(pibo_prior_data["scenario"] == scenario) & (pibo_prior_data["dataset"] == dataset) & (pibo_prior_data["prior_kind"] == prior_kind)]
+    return relevant_baseline, relevant_dynabo_incumbents, relevant_dynabo_prior, relevant_pibo_incumbents, relevant_pibo_prior
 
 
-baseline_df = merge_df(baseline_table, baseline_incumbent, None)
-dynabo_df = merge_df(dynabo_table, dynabo_incumbent, dynabo_priors)
-pibo_df = merge_df(pibo_table, pibo_incumbent, pibo_priors)
+if __name__ == "__main__":
+    baseline_df, _ = merge_df(baseline_table, baseline_incumbent, None)
+    dynabo_df_incumbent_df, dynabo_prior_df = merge_df(dynabo_table, dynabo_incumbent, dynabo_priors)
+    pibo_incumbent_df, pibo_prior_df = merge_df(pibo_table, pibo_incumbent, pibo_priors)
 
-baseline_df
+    baseline_df
 
-for dataset in baseline_df["dataset"].unique():
-    fig, axs = plt.subplots(1, 3, figsize=(30, 10))
-    axs = axs.flatten()
-    for ax, prior_kind in zip(axs, ["good", "medium", "misleading"]):
-        try:
-            ax = plot_run(baseline_df, dynabo_df, pibo_df, "lcbench", dataset, prior_kind, ax, min_ntrials=1, max_ntrials=200)
-        except Exception:
-            pass
-        ax.legend()
-        ax.set_title(f"{prior_kind}")
-    fig.suptitle(f"{dataset}")
-    plt.savefig(
-        f"dynabo/plots//lcbench/{dataset}.png",
-        bbox_inches="tight",
-    )
-    plt.close()
+    for dataset in baseline_df["dataset"].unique():
+        fig, axs = plt.subplots(1, 3, figsize=(30, 10))
+        axs = axs.flatten()
+        for ax, prior_kind in zip(axs, ["good", "medium", "misleading"]):
+            try:
+                ax = plot_run(baseline_df, dynabo_df_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, "lcbench", dataset, prior_kind, ax, min_ntrials=1, max_ntrials=200)
+            except Exception:
+                pass
+            ax.legend()
+            ax.set_title(f"{prior_kind}")
+        fig.suptitle(f"{dataset}")
+        plt.savefig(
+            f"dynabo/plots//lcbench/{dataset}.png",
+            bbox_inches="tight",
+        )
+        plt.close()

@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from ConfigSpace import ConfigurationSpace
 from py_experimenter.result_processor import ResultProcessor
+from scipy.stats import mannwhitneyu
+from smac.acquisition.function import LCB
 from smac.callback import Callback
 from smac.main.smbo import SMBO
 from smac.runhistory import TrialInfo, TrialValue
@@ -51,7 +53,9 @@ class AbstractPriorCallback(Callback, ABC):
         prior_std_denominator: float,
         prior_sampling_weight: float,
         initial_design_size: int,
-        validate_prior: bool = False,
+        validate_prior: bool,
+        n_prior_validation_samples,
+        prior_p_value: float,
         result_processor: ResultProcessor = None,
         evaluator: YAHPOGymEvaluator = None,
     ):
@@ -70,6 +74,11 @@ class AbstractPriorCallback(Callback, ABC):
         self.evaluator = evaluator
 
         self.incumbent_performance = float(np.infty)
+
+        if self.validate_prior:
+            self.lcb = LCB()
+        self.n_prior_validation_samples = n_prior_validation_samples
+        self.prior_p_value = prior_p_value
 
         self.prior_data_path = self.get_prior_data_path(base_path, scenario, dataset, metric)
         self.prior_data = self.get_prior_data()
@@ -96,28 +105,44 @@ class AbstractPriorCallback(Callback, ABC):
         if self.intervene(smbo):
             prior_configspace, origin_configpsace, performance, logging_config = self.construct_prior(smbo)
 
-            if prior_configspace is not None:
-                prior_accepted = self.check_prior(smbo, prior_configspace, origin_configpsace)
-                if prior_accepted:
-                    self.set_prior(smbo, prior_configspace)
-                self.log_prior(smbo=smbo, performance=performance, config=logging_config, prior_accepted=prior_accepted)
-            else:
-                prior_accepted = False
-                self.log_no_prior()
+            prior_accepted, prior_mean_acq_value, origin_mean_acq_value = self.accept_prior(smbo, prior_configspace, origin_configpsace)
+
+            if prior_accepted:
+                self.set_prior(smbo, prior_configspace)
+            self.log_prior(
+                smbo=smbo, performance=performance, config=logging_config, prior_accepted=prior_accepted, prior_mean_acq_value=prior_mean_acq_value, origin_mean_acq_value=origin_mean_acq_value
+            )
+        else:
+            self.log_no_prior()
 
         return super().on_ask_start(smbo)
 
-    def check_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace, origin_configpsace: ConfigurationSpace) -> bool:
+    def accept_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace, origin_configspace: ConfigurationSpace) -> bool:
         if self.validate_prior:
-            # Sample configurations according to both the prior and the standard configpsace
-            # prior_configs = prior_configspace.sample_configuration(1000)
-            # origin_configs = origin_configpsace.sample_configuration(1000)
+            current_incumbent = smbo.intensifier.get_incumbent()
+            incumbent_configuration_dict = dict(current_incumbent)
+            incumbent_configuration_space = build_prior_configuration_space(origin_configspace, incumbent_configuration_dict, prior_std_denominator=self.prior_std_denominator * self.prior_number)
 
-            # mannwhitneyu()
+            prior_samples = prior_configspace.sample_configuration(size=self.n_prior_validation_samples)
+            incumbent_samples = incumbent_configuration_space.sample_configuration(size=self.n_prior_validation_samples)
 
-            # Do Man Whitney U Test, to determien whether or not we use the prior
-            raise NotImplementedError("Please implement the validate_prior method.")
-        return True
+            self.lcb.update(model=smbo.intensifier.config_selector._acquisition_function.model, num_data=smbo.runhistory.finished)
+            lcb_prior_values = self.lcb(prior_samples).squeeze()
+            lcb_incumbent_values = self.lcb(incumbent_samples).squeeze()
+
+            # TODO Double Check the test
+            result = mannwhitneyu(
+                lcb_prior_values,
+                lcb_incumbent_values,
+                alternative="less",
+            )
+
+            if result.pvalue < self.prior_p_value:
+                return False, lcb_prior_values.mean(), lcb_incumbent_values.mean()
+            else:
+                return True, lcb_prior_values.mean(), lcb_incumbent_values.mean()
+
+        return True, None, None
 
     @abstractmethod
     def intervene(self, smbo: SMBO) -> bool:
@@ -162,7 +187,7 @@ class AbstractPriorCallback(Callback, ABC):
         Samples a prior from the prior data.
         """
 
-    def log_prior(self, smbo: SMBO, performance: float, config: Dict, prior_accepted: bool):
+    def log_prior(self, smbo: SMBO, performance: float, config: Dict, prior_accepted: bool, prior_mean_acq_value: float, origin_mean_acq_value: float):
         """
         Logs the prior data.
         """
@@ -173,6 +198,8 @@ class AbstractPriorCallback(Callback, ABC):
                         "prior_accepted": prior_accepted,
                         "no_superior_configuration": False,
                         "performance": performance,
+                        "prior_mean_acq_value": prior_mean_acq_value,
+                        "origin_mean_acq_value": origin_mean_acq_value,
                         "configuration": str(config),
                         "after_n_evaluations": smbo.runhistory.finished,
                         "after_runtime": self.evaluator.accumulated_runtime,
@@ -208,12 +235,17 @@ class AbstractPriorCallback(Callback, ABC):
 
 class DynaBOAbstractPriorCallback(AbstractPriorCallback):
     def intervene(self, smbo: SMBO) -> bool:
-        return smbo.runhistory.finished >= self.initial_design_size and (smbo.runhistory.finished - self.initial_design_size) % self.prior_every_n_iterations == 0
+        # To use the surrogate, we need to sample one additional config here
+        return smbo.runhistory.finished >= self.initial_design_size + 1 and (smbo.runhistory.finished - self.initial_design_size - 1) % self.prior_every_n_iterations == 0
 
 
 class PiBOAbstractPriorCallback(AbstractPriorCallback):
     def intervene(self, smbo):
-        return smbo.runhistory.finished == self.initial_design_size and (smbo.runhistory.finished - self.initial_design_size) % self.prior_every_n_iterations == 0
+        # To use the surrogate, we need to sample one additional config here
+        return smbo.runhistory.finished == self.initial_design_size + 1 and (smbo.runhistory.finished - self.initial_design_size - 1) % self.prior_every_n_iterations == 0
+
+    def accept_prior(self, smbo, prior_configspace, origin_configspace):
+        return True, None, None
 
 
 class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback):

@@ -8,7 +8,9 @@ from ConfigSpace.hyperparameters import CategoricalHyperparameter, Constant, Nor
 def build_prior_configuration_space(configuration_space: ConfigurationSpace, prior: Dict[str, float], prior_std_denominator: float) -> ConfigurationSpace:
     configspace_name = configuration_space.name
 
+    random_state = configuration_space.random.get_state()
     new_configuration_space = ConfigurationSpace(name=f"{configspace_name}_prior")
+    new_configuration_space.random.set_state(random_state)
 
     for hyperparameter in configuration_space.values():
         if isinstance(hyperparameter, CategoricalHyperparameter):

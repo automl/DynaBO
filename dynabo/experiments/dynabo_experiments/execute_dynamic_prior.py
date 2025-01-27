@@ -66,6 +66,8 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     prior_every_n_trials = int(config["prior_every_n_trials"])
     prior_std_denominator = float(config["prior_std_denominator"])
     validate_prior = config["validate_prior"]
+    prior_p_value = float(config["prior_p_value"])
+    n_prior_validation_samples = int(config["n_prior_validation_samples"])
     prior_sampling_weight = config["prior_sampling_weight"]
 
     evaluator: YAHPOGymEvaluator = YAHPOGymEvaluator(
@@ -103,7 +105,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         PriorCallbackClass = DynaBOWellPerformingPriorCallback
     elif prior_kind == "medium":
         PriorCallbackClass = DynaBOMediumPriorCallback
-    elif prior_kind == "missleading":
+    elif prior_kind == "misleading":
         PriorCallbackClass = DynaBOMisleadingPriorCallback
     elif prior_kind == "deceiving":
         PriorCallbackClass = DynaBODeceivingPriorCallback
@@ -118,6 +120,8 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         prior_every_n_iterations=prior_every_n_trials,
         prior_std_denominator=prior_std_denominator,
         prior_sampling_weight=prior_sampling_weight,
+        n_prior_validation_samples=n_prior_validation_samples,
+        prior_p_value=prior_p_value,
         initial_design_size=initial_design._n_configs,
         result_processor=result_processor,
         evaluator=evaluator,
@@ -161,14 +165,16 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = False
+    fill = True
     if fill:
         experimenter.fill_table_from_combination(
             parameters={
                 "benchmarklib": ["yahpogym"],
-                "prior_kind": ["good", "medium", "missleading"],
+                "prior_kind": ["good", "medium", "misleading"],
                 "prior_every_n_trials": [50],
-                "validate_prior": [False],
+                "validate_prior": [True, False],
+                "n_prior_validation_samples": [500],
+                "prior_p_value": [0.05],
                 "prior_std_denominator": 5,
                 "prior_sampling_weight": [0.3],
                 "timeout_total": [86400],
@@ -177,6 +183,6 @@ if __name__ == "__main__":
                 "initial_design_size": [20],
                 "seed": range(30),
             },
-            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(),
+            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_datasets=False, medium_and_hard=True),
         )
-    experimenter.execute(run_experiment, max_experiments=1)
+    experimenter.execute(run_experiment, max_experiments=20, random_order=True)

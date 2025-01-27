@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table:
-      name: lcbench_dynabo
+      name: dynabo
       keyfields:
         benchmarklib:
           type: VARCHAR(255)
@@ -28,6 +28,12 @@ PY_EXPERIMENTER:
         validate_prior:
           type: BOOLEAN
           values: [False]
+        n_prior_validation_samples: 
+          type: INT
+          values: [500]
+        prior_p_value: 
+          type: FLOAT
+          values: [0.05]
         prior_std_denominator:
           type: FLOAT
           values: [5]
@@ -73,6 +79,8 @@ PY_EXPERIMENTER:
         prior_accepted: BOOLEAN
         no_superior_configuration: BOOLEAN
         performance: FLOAT
+        prior_mean_acq_value: FLOAT
+        origin_mean_acq_value: FLOAT
         configuration: TEXT
         after_n_evaluations: INT
         after_runtime: FLOAT
