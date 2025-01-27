@@ -19,4 +19,4 @@ ml Miniforge3
 source /pc2/users/i/intexml9/.bashrc
 conda activate DynaBO
 
-python dynabo/experiments/prior_experiments/execute_dynamic_prior.py
+python dynabo/experiments/dynabo_experiments/execute_dynamic_prior.py

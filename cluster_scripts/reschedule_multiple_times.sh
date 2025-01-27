@@ -7,48 +7,42 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 
-# Paths to the baseline and approach job scripts
-BASELINE_SCRIPT="cluster_scripts/baseline-alloc.sh"
-PRIOR_SCRIPT="cluster_scripts/prior-alloc.sh"
+DYNABO_RUN_SCRIPT="cluster_scripts/dynabo-alloc.sh"
+PIBO_RUN_SCRIPT="cluster_scripts/pibo_alloc.sh"
 
-# Target number of jobs to maintain
-TARGET_JOBS=300
+TOTAL_JOBS=3300
+N_PARALLEL_JOBS=300
 
-# Total number of jobs to submit for each type
-TOTAL_BASELINE_JOBS=1200
-TOTAL_PRIOR_JOBS=1200
-
-# Counters for submitted jobs
-SUBMITTED_BASELINE_JOBS=0
-SUBMITTED_PRIOR_JOBS=0
+# Initialize counters
+SUBMITTED_JOBS=0
 
 # Function to check if any jobs are scheduled or running
 jobs_scheduled_or_running() {
     local job_count
     job_count=$(squeue -u $USER | wc -l)
-    [ "$job_count" -gt 4 ]
+    [ "$job_count" -gt 2 ]
 }
 
 # Infinite loop to monitor and submit jobs
 while true; do
     # Check if jobs are currently scheduled or running
-    if (( SUBMITTED_BASELINE_JOBS >= TOTAL_BASELINE_JOBS && SUBMITTED_PRIOR_JOBS >= TOTAL_PRIOR_JOBS )); then
-        echo "All jobs submitted: $SUBMITTED_BASELINE_JOBS baseline jobs and $SUBMITTED_PRIOR_JOBS prior jobs."
+    if (( SUBMITTED_JOBS >= TOTAL_JOBS )); then
+        echo "$(date) - All jobs submitted. Exiting..."
         exit 0
     fi
 
     if jobs_scheduled_or_running; then
-        echo "Jobs are already scheduled or running. No jobs submitted."
+        echo "$(date) - Jobs are already scheduled or running. No jobs submitted."
     else
-        echo "No jobs currently scheduled or running. Submitting jobs..."
-        #sbatch $BASELINE_SCRIPT
-        SUBMITTED_BASELINE_JOBS=$(( SUBMITTED_BASELINE_JOBS + 150 ))
-        sbatch $PRIOR_SCRIPT
-        SUBMITTED_PRIOR_JOBS=$(( SUBMITTED_PRIOR_JOBS + 150 ))
+        echo "$(date) - No jobs currently scheduled or running. Submitting jobs..."
+        #sbatch $DYNABO_RUN_SCRIPT
+        sbatch $PIBO_RUN_SCRIPT
+        sbatch
+        SUBMITTED_JOBS=$(( SUBMITTED_JOBS + N_PARALLEL_JOBS ))
+        echo "$(date) - Submitted $N_PARALLEL_JOBS jobs. Total submitted: $SUBMITTED_JOBS."
     fi
 
     # Sleep for 2 minutes before the next check
-    echo "Pausing for 2 minutes..."
+    echo "$(date) - Pausing for 2 minutes..."
     sleep 120
-
 done

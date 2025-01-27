@@ -120,3 +120,4 @@ benchmark_data/prior_data
 logs
 dynabo/plots/*.csv
 dynabo/plots/lcbench/*.png
+dynamic_submission.err
