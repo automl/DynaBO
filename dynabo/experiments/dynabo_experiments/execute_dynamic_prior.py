@@ -185,4 +185,4 @@ if __name__ == "__main__":
             },
             fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_datasets=False, medium_and_hard=True),
         )
-    experimenter.execute(run_experiment, max_experiments=20, random_order=True)
+    experimenter.execute(run_experiment, max_experiments=1, random_order=True)
