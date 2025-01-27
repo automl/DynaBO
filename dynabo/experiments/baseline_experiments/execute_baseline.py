@@ -1,4 +1,3 @@
-import os
 import time
 
 from py_experimenter.experimenter import PyExperimenter
@@ -6,11 +5,10 @@ from py_experimenter.result_processor import ResultProcessor
 from smac import HyperparameterOptimizationFacade, Scenario
 from smac.acquisition.maximizer import LocalAndSortedRandomSearch
 from smac.runhistory import StatusType, TrialInfo, TrialValue
-from yahpo_gym import local_config
 
 from dynabo.smac_additions.dynamic_prior_callback import LogIncumbentCallback
-from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, get_yahpo_fixed_parameter_combinations
 from dynabo.utils.cluster_utils import intiialise_experiments
+from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, get_yahpo_fixed_parameter_combinations
 
 EXP_CONFIG_FILE_PATH = "dynabo/experiments/baseline_experiments/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
@@ -139,6 +137,6 @@ if __name__ == "__main__":
                 "initial_design_size": [20],
                 "seed": range(30),
             },
-            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(),
+            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_datasets=False, medium_and_hard=True),
         )
     experimenter.execute(run_experiment, max_experiments=1)

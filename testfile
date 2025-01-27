@@ -1,0 +1,28 @@
+Traceback (most recent call last):
+  File "/opt/anaconda3/envs/DynaBO/lib/python3.10/site-packages/py_experimenter/experimenter.py", line 433, in _execute_experiment
+    final_status = experiment_function(keyfield_values, result_processor, self.config.custom_configuration.custom_values)
+  File "/Users/lukasfehring/Desktop/DynaBO/dynabo/experiments/dynabo_experiments/execute_dynamic_prior.py", line 144, in run_experiment
+    ask_tell_opt(smac=smac, evaluator=evaluator, timeout=timeout, result_processor=result_processor)
+  File "/Users/lukasfehring/Desktop/DynaBO/dynabo/experiments/dynabo_experiments/execute_dynamic_prior.py", line 27, in ask_tell_opt
+    trial_info: TrialInfo = smac.ask()
+  File "/Users/lukasfehring/Desktop/DynaBO/lib/SMAC3/smac/facade/abstract_facade.py", line 281, in ask
+    return self._optimizer.ask()
+  File "/Users/lukasfehring/Desktop/DynaBO/lib/SMAC3/smac/main/smbo.py", line 160, in ask
+    trial_info = next(self._trial_generator)
+  File "/Users/lukasfehring/Desktop/DynaBO/lib/SMAC3/smac/intensifier/intensifier.py", line 226, in __iter__
+    config = next(self.config_generator)
+  File "/Users/lukasfehring/Desktop/DynaBO/lib/SMAC3/smac/main/config_selector.py", line 221, in __iter__
+    for config in challengers:
+  File "/Users/lukasfehring/Desktop/DynaBO/lib/SMAC3/smac/acquisition/maximizer/helpers.py", line 62, in __next__
+    self._challengers = self._challengers_callback()
+  File "/Users/lukasfehring/Desktop/DynaBO/lib/SMAC3/smac/acquisition/maximizer/abstract_acquisition_maximizer.py", line 105, in next_configs_by_acquisition_value
+    return [t[1] for t in self._maximize(previous_configs, n_points)]
+  File "/Users/lukasfehring/Desktop/DynaBO/dynabo/smac_additions/local_and_prior_search.py", line 101, in _maximize
+    next_configs_by_random_search_sorted = self._random_search._maximize(
+  File "/Users/lukasfehring/Desktop/DynaBO/dynabo/smac_additions/prior_random_search.py", line 82, in _maximize
+    configs += self._maximize_prior(n_samples, self._prior_configspace[i])
+  File "/Users/lukasfehring/Desktop/DynaBO/dynabo/smac_additions/prior_random_search.py", line 128, in _maximize_prior
+    return configspace.sample_configuration(size=n_points)
+  File "/Users/lukasfehring/Desktop/DynaBO/dynabo/smac_additions/prior_random_search.py", line 21, in sample_configuration
+    return self._configspace.sample_configuration(size=size)
+AttributeError: 'NoneType' object has no attribute 'sample_configuration'
