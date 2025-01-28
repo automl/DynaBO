@@ -136,7 +136,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         target_function=evaluator.train,
         acquisition_function=acquisition_function,
         acquisition_maximizer=local_and_prior_search,
-        conifg_selector=config_selector,
+        config_selector=config_selector,
         callbacks=[prior_callback, incumbent_callback],
         initial_design=initial_design,
         intensifier=intensifier,
@@ -187,4 +187,7 @@ if __name__ == "__main__":
             },
             fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_datasets=False, medium_and_hard=True),
         )
+    reset = False
+    if reset:
+        experimenter.reset_experiments("error", "running")
     experimenter.execute(run_experiment, max_experiments=1, random_order=True)
