@@ -4,6 +4,7 @@ from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
 from smac import HyperparameterOptimizationFacade, Scenario
 from smac.runhistory import StatusType, TrialInfo, TrialValue
+from smac.main.config_selector import ConfigSelector
 
 from dynabo.smac_additions.dynamic_prior_callback import (
     LogIncumbentCallback,
@@ -91,7 +92,13 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     local_and_prior_search = LocalAndPriorSearch(
         configspace=configuration_space,
         acquisition_function=acquisition_function,
-        max_steps=100,  # TODO wie viele local search steps sind reasonable?
+        max_steps=500,  # TODO wie viele local search steps sind reasonable?
+    )
+    config_selector = ConfigSelector(scenario=smac_scenario, retries=100)
+
+    intensifier = HyperparameterOptimizationFacade.get_intensifier(
+        scenario=smac_scenario,
+        max_config_calls=1,
     )
 
     intensifier = HyperparameterOptimizationFacade.get_intensifier(
@@ -131,6 +138,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         target_function=evaluator.train,
         acquisition_function=acquisition_function,
         acquisition_maximizer=local_and_prior_search,
+        config_selector=config_selector,
         callbacks=[prior_callback, incumbent_callback],
         initial_design=initial_design,
         intensifier=intensifier,
