@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table:
-      name: pibo_fix
+      name: pibo_unfiform
       keyfields:
         benchmarklib:
           type: VARCHAR(255)
