@@ -37,6 +37,9 @@ PY_EXPERIMENTER:
         prior_std_denominator:
           type: FLOAT
           values: [5]
+        exponential_prior:
+          type: BOOLEAN
+          values: [False]
         prior_sampling_weight:
           type: FLOAT
           values: [0.3]

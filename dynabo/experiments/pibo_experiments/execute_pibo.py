@@ -70,6 +70,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     validate_prior = config["validate_prior"]
     prior_p_value = float(config["prior_p_value"]) if config["prior_p_value"] is not None else None
     n_prior_validation_samples = int(config["n_prior_validation_samples"]) if config["n_prior_validation_samples"] is not None else None
+    exponential_prior = config["exponential_prior"]
     prior_sampling_weight = config["prior_sampling_weight"]
 
     evaluator: YAHPOGymEvaluator = YAHPOGymEvaluator(
@@ -133,6 +134,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         n_prior_validation_samples=n_prior_validation_samples,
         prior_p_value=prior_p_value,
         prior_std_denominator=prior_std_denominator,
+        exponential_prior=exponential_prior,
         prior_sampling_weight=prior_sampling_weight,
         initial_design_size=initial_design._n_configs,
         result_processor=result_processor,
@@ -191,6 +193,7 @@ if __name__ == "__main__":
                 "n_prior_validation_samples": [None],
                 "prior_p_value": [None],
                 "prior_std_denominator": 5,
+                "exponential_prior": [False],
                 "prior_sampling_weight": [0.3],
                 "timeout_total": [86400],
                 "timeout_internal": [1200],
