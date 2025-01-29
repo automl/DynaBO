@@ -60,7 +60,8 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     n_trials = int(config["n_trials"])
 
     # Initial Design values
-    initial_design_size = int(config["initial_design_size"])
+    n_configs_per_hyperparameter = int(config["n_configs_per_hyperparameter"])
+    max_ratio = float(config["max_ratio"])
 
     # Prior Values
     prior_kind = config["prior_kind"]
@@ -69,6 +70,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     validate_prior = config["validate_prior"]
     prior_p_value = float(config["prior_p_value"]) if config["prior_p_value"] is not None else None
     n_prior_validation_samples = int(config["n_prior_validation_samples"]) if config["n_prior_validation_samples"] is not None else None
+    exponential_prior = config["exponential_prior"]
     prior_sampling_weight = config["prior_sampling_weight"]
 
     evaluator: YAHPOGymEvaluator = YAHPOGymEvaluator(
@@ -81,8 +83,12 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
     configuration_space = evaluator.benchmark.get_opt_space(drop_fidelity_params=True)
 
-    start_time = time.time()
     smac_scenario = Scenario(configspace=configuration_space, deterministic=True, seed=seed, n_trials=n_trials)
+
+    initial_design_size = n_configs_per_hyperparameter * len(configuration_space)
+    max_initial_design_size = int(max(1, min(initial_design_size, (max_ratio * smac_scenario.n_trials))))
+    if initial_design_size != max_initial_design_size:
+        initial_design_size = max_initial_design_size
 
     initial_design = HyperparameterOptimizationFacade.get_initial_design(scenario=smac_scenario, n_configs=initial_design_size)
 
@@ -128,6 +134,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         n_prior_validation_samples=n_prior_validation_samples,
         prior_p_value=prior_p_value,
         prior_std_denominator=prior_std_denominator,
+        exponential_prior=exponential_prior,
         prior_sampling_weight=prior_sampling_weight,
         initial_design_size=initial_design._n_configs,
         result_processor=result_processor,
@@ -149,10 +156,12 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         overwrite=True,
     )
 
+    start_time = time.time()
     ask_tell_opt(smac=smac, evaluator=evaluator, timeout=timeout, result_processor=result_processor)
     end_time = time.time()
 
     result = {
+        "initial_design_size": initial_design_size,
         "final_performance": (-1) * evaluator.incumbent_cost,
         "runtime": round(end_time - start_time, 3),
         "virtual_runtime": round(evaluator.accumulated_runtime + evaluator.reasoning_runtime, 3),
@@ -184,11 +193,13 @@ if __name__ == "__main__":
                 "n_prior_validation_samples": [None],
                 "prior_p_value": [None],
                 "prior_std_denominator": 5,
+                "exponential_prior": [False],
                 "prior_sampling_weight": [0.3],
                 "timeout_total": [86400],
                 "timeout_internal": [1200],
                 "n_trials": [200],
-                "initial_design_size": [20],
+                "n_configs_per_hyperparameter": [10],
+                "max_ratio": [0.25],
                 "seed": range(30),
             },
             fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_datasets=False, medium_and_hard=True),

@@ -51,6 +51,7 @@ class AbstractPriorCallback(Callback, ABC):
         base_path: str,
         prior_every_n_iterations: int,
         prior_std_denominator: float,
+        exponential_prior: bool,
         prior_sampling_weight: float,
         initial_design_size: int,
         validate_prior: bool,
@@ -66,6 +67,7 @@ class AbstractPriorCallback(Callback, ABC):
         self.base_path = base_path
         self.prior_every_n_iterations = prior_every_n_iterations
         self.prior_std_denominator = prior_std_denominator
+        self.exponential_prior = exponential_prior
         self.prior_sampling_weight = prior_sampling_weight
         self.initial_design_size = initial_design_size
         self.validate_prior = validate_prior
@@ -220,17 +222,20 @@ class AbstractPriorCallback(Callback, ABC):
                 }
             )
 
-    def draw_exponential_sample(self, df: pd.DataFrame, rng) -> np.ndarray:
+    def draw_sample(self, df: pd.DataFrame, rng) -> np.ndarray:
         """
         Draws an exponential sample from the data. Samples with smaller indices are more likely to be drawn.
         """
         if df.shape[0] == 0:
             return None
 
-        weights = np.exp(-self.prior_sampling_weight * df.index).values
-        weights_normalized = weights / weights.sum()  # Normalize weights
+        if self.exponential_prior:
+            weights = np.exp(-self.prior_sampling_weight * df.index).values
+            weights_normalized = weights / weights.sum()  # Normalize weights
 
-        sample = df.sample(weights=weights_normalized, random_state=rng)
+            sample = df.sample(weights=weights_normalized, random_state=rng)
+        else:
+            sample = df.sample(random_state=rng)
         return sample
 
 
@@ -255,7 +260,7 @@ class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback):
         better_performing_configs = self.prior_data[self.prior_data["score"] > incumbent_performance]
         better_performing_configs = better_performing_configs.sort_values("score")
 
-        return self.draw_exponential_sample(better_performing_configs, smbo.intensifier._rng)
+        return self.draw_sample(better_performing_configs, smbo.intensifier._rng)
 
 
 class PiBOWellPerformingPriorCallback(PiBOAbstractPriorCallback):
@@ -265,7 +270,7 @@ class PiBOWellPerformingPriorCallback(PiBOAbstractPriorCallback):
         better_performing_configs = self.prior_data[self.prior_data["score"] > incumbent_performance]
         better_performing_configs = better_performing_configs.sort_values("score")
 
-        return self.draw_exponential_sample(better_performing_configs, smbo.intensifier._rng)
+        return self.draw_sample(better_performing_configs, smbo.intensifier._rng)
 
 
 class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback):
@@ -278,7 +283,7 @@ class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback):
             better_performing_configs = self.prior_data[self.prior_data["score"] < incumbent_performance]
             better_performing_configs = better_performing_configs.sort_values("score", ascending=False)
 
-        return self.draw_exponential_sample(better_performing_configs, smbo.intensifier._rng)
+        return self.draw_sample(better_performing_configs, smbo.intensifier._rng)
 
 
 class PiBOMediumPriorCallback(PiBOAbstractPriorCallback):
@@ -292,7 +297,7 @@ class PiBOMediumPriorCallback(PiBOAbstractPriorCallback):
             better_performing_configs = self.prior_data[self.prior_data["score"] < incumbent_performance]
             better_performing_configs = better_performing_configs.sort_values("score", ascending=False)
 
-        return self.draw_exponential_sample(better_performing_configs, smbo.intensifier._rng)
+        return self.draw_sample(better_performing_configs, smbo.intensifier._rng)
 
 
 class DynaBOMisleadingPriorCallback(DynaBOAbstractPriorCallback):
@@ -302,7 +307,7 @@ class DynaBOMisleadingPriorCallback(DynaBOAbstractPriorCallback):
         worse_performing_configs = worse_performing_configs.sort_values("score", ascending=False)
 
         # Sample from the considered configurations
-        return self.draw_exponential_sample(worse_performing_configs, smbo.intensifier._rng)
+        return self.draw_sample(worse_performing_configs, smbo.intensifier._rng)
 
 
 class PiBOMisleadingPriorCallback(PiBOAbstractPriorCallback):
@@ -312,7 +317,7 @@ class PiBOMisleadingPriorCallback(PiBOAbstractPriorCallback):
         worse_performing_configs = worse_performing_configs.sort_values("score", ascending=False)
 
         # Sample from the considered configurations
-        return self.draw_exponential_sample(worse_performing_configs, smbo.intensifier._rng)
+        return self.draw_sample(worse_performing_configs, smbo.intensifier._rng)
 
 
 class DynaBODeceivingPriorCallback(DynaBOAbstractPriorCallback):

@@ -119,5 +119,7 @@ benchmark_data/prior_data
 # logs
 logs
 dynabo/plots/*.csv
-dynabo/plots/lcbench/*.png
 dynamic_submission.err
+dynabo/plots/*/*.png
+dynabo/plots/scenario_plots/*
+*.zip

@@ -100,12 +100,16 @@ def plot_run(
     return ax
 
 
+def quantile_ci(data):
+    return np.percentile(data, [2.5, 97.5])
+
+
 def plot_run_seaborn(
     baseline_data: pd.DataFrame,
     dynabo_incumbent_data: pd.DataFrame,
-    dynabo_prior_data,
+    dynabo_prior_data: pd.DataFrame,
     pibo_incumbent_data: pd.DataFrame,
-    pibo_prior_data,
+    pibo_prior_data: pd.DataFrame,
     scenario: str,
     dataset: str,
     prior_kind: str,
@@ -114,21 +118,58 @@ def plot_run_seaborn(
     min_ntrials=1,
     max_ntrials=200,
 ):
+    # Select relevant data
     relevant_baseline, relevant_dynabo_incumbents, relevant_dynabo_priors, relevant_pibo_incumbents, relevant_pibo_priors = select_relevant_data(
         baseline_data, dynabo_incumbent_data, dynabo_prior_data, pibo_incumbent_data, pibo_prior_data, scenario, dataset, prior_kind, use_rejection
     )
+
     full_range = pd.DataFrame({"after_n_evaluations": range(min_ntrials, max_ntrials + 1)})
-    for df in [relevant_baseline, relevant_dynabo_incumbents, relevant_dynabo_priors, relevant_pibo_incumbents, relevant_pibo_priors]:
-        df = full_range.merge(df, on="after_n_evaluations", how="left")  # Ensure all trials exist
-        df.sort_values("after_n_evaluations", inplace=True)  # Keep order
 
-    for df in [relevant_baseline, relevant_dynabo_incumbents, relevant_dynabo_priors, relevant_pibo_incumbents, relevant_pibo_priors]:
-        df.sort_values(["scenario", "dataset", "seed", "after_n_evaluations"], inplace=True)  # Ensure ordering
-        df["performance"] = df.groupby(["scenario", "dataset", "seed"])["performance"].ffill()  # Forward fill within groups
+    df_dict = {
+        "baseline": relevant_baseline,
+        "dynabo_incumbents": relevant_dynabo_incumbents,
+        "pibo_incumbents": relevant_pibo_incumbents,
+    }
 
-    sns.lineplot(x="after_n_evaluations", y="performance", drawstyle="steps-pre", data=relevant_baseline, label="baseline", ax=ax)
-    sns.lineplot(x="after_n_evaluations", y="performance", drawstyle="steps-pre", data=relevant_dynabo_incumbents, label="dynabo", ax=ax)
-    sns.lineplot(x="after_n_evaluations", y="performance", drawstyle="steps-pre", data=relevant_pibo_incumbents, label="pibo", ax=ax)
+    # Step 1: Iterate over all DataFrames
+    for key in df_dict.keys():
+        df = df_dict[key]
+        local = list()
+        # Ensure sorting
+        df.sort_values(["scenario", "dataset", "seed", "after_n_evaluations"], inplace=True)
+        # Step 2: Iterate over each scenario
+        for scenario in df["scenario"].unique():
+            scenario_mask = df["scenario"] == scenario
+            scenario_df = df[scenario_mask]
+
+            # Step 3: Iterate over each dataset in the current scenario
+            for dataset in scenario_df["dataset"].unique():
+                dataset_mask = scenario_mask & (df["dataset"] == dataset)
+                dataset_df = df[dataset_mask]
+
+                # Step 4: Iterate over each seed in the current dataset
+                for seed in dataset_df["seed"].unique():
+                    seed_mask = dataset_mask & (df["seed"] == seed)
+
+                    # Merge the full range with the current group to ensure all `after_n_evaluations` are included
+                    merged_df = full_range.merge(df.loc[seed_mask], on="after_n_evaluations", how="left")
+
+                    merged_df["performance"] = merged_df["performance"].ffill()
+                    merged_df_final = pd.DataFrame(columns=["scenario", "dataset", "seed", "after_n_evaluations", "performance"])
+                    merged_df_final["after_n_evaluations"] = merged_df["after_n_evaluations"]
+                    merged_df_final["performance"] = merged_df["performance"]
+                    merged_df_final["scenario"] = scenario
+                    merged_df_final["dataset"] = dataset
+                    merged_df_final["seed"] = seed
+
+                    local.append(merged_df_final)
+
+        # Concatenate the local list to a DataFrame
+        df_dict[key] = pd.concat(local)
+
+    sns.lineplot(x="after_n_evaluations", y="performance", drawstyle="steps-pre", data=df_dict["baseline"], label="baseline", ax=ax, errorbar=quantile_ci)
+    sns.lineplot(x="after_n_evaluations", y="performance", drawstyle="steps-pre", data=df_dict["dynabo_incumbents"], label="dynabo", ax=ax, errorbar=quantile_ci)
+    sns.lineplot(x="after_n_evaluations", y="performance", drawstyle="steps-pre", data=df_dict["pibo_incumbents"], label="pibo", ax=ax, errorbar=quantile_ci)
     return ax
 
 
@@ -268,9 +309,7 @@ if __name__ == "__main__":
     pibo_prior_df = pibo_prior_df.merge(gt_data, on=["scenario", "dataset"], suffixes=("", "_gt"))
     pibo_prior_df["performance"] = pibo_prior_df["final_performance_gt"] - pibo_prior_df["performance"]
 
-    for scenario in [
-        "rbv2_xgboost",
-    ]:
+    for scenario in baseline_df["scenario"].unique():
         scenario_df = baseline_df[baseline_df["scenario"] == scenario]
         os.makedirs(f"dynabo/plots/scenario_plots/{scenario}", exist_ok=True)
         fig, axs = plt.subplots(2, 3, figsize=(30, 20))
@@ -280,7 +319,9 @@ if __name__ == "__main__":
             for prior_kind in ["good", "medium", "misleading"]:
                 ax = axs[plot_number]
                 try:
-                    ax = plot_run(baseline_df, dynabo_df_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, scenario, None, prior_kind, use_rejection, ax, min_ntrials=1, max_ntrials=200)
+                    ax = plot_run_seaborn(
+                        baseline_df, dynabo_df_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, scenario, None, prior_kind, use_rejection, ax, min_ntrials=1, max_ntrials=200
+                    )
                 except Exception:
                     pass
                 plot_number += 1
@@ -289,12 +330,13 @@ if __name__ == "__main__":
             fig.suptitle(f"{scenario}")
 
         plt.savefig(
-            f"dynabo/plots/scenario_plots/{scenario}/{scenario}.png",
+            f"dynabo/plots/scenario_plots/{scenario}/{scenario}_sns.png",
             bbox_inches="tight",
         )
         plt.close()
-        break
     # TODO Add average regret by scenario and overall
     # TODO add experiments with intial design
+
+# %%
 
 # %%

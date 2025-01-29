@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table:
-      name: dynabo
+      name: dynabo_uniform
       keyfields:
         benchmarklib:
           type: VARCHAR(255)
@@ -37,6 +37,9 @@ PY_EXPERIMENTER:
         prior_std_denominator:
           type: FLOAT
           values: [5]
+        exponential_prior:
+          type: BOOLEAN
+          values: [False]
         prior_sampling_weight:
           type: FLOAT
           values: [0.3]
@@ -49,9 +52,12 @@ PY_EXPERIMENTER:
         n_trials:
           type: INT
           values: [200]
-        initial_design_size:
+        n_configs_per_hyperparameter:
           type: INT
-          values: [20]
+          values: [10]
+        max_ratio:
+          type: FLOAT
+          values: [0.25]
         seed:
           type: INT
           values:
@@ -60,6 +66,7 @@ PY_EXPERIMENTER:
             step: 1
       result_timestamps: False
       resultfields:
+        initial_design_size: INT
         final_performance: FLOAT
         runtime: FLOAT
         virtual_runtime: FLOAT 
