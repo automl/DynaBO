@@ -3,8 +3,9 @@ import time
 from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
 from smac import HyperparameterOptimizationFacade, Scenario
-from smac.runhistory import StatusType, TrialInfo, TrialValue
 from smac.main.config_selector import ConfigSelector
+from smac.runhistory import StatusType, TrialInfo, TrialValue
+
 from dynabo.smac_additions.dynamic_prior_callback import (
     DynaBODeceivingPriorCallback,
     DynaBOMediumPriorCallback,
@@ -59,7 +60,8 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     n_trials = int(config["n_trials"])
 
     # Initial Design values
-    initial_design_size = int(config["initial_design_size"])
+    n_configs_per_hyperparameter = int(config["n_configs_per_hyperparameter"])
+    max_ratio = float(config["max_ratio"])
 
     # Prior Values
     prior_kind = config["prior_kind"]
@@ -80,8 +82,12 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
     configuration_space = evaluator.benchmark.get_opt_space(drop_fidelity_params=True)
 
-    start_time = time.time()
     smac_scenario = Scenario(configspace=configuration_space, deterministic=True, seed=seed, n_trials=n_trials)
+
+    initial_design_size = n_configs_per_hyperparameter * len(configuration_space)
+    max_initial_design_size = int(max(1, min(initial_design_size, (max_ratio * smac_scenario.n_trials))))
+    if initial_design_size != max_initial_design_size:
+        initial_design_size = max_initial_design_size
 
     initial_design = HyperparameterOptimizationFacade.get_initial_design(scenario=smac_scenario, n_configs=initial_design_size)
 
@@ -136,17 +142,19 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         target_function=evaluator.train,
         acquisition_function=acquisition_function,
         acquisition_maximizer=local_and_prior_search,
-        conifg_selector=config_selector,
+        config_selector=config_selector,
         callbacks=[prior_callback, incumbent_callback],
         initial_design=initial_design,
         intensifier=intensifier,
         overwrite=True,
     )
 
+    start_time = time.time()
     ask_tell_opt(smac=smac, evaluator=evaluator, timeout=timeout, result_processor=result_processor)
     end_time = time.time()
 
     result = {
+        "initial_design_size": initial_design_size,
         "final_performance": (-1) * evaluator.incumbent_cost,
         "runtime": round(end_time - start_time, 3),
         "virtual_runtime": round(evaluator.accumulated_runtime + evaluator.reasoning_runtime, 3),
@@ -167,7 +175,7 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = False
+    fill = True
     if fill:
         experimenter.fill_table_from_combination(
             parameters={
@@ -182,7 +190,8 @@ if __name__ == "__main__":
                 "timeout_total": [86400],
                 "timeout_internal": [1200],
                 "n_trials": [200],
-                "initial_design_size": [20],
+                "n_configs_per_hyperparameter": [10],
+                "max_ratio": [0.25],
                 "seed": range(30),
             },
             fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_datasets=False, medium_and_hard=True),
