@@ -1,4 +1,5 @@
 # %%
+import os
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -45,12 +46,13 @@ def plot_run(
     scenario: str,
     dataset: str,
     prior_kind: str,
+    use_rejection: bool,
     ax: plt.Axes,
     min_ntrials=1,
     max_ntrials=200,
 ):
     relevant_baseline, relevant_dynabo_incumbents, relevant_dynabo_priors, relevant_pibo_incumbents, relevant_pibo_priors = select_relevant_data(
-        baseline_data, dynabo_incumbent_data, dynabo_prior_data, pibo_incumbent_data, pibo_prior_data, scenario, dataset, prior_kind
+        baseline_data, dynabo_incumbent_data, dynabo_prior_data, pibo_incumbent_data, pibo_prior_data, scenario, dataset, prior_kind, use_rejection
     )
     plot_baseline_incumbents_df = fill_df(relevant_baseline, min_ntrials)
     plot_dynabo_incubments_df = fill_df(relevant_dynabo_incumbents, min_ntrials)
@@ -166,15 +168,33 @@ def find_last(df: pd.DataFrame, experiment_id: int, column: str, current: int):
 
 
 def select_relevant_data(
-    baseline_data: pd.DataFrame, dynabo_incumbent_data: pd.DataFrame, dynabo_prior_data, pibo_incumbent_data: pd.DataFrame, pibo_prior_data: pd.DataFrame, scenario: str, dataset: str, prior_kind
+    baseline_data: pd.DataFrame,
+    dynabo_incumbent_data: pd.DataFrame,
+    dynabo_prior_data,
+    pibo_incumbent_data: pd.DataFrame,
+    pibo_prior_data: pd.DataFrame,
+    scenario: str,
+    dataset: str,
+    prior_kind: str,
+    use_rejection: bool,
 ):
     relevant_baseline = baseline_data[(baseline_data["scenario"] == scenario) & (baseline_data["dataset"] == dataset)]
     relevant_dynabo_incumbents = dynabo_incumbent_data[
-        (dynabo_incumbent_data["scenario"] == scenario) & (dynabo_incumbent_data["dataset"] == dataset) & (dynabo_incumbent_data["prior_kind"] == prior_kind)
+        (dynabo_incumbent_data["scenario"] == scenario)
+        & (dynabo_incumbent_data["dataset"] == dataset)
+        & (dynabo_incumbent_data["prior_kind"] == prior_kind)
+        & (dynabo_incumbent_data["validate_prior"] == use_rejection)
     ]
-    relevant_dynabo_prior = dynabo_prior_data[(dynabo_prior_data["scenario"] == scenario) & (dynabo_prior_data["dataset"] == dataset) & (dynabo_prior_data["prior_kind"] == prior_kind)]
+    relevant_dynabo_prior = dynabo_prior_data[
+        (dynabo_prior_data["scenario"] == scenario)
+        & (dynabo_prior_data["dataset"] == dataset)
+        & (dynabo_prior_data["prior_kind"] == prior_kind)
+        & (dynabo_prior_data["validate_prior"] == use_rejection)
+    ]
     relevant_pibo_incumbents = pibo_incumbent_data[(pibo_incumbent_data["scenario"] == scenario) & (pibo_incumbent_data["dataset"] == dataset) & (pibo_incumbent_data["prior_kind"] == prior_kind)]
-    relevant_pibo_prior = pibo_prior_data[(pibo_prior_data["scenario"] == scenario) & (pibo_prior_data["dataset"] == dataset) & (pibo_prior_data["prior_kind"] == prior_kind)]
+    relevant_pibo_prior = pibo_prior_data[
+        (pibo_prior_data["scenario"] == scenario) & (pibo_prior_data["dataset"] == dataset) & (pibo_prior_data["prior_kind"] == prior_kind) & (pibo_prior_data["validate_prior"] == use_rejection)
+    ]
     return relevant_baseline, relevant_dynabo_incumbents, relevant_dynabo_prior, relevant_pibo_incumbents, relevant_pibo_prior
 
 
@@ -183,21 +203,29 @@ if __name__ == "__main__":
     dynabo_df_incumbent_df, dynabo_prior_df = merge_df(dynabo_table, dynabo_incumbent, dynabo_priors)
     pibo_incumbent_df, pibo_prior_df = merge_df(pibo_table, pibo_incumbent, pibo_priors)
 
-    baseline_df
+    for scenario in baseline_df["scenario"].unique():
+        scenario_df = baseline_df[baseline_df["scenario"] == scenario]
+        os.makedirs(f"dynabo/plots/{scenario}", exist_ok=True)
+        for dataset in scenario_df["dataset"].unique():
+            fig, axs = plt.subplots(2, 3, figsize=(30, 20))
+            axs = axs.flatten()
+            plot_number = 0
+            for use_rejection in [True, False]:
+                for prior_kind in ["good", "medium", "misleading"]:
+                    ax = axs[plot_number]
+                    try:
+                        ax = plot_run(
+                            baseline_df, dynabo_df_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, scenario, dataset, prior_kind, use_rejection, ax, min_ntrials=1, max_ntrials=200
+                        )
+                    except Exception:
+                        pass
+                    plot_number += 1
+                    ax.legend()
+                    ax.set_title(f"{prior_kind}")
+                fig.suptitle(f"{dataset}")
 
-    for dataset in baseline_df["dataset"].unique():
-        fig, axs = plt.subplots(1, 3, figsize=(30, 10))
-        axs = axs.flatten()
-        for ax, prior_kind in zip(axs, ["good", "medium", "misleading"]):
-            try:
-                ax = plot_run(baseline_df, dynabo_df_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, "lcbench", dataset, prior_kind, ax, min_ntrials=1, max_ntrials=200)
-            except Exception:
-                pass
-            ax.legend()
-            ax.set_title(f"{prior_kind}")
-        fig.suptitle(f"{dataset}")
-        plt.savefig(
-            f"dynabo/plots//lcbench/{dataset}.png",
-            bbox_inches="tight",
-        )
-        plt.close()
+            plt.savefig(
+                f"dynabo/plots/{scenario}/{dataset}.png",
+                bbox_inches="tight",
+            )
+            plt.close()
