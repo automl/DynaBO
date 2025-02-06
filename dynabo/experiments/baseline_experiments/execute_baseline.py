@@ -16,7 +16,7 @@ DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
 
 def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: YAHPOGymEvaluator, result_processor: ResultProcessor, timeout: int):
-    while (evaluator.accumulated_runtime + evaluator.reasoning_runtime) < timeout and smac.runhistory.finished < smac.scenario.n_trials:
+    while smac.runhistory.finished < smac.scenario.n_trials:
         start_ask = time.time()
         trial_info: TrialInfo = smac.ask()
         end_ask = time.time()

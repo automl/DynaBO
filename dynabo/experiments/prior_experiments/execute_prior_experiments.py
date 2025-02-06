@@ -209,7 +209,7 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = True
+    fill = False
     if fill:
         experimenter.fill_table_from_combination(
             parameters={
@@ -220,7 +220,6 @@ if __name__ == "__main__":
                 "n_prior_validation_samples": [500],
                 "prior_validation_p_value": [0.05],
                 "prior_std_denominator": 5,
-                "prior_decay_enumerator": [50],
                 "prior_decay_denominator": [10],
                 "exponential_prior": [False],
                 "prior_sampling_weight": [0.3],
@@ -229,8 +228,11 @@ if __name__ == "__main__":
                 "n_trials": [200],
                 "n_configs_per_hyperparameter": [10],
                 "max_ratio": [0.25],
-                "seed": range(1, 10),
+                "seed": range(10),
             },
             fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard_datasets=True),
         )
+    reset = False
+    if reset:
+        experimenter.reset_experiments("running", "error")
     # experimenter.execute(run_experiment, max_experiments=2, random_order=True)

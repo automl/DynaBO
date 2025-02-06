@@ -9,6 +9,9 @@ from yahpo_gym import benchmark_set
 def get_yahpo_fixed_parameter_combinations(
     with_all_datasets: bool = True,
     medium_and_hard_datasets: bool = False,
+    pibo: bool = False,
+    dynabo: bool = False,
+    baseline: bool = False,
 ):
     jobs = []
 
@@ -33,7 +36,16 @@ def get_yahpo_fixed_parameter_combinations(
         else:
             metric = "unknown"
 
-        job = [{"pibo": False, "dynabo": True}, {"pibo": True, "dynabo": False}]
+        # asset pibo, baseliiine or dynabo is set
+        assert pibo or dynabo or baseline
+        job = []
+
+        if baseline:
+            job += [{"pibo": False, "dynabo": False, "prior_decay_enumerator": 50}]
+        elif pibo:
+            job += [{"pibo": True, "dynabo": False, "prior_decay_enumerator": 50}]
+        elif dynabo:
+            job += [{"pibo": False, "dynabo": True, "prior_decay_enumerator": 50}]
 
         if with_all_datasets:
             # create ablation and ds_tunability jobs

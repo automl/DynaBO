@@ -123,4 +123,12 @@ dynamic_submission.err
 dynabo/plots/*/*.png
 dynabo/plots/scenario_plots/*
 *.zip
-dynabo/plots/regret/*/*.png
+
+# add to gitignore except gitkeep
+plots/dataset_plots/*
+!plots/dataset_plots/.gitkeep
+
+plots/scenario_plots/*
+!plots/scenario_plots/.gitkeep
+plotting_data/*
+!plotting_data/.gitkeep
