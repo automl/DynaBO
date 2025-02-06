@@ -1,6 +1,5 @@
 # %%
 import ast
-import os
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -170,6 +169,7 @@ def plot_run_seaborn(
     sns.lineplot(x="after_n_evaluations", y="performance", drawstyle="steps-pre", data=df_dict["baseline"], label="baseline", ax=ax, errorbar=quantile_ci)
     sns.lineplot(x="after_n_evaluations", y="performance", drawstyle="steps-pre", data=df_dict["dynabo_incumbents"], label="dynabo", ax=ax, errorbar=quantile_ci)
     sns.lineplot(x="after_n_evaluations", y="performance", drawstyle="steps-pre", data=df_dict["pibo_incumbents"], label="pibo", ax=ax, errorbar=quantile_ci)
+    ax.set_ylabel("Regret")
     return ax
 
 
@@ -309,33 +309,52 @@ if __name__ == "__main__":
     pibo_prior_df = pibo_prior_df.merge(gt_data, on=["scenario", "dataset"], suffixes=("", "_gt"))
     pibo_prior_df["performance"] = pibo_prior_df["final_performance_gt"] - pibo_prior_df["performance"]
 
-    for scenario in baseline_df["scenario"].unique():
-        scenario_df = baseline_df[baseline_df["scenario"] == scenario]
-        os.makedirs(f"dynabo/plots/scenario_plots/{scenario}", exist_ok=True)
-        fig, axs = plt.subplots(2, 3, figsize=(30, 20))
-        axs = axs.flatten()
-        plot_number = 0
-        for use_rejection in [True, False]:
-            for prior_kind in ["good", "medium", "misleading"]:
-                ax = axs[plot_number]
-                try:
-                    ax = plot_run_seaborn(
-                        baseline_df, dynabo_df_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, scenario, None, prior_kind, use_rejection, ax, min_ntrials=1, max_ntrials=200
-                    )
-                except Exception:
-                    pass
-                plot_number += 1
-                ax.legend()
-                ax.set_title(f"{prior_kind}")
-            fig.suptitle(f"{scenario}")
+    # for scenario in baseline_df["scenario"].unique():
+    #    scenario_df = baseline_df[baseline_df["scenario"] == scenario]
+    #    for dataset in scenario_df["dataset"].unique():
+    #        scenario_df = baseline_df[baseline_df["scenario"] == scenario]
+    #        os.makedirs(f"dynabo/plots/regret/{scenario}", exist_ok=True)
+    #        fig, axs = plt.subplots(2, 3, figsize=(30, 20))
+    #        axs = axs.flatten()
+    #        plot_number = 0
+    #        for use_rejection in [True, False]:
+    #            for prior_kind in ["good", "medium", "misleading"]:
+    #                ax = axs[plot_number]
+    #                try:
+    #                    ax = plot_run_seaborn(
+    #                        baseline_df, dynabo_df_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, scenario, dataset, prior_kind, use_rejection, ax, min_ntrials=1, max_ntrials=200
+    #                    )
+    #                except Exception:
+    #                    pass
+    #                plot_number += 1
+    #                ax.legend()
+    #                ax.set_title(f"{prior_kind}")
+    #            fig.suptitle(f"{scenario}")
+    #
+    #        plt.savefig(
+    #            f"dynabo/plots/regret/{scenario}/{dataset}.png",
+    #            bbox_inches="tight",
+    #        )
+    #        plt.close()
+    #        print(f"Saved {scenario}/{dataset}.png")
 
-        plt.savefig(
-            f"dynabo/plots/scenario_plots/{scenario}/{scenario}_sns.png",
-            bbox_inches="tight",
-        )
-        plt.close()
-    # TODO Add average regret by scenario and overall
-    # TODO add experiments with intial design
+    scenario = "rbv2_ranger"
+    dataset = 41216
+    prior_kind = "good"
+    use_rejection = False
+
+    fig, ax = plt.subplots(1, 1, figsize=(15, 5))
+    ax = plot_run_seaborn(baseline_df, dynabo_df_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, scenario, dataset, prior_kind, use_rejection, ax, min_ntrials=1, max_ntrials=200)
+    # SEt GRid
+    sns.set_style("whitegrid")
+    # set apppropriate text sizes
+    ax.set_title("Example Results", fontsize=20, fontweight="bold")
+    ax.legend(fontsize=15)
+    plt.xticks(fontsize=15)
+    plt.yticks(fontsize=15)
+    plt.xlabel("Number of Trials", fontsize=15)
+    plt.ylabel("Regret", fontsize=15)
+    plt.savefig("example.png", bbox_inches="tight")
 
 # %%
 

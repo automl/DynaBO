@@ -49,14 +49,16 @@ class AbstractPriorCallback(Callback, ABC):
         dataset: str,
         metric: str,
         base_path: str,
-        prior_every_n_iterations: int,
-        prior_std_denominator: float,
-        exponential_prior: bool,
-        prior_sampling_weight: float,
         initial_design_size: int,
+        prior_every_n_trials: int,
         validate_prior: bool,
         n_prior_validation_samples,
-        prior_p_value: float,
+        prior_validation_p_value: float,
+        prior_std_denominator: float,
+        prior_decay_enumerator: int,
+        prior_decay_denominator: int,
+        exponential_prior: bool,
+        prior_sampling_weight: float,
         result_processor: ResultProcessor = None,
         evaluator: YAHPOGymEvaluator = None,
     ):
@@ -65,12 +67,17 @@ class AbstractPriorCallback(Callback, ABC):
         self.dataset = dataset
         self.metric = metric
         self.base_path = base_path
-        self.prior_every_n_iterations = prior_every_n_iterations
+        self.initial_design_size = initial_design_size
+        self.prior_every_n_trials = prior_every_n_trials
+        self.validate_prior = validate_prior
+        self.prior_validation_p_value = prior_validation_p_value
+        self.n_prior_validation_samples = n_prior_validation_samples
         self.prior_std_denominator = prior_std_denominator
+        self.prior_decay_enumerator = prior_decay_enumerator
+        self.prior_decay_denominator = prior_decay_denominator
+
         self.exponential_prior = exponential_prior
         self.prior_sampling_weight = prior_sampling_weight
-        self.initial_design_size = initial_design_size
-        self.validate_prior = validate_prior
 
         self.result_processor = result_processor
         self.evaluator = evaluator
@@ -79,8 +86,6 @@ class AbstractPriorCallback(Callback, ABC):
 
         if self.validate_prior:
             self.lcb = LCB()
-        self.n_prior_validation_samples = n_prior_validation_samples
-        self.prior_p_value = prior_p_value
 
         self.prior_data_path = self.get_prior_data_path(base_path, scenario, dataset, metric)
         self.prior_data = self.get_prior_data()
@@ -140,7 +145,7 @@ class AbstractPriorCallback(Callback, ABC):
                 alternative="less",
             )
 
-            if result.pvalue < self.prior_p_value:
+            if result.pvalue < self.prior_validation_p_value:
                 return False, lcb_prior_values.mean(), lcb_incumbent_values.mean()
             else:
                 return True, lcb_prior_values.mean(), lcb_incumbent_values.mean()
@@ -180,7 +185,7 @@ class AbstractPriorCallback(Callback, ABC):
         smbo.intensifier.config_selector._acquisition_function.dynamic_init(
             acquisition_function=smbo.intensifier.config_selector._acquisition_function._acquisition_function,
             prior_configspace=prior_configspace,
-            decay_beta=smbo._scenario.n_trials / 10,
+            decay_beta=self.prior_decay_enumerator / self.prior_decay_denominator,
             prior_start=smbo.runhistory.finished,
         )
 
@@ -242,13 +247,13 @@ class AbstractPriorCallback(Callback, ABC):
 class DynaBOAbstractPriorCallback(AbstractPriorCallback):
     def intervene(self, smbo: SMBO) -> bool:
         # To use the surrogate, we need to sample one additional config here
-        return smbo.runhistory.finished >= self.initial_design_size + 1 and (smbo.runhistory.finished - self.initial_design_size - 1) % self.prior_every_n_iterations == 0
+        return smbo.runhistory.finished >= self.initial_design_size + 1 and (smbo.runhistory.finished - self.initial_design_size - 1) % self.prior_every_n_trials == 0
 
 
 class PiBOAbstractPriorCallback(AbstractPriorCallback):
     def intervene(self, smbo):
         # To use the surrogate, we need to sample one additional config here
-        return smbo.runhistory.finished == self.initial_design_size + 1 and (smbo.runhistory.finished - self.initial_design_size - 1) % self.prior_every_n_iterations == 0
+        return smbo.runhistory.finished == self.initial_design_size + 1 and (smbo.runhistory.finished - self.initial_design_size - 1) % self.prior_every_n_trials == 0
 
     def accept_prior(self, smbo, prior_configspace, origin_configspace):
         return True, None, None

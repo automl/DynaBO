@@ -6,7 +6,10 @@ from py_experimenter.result_processor import ResultProcessor
 from yahpo_gym import benchmark_set
 
 
-def get_yahpo_fixed_parameter_combinations(with_datasets: bool = True, medium_and_hard: bool = False):
+def get_yahpo_fixed_parameter_combinations(
+    with_all_datasets: bool = True,
+    medium_and_hard_datasets: bool = False,
+):
     jobs = []
 
     # Add all YAHPO-Gym Evaluations
@@ -30,14 +33,20 @@ def get_yahpo_fixed_parameter_combinations(with_datasets: bool = True, medium_an
         else:
             metric = "unknown"
 
-        if with_datasets:
+        job = [{"pibo": False, "dynabo": True}, {"pibo": True, "dynabo": False}]
+
+        if with_all_datasets:
             # create ablation and ds_tunability jobs
-            jobs += [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in bench.instances]
-        elif medium_and_hard:
+            new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in bench.instances]
+            # combine job with new_job
+        elif medium_and_hard_datasets:
             medium_df = get_medium_and_hard_datasets(scenario)
-            jobs += [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in medium_df]
+            new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in medium_df]
         else:
-            jobs += [{"scenario": scenario, "dataset": "all", "metric": metric}]
+            new_job = [{"scenario": scenario, "dataset": "all", "metric": metric}]
+
+        jobs += [dict(**j, **nj) for j in job for nj in new_job]
+
     return jobs
 
 

@@ -12,13 +12,17 @@ from dynabo.smac_additions.dynamic_prior_callback import (
     DynaBOMisleadingPriorCallback,
     DynaBOWellPerformingPriorCallback,
     LogIncumbentCallback,
+    PiBODeceivingPriorCallback,
+    PiBOMediumPriorCallback,
+    PiBOMisleadingPriorCallback,
+    PiBOWellPerformingPriorCallback,
 )
 from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 from dynabo.utils.cluster_utils import intiialise_experiments
 from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, get_yahpo_fixed_parameter_combinations
 
-EXP_CONFIG_FILE_PATH = "dynabo/experiments/dynabo_experiments/config.yml"
+EXP_CONFIG_FILE_PATH = "dynabo/experiments/prior_experiments/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
 
@@ -53,6 +57,12 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     dataset: str = config["dataset"]
     metric: str = config["metric"]
 
+    # DynaBO or PIBO
+    dynabo: bool = config["dynabo"]
+    pibo: bool = config["pibo"]
+
+    assert dynabo ^ pibo, "Either DynaBO or PiBO must be True"
+
     # SMAC Scenario Values
     internal_timeout: int = int(config["timeout_internal"])
     timeout: int = int(config["timeout_total"])
@@ -66,10 +76,13 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     # Prior Values
     prior_kind = config["prior_kind"]
     prior_every_n_trials = int(config["prior_every_n_trials"])
-    prior_std_denominator = float(config["prior_std_denominator"])
     validate_prior = config["validate_prior"]
-    prior_p_value = float(config["prior_p_value"])
     n_prior_validation_samples = int(config["n_prior_validation_samples"])
+    prior_validation_p_value = float(config["prior_validation_p_value"])
+    prior_std_denominator = float(config["prior_std_denominator"])
+    prior_decay_enumerator = float(config["prior_decay_enumerator"])
+    prior_decay_denominator = float(config["prior_decay_denominator"])
+
     exponential_prior = config["exponential_prior"]
     prior_sampling_weight = config["prior_sampling_weight"]
 
@@ -109,32 +122,51 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         max_config_calls=1,
     )
 
-    if prior_kind == "good":
-        PriorCallbackClass = DynaBOWellPerformingPriorCallback
-    elif prior_kind == "medium":
-        PriorCallbackClass = DynaBOMediumPriorCallback
-    elif prior_kind == "misleading":
-        PriorCallbackClass = DynaBOMisleadingPriorCallback
-    elif prior_kind == "deceiving":
-        PriorCallbackClass = DynaBODeceivingPriorCallback
-    else:
-        raise ValueError(f"Prior kind {prior_kind} not supported")
+    intensifier = HyperparameterOptimizationFacade.get_intensifier(
+        scenario=smac_scenario,
+        max_config_calls=1,
+    )
+
+    if pibo:
+        if prior_kind == "good":
+            PriorCallbackClass = PiBOWellPerformingPriorCallback
+        elif prior_kind == "medium":
+            PriorCallbackClass = PiBOMediumPriorCallback
+        elif prior_kind == "misleading":
+            PriorCallbackClass = PiBOMisleadingPriorCallback
+        elif prior_kind == "deceiving":
+            PriorCallbackClass = PiBODeceivingPriorCallback
+        else:
+            raise ValueError(f"Prior kind {prior_kind} not supported")
+    elif dynabo:
+        if prior_kind == "good":
+            PriorCallbackClass = DynaBOWellPerformingPriorCallback
+        elif prior_kind == "medium":
+            PriorCallbackClass = DynaBOMediumPriorCallback
+        elif prior_kind == "misleading":
+            PriorCallbackClass = DynaBOMisleadingPriorCallback
+        elif prior_kind == "deceiving":
+            PriorCallbackClass = DynaBODeceivingPriorCallback
+        else:
+            raise ValueError(f"Prior kind {prior_kind} not supported")
 
     prior_callback = PriorCallbackClass(
         scenario=evaluator.scenario,
         dataset=evaluator.dataset,
         metric=metric,
         base_path="benchmark_data/prior_data",
-        prior_every_n_iterations=prior_every_n_trials,
+        initial_design_size=initial_design._n_configs,
+        prior_every_n_trials=prior_every_n_trials,
+        validate_prior=validate_prior,
+        n_prior_validation_samples=n_prior_validation_samples,
+        prior_validation_p_value=prior_validation_p_value,
         prior_std_denominator=prior_std_denominator,
+        prior_decay_enumerator=prior_decay_enumerator,
+        prior_decay_denominator=prior_decay_denominator,
         exponential_prior=exponential_prior,
         prior_sampling_weight=prior_sampling_weight,
-        n_prior_validation_samples=n_prior_validation_samples,
-        prior_p_value=prior_p_value,
-        initial_design_size=initial_design._n_configs,
         result_processor=result_processor,
         evaluator=evaluator,
-        validate_prior=validate_prior,
     )
 
     incumbent_callback = LogIncumbentCallback(result_processor=result_processor, evaluator=evaluator)
@@ -177,17 +209,19 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = True
+    fill = False
     if fill:
         experimenter.fill_table_from_combination(
             parameters={
                 "benchmarklib": ["yahpogym"],
                 "prior_kind": ["good", "medium", "misleading"],
                 "prior_every_n_trials": [50],
-                "validate_prior": [True, False],
+                "validate_prior": [False],
                 "n_prior_validation_samples": [500],
-                "prior_p_value": [0.05],
+                "prior_validation_p_value": [0.05],
                 "prior_std_denominator": 5,
+                "prior_decay_enumerator": [50],
+                "prior_decay_denominator": [10],
                 "exponential_prior": [False],
                 "prior_sampling_weight": [0.3],
                 "timeout_total": [86400],
@@ -195,11 +229,8 @@ if __name__ == "__main__":
                 "n_trials": [200],
                 "n_configs_per_hyperparameter": [10],
                 "max_ratio": [0.25],
-                "seed": range(30),
+                "seed": range(1),
             },
-            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_datasets=False, medium_and_hard=True),
+            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard_datasets=True),
         )
-    reset = False
-    if reset:
-        experimenter.reset_experiments("error", "running")
-    experimenter.execute(run_experiment, max_experiments=1, random_order=True)
+    experimenter.execute(run_experiment, max_experiments=2, random_order=True)

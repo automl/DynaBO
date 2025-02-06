@@ -123,3 +123,4 @@ dynamic_submission.err
 dynabo/plots/*/*.png
 dynabo/plots/scenario_plots/*
 *.zip
+dynabo/plots/regret/*/*.png

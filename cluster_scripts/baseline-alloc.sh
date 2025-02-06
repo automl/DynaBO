@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH -t 8:00:00
-#SBATCH --array=1-150
+#SBATCH -t 00:5:00
+#SBATCH --array=1-300
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu 4G
 #SBATCH -J dynabo-basleine
