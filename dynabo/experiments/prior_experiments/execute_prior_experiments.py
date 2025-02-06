@@ -4,7 +4,6 @@ from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
 from smac import HyperparameterOptimizationFacade, Scenario
 from smac.main.config_selector import ConfigSelector
-from smac.runhistory import StatusType, TrialInfo, TrialValue
 
 from dynabo.smac_additions.dynamic_prior_callback import (
     DynaBODeceivingPriorCallback,
@@ -20,35 +19,10 @@ from dynabo.smac_additions.dynamic_prior_callback import (
 from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 from dynabo.utils.cluster_utils import intiialise_experiments
-from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, get_yahpo_fixed_parameter_combinations
+from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, ask_tell_opt, get_yahpo_fixed_parameter_combinations
 
 EXP_CONFIG_FILE_PATH = "dynabo/experiments/prior_experiments/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
-
-
-def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: YAHPOGymEvaluator, result_processor: ResultProcessor, timeout: int):
-    while smac.runhistory.finished < smac.scenario.n_trials:
-        start_ask = time.time()
-        trial_info: TrialInfo = smac.ask()
-        end_ask = time.time()
-
-        # add runtime for ask
-        ask_runtime = round(end_ask - start_ask, 3)
-        evaluator.reasoning_runtime += ask_runtime
-
-        try:
-            cost, runtime = evaluator.train(dict(trial_info.config))
-            trial_value = TrialValue(cost=cost, time=runtime)
-        except Exception:
-            trial_value = TrialValue(cost=0, status=StatusType.TIMEOUT)
-
-        start_tell = time.time()
-        smac.tell(info=trial_info, value=trial_value)
-        end_tell = time.time()
-
-        # add runtime for tell
-        tell_runtime = round(end_tell - start_tell, 3)
-        evaluator.reasoning_runtime += tell_runtime
 
 
 def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: dict):
@@ -235,4 +209,4 @@ if __name__ == "__main__":
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    # experimenter.execute(run_experiment, max_experiments=2, random_order=True)
+    experimenter.execute(run_experiment, max_experiments=2, random_order=True)

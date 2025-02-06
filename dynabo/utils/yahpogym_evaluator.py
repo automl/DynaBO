@@ -1,72 +1,12 @@
 import json
+import time
 
 import pandas as pd
 from ConfigSpace import Configuration, ConfigurationSpace
 from py_experimenter.result_processor import ResultProcessor
+from smac.facade.hyperparameter_optimization_facade import HyperparameterOptimizationFacade
+from smac.runhistory import StatusType, TrialInfo, TrialValue
 from yahpo_gym import benchmark_set
-
-
-def get_yahpo_fixed_parameter_combinations(
-    with_all_datasets: bool = True,
-    medium_and_hard_datasets: bool = False,
-    pibo: bool = False,
-    dynabo: bool = False,
-    baseline: bool = False,
-):
-    jobs = []
-
-    # Add all YAHPO-Gym Evaluations
-    for scenario in [
-        "rbv2_ranger",
-        "rbv2_xgboost",
-        "rbv2_svm",
-        "rbv2_glmnet",
-        "lcbench",
-        "nb301",
-        "rbv2_aknn",
-        "rbv2_rpart",
-        "rbv2_super",
-    ]:
-        bench = benchmark_set.BenchmarkSet(scenario=scenario)
-
-        if "val_accuracy" in bench.config.y_names:
-            metric = "val_accuracy"
-        elif "acc" in bench.config.y_names:
-            metric = "acc"
-        else:
-            metric = "unknown"
-
-        # asset pibo, baseliiine or dynabo is set
-        assert pibo or dynabo or baseline
-        job = []
-
-        if baseline:
-            job += [{"pibo": False, "dynabo": False, "prior_decay_enumerator": 50}]
-        elif pibo:
-            job += [{"pibo": True, "dynabo": False, "prior_decay_enumerator": 50}]
-        elif dynabo:
-            job += [{"pibo": False, "dynabo": True, "prior_decay_enumerator": 50}]
-
-        if with_all_datasets:
-            # create ablation and ds_tunability jobs
-            new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in bench.instances]
-            # combine job with new_job
-        elif medium_and_hard_datasets:
-            medium_df = get_medium_and_hard_datasets(scenario)
-            new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in medium_df]
-        else:
-            new_job = [{"scenario": scenario, "dataset": "all", "metric": metric}]
-
-        jobs += [dict(**j, **nj) for j in job for nj in new_job]
-
-    return jobs
-
-
-def get_medium_and_hard_datasets(scenario: str):
-    prior_df = pd.read_csv("benchmark_data/gt_prior_data/origin_table.csv")
-    medium_df = prior_df[((prior_df["difficulty"] == "medium") | (prior_df["difficulty"] == "hard")) & (prior_df["scenario"] == scenario)]  #
-    medium_df = medium_df[medium_df["prior_trace"].notna()]
-    return medium_df["dataset"].unique().tolist()
 
 
 class YAHPOGymEvaluator:
@@ -146,3 +86,91 @@ class YAHPOGymEvaluator:
 
     def get_configuration_space(self) -> ConfigurationSpace:
         return self.benchmark.get_opt_space(drop_fidelity_params=True)
+
+
+def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: YAHPOGymEvaluator, result_processor: ResultProcessor, timeout: int):
+    while smac.runhistory.finished < smac.scenario.n_trials:
+        start_ask = time.time()
+        trial_info: TrialInfo = smac.ask()
+        end_ask = time.time()
+
+        # add runtime for ask
+        ask_runtime = round(end_ask - start_ask, 3)
+        evaluator.reasoning_runtime += ask_runtime
+
+        try:
+            cost, runtime = evaluator.train(dict(trial_info.config))
+            trial_value = TrialValue(cost=cost, time=runtime)
+        except Exception:
+            trial_value = TrialValue(cost=0, status=StatusType.TIMEOUT)
+
+        start_tell = time.time()
+        smac.tell(info=trial_info, value=trial_value)
+        end_tell = time.time()
+
+        # add runtime for tell
+        tell_runtime = round(end_tell - start_tell, 3)
+        evaluator.reasoning_runtime += tell_runtime
+
+
+def get_yahpo_fixed_parameter_combinations(
+    with_all_datasets: bool = True,
+    medium_and_hard_datasets: bool = False,
+    pibo: bool = False,
+    dynabo: bool = False,
+    baseline: bool = False,
+):
+    jobs = []
+
+    # Add all YAHPO-Gym Evaluations
+    for scenario in [
+        "rbv2_ranger",
+        "rbv2_xgboost",
+        "rbv2_svm",
+        "rbv2_glmnet",
+        "lcbench",
+        "nb301",
+        "rbv2_aknn",
+        "rbv2_rpart",
+        "rbv2_super",
+    ]:
+        bench = benchmark_set.BenchmarkSet(scenario=scenario)
+
+        if "val_accuracy" in bench.config.y_names:
+            metric = "val_accuracy"
+        elif "acc" in bench.config.y_names:
+            metric = "acc"
+        else:
+            metric = "unknown"
+
+        # asset pibo, baseliiine or dynabo is set
+        assert pibo or dynabo or baseline
+        job = []
+
+        if baseline:
+            job += [{"pibo": False, "dynabo": False, "prior_decay_enumerator": 50}]
+        elif pibo:
+            job += [{"pibo": True, "dynabo": False, "prior_decay_enumerator": 50}]
+        elif dynabo:
+            job += [{"pibo": False, "dynabo": True, "prior_decay_enumerator": 50}]
+
+        if with_all_datasets:
+            # create ablation and ds_tunability jobs
+            new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in bench.instances]
+            # combine job with new_job
+        elif medium_and_hard_datasets:
+            medium_df = get_medium_and_hard_datasets(scenario)
+            new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in medium_df]
+        else:
+            new_job = [{"scenario": scenario, "dataset": "all", "metric": metric}]
+
+        jobs += [dict(**j, **nj) for j in job for nj in new_job]
+
+    return jobs
+
+
+def get_medium_and_hard_datasets(scenario: str):
+    prior_df = pd.read_csv("benchmark_data/gt_prior_data/origin_table.csv")
+    medium_df = prior_df[((prior_df["difficulty"] == "medium") | (prior_df["difficulty"] == "hard")) & (prior_df["scenario"] == scenario)]  #
+    medium_df = medium_df[medium_df["prior_trace"].notna()]
+    return medium_df["dataset"].unique().tolist()
