@@ -58,7 +58,7 @@ if __name__ == "__main__":
         dataset=evaluator.dataset,
         metric="acc",
         base_path="benchmark_data/prior_data",
-        prior_every_n_iterations=20,
+        prior_every_n_trials=20,
         initial_design_size=initial_design._n_configs,
     )
 

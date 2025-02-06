@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table:
-      name: pibo_unfiform
+      name: all_prior
       keyfields:
         benchmarklib:
           type: VARCHAR(255)
@@ -19,6 +19,12 @@ PY_EXPERIMENTER:
         metric:
           type: VARCHAR(255)
           values: ['acc']
+        dynabo:
+          type: BOOLEAN
+          values: [True]
+        pibo:
+          type: BOOLEAN
+          values: [False]
         prior_kind:
           type: VARCHAR(255)
           values: ['good']
@@ -31,12 +37,18 @@ PY_EXPERIMENTER:
         n_prior_validation_samples: 
           type: INT
           values: [500]
-        prior_p_value: 
+        prior_validation_p_value: 
           type: FLOAT
           values: [0.05]
         prior_std_denominator:
           type: FLOAT
           values: [5]
+        prior_decay_enumerator:
+          type: INT
+          values: [50]
+        prior_decay_denominator:
+          type: INT
+          values: [10]
         exponential_prior:
           type: BOOLEAN
           values: [False]
