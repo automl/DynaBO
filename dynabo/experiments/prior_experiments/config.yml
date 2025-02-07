@@ -25,6 +25,9 @@ PY_EXPERIMENTER:
         pibo:
           type: BOOLEAN
           values: [False]
+        baseline:
+          type: BOOLEAN
+          values: [False]
         prior_kind:
           type: VARCHAR(255)
           values: ['good']

@@ -5,39 +5,65 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table:
-      name: groundtruth_seed0_c1
+      name: data_generation
       keyfields:
         benchmarklib:
           type: VARCHAR(255)
           values: ['yahpogym']
         scenario:
           type: VARCHAR(255)
-          values: ['rbv2_xgboost']
+          values: ['rbv2_ranger']
         dataset:
           type: VARCHAR(255)
-          values: ['3470']
+          values: ['1220']
         metric:
           type: VARCHAR(255)
-          values: ['validation_acc']
-        algorithm:
-          type: VARCHAR(255)
-          values: ['groundtruth']
+          values: ['acc']
+        dynabo:
+          type: BOOLEAN
+          values: [True]
+        pibo:
+          type: BOOLEAN
+          values: [False]
+        baseline:
+          type: BOOLEAN
+          values: [False]
         timeout_total:
           type: INT
-          values: [86400]
+          values: [3600]
         timeout_internal:
           type: INT
           values: [300]
+        n_trials:
+          type: INT
+          values: [200]
+        n_configs_per_hyperparameter:
+          type: INT
+          values: [10]
+        max_ratio:
+          type: FLOAT
+          values: [0.25]
         seed:
           type: INT
-          values: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]
+          values:
+            start: 0
+            stop: 30
+            step: 1
       result_timestamps: False
       resultfields:
-        actual_runtime: VARCHAR(255)
-        acc_virtual_runtime: VARCHAR(255)
-        acc_reasoning_runtime: VARCHAR(255)
-        final_performance: VARCHAR(255)
-        incumbent_trace: TEXT
-        num_evaluations: VARCHAR(255)
-        num_timeouts: VARCHAR(255)
-        done: VARCHAR(50)
+        initial_design_size: INT
+        final_performance: FLOAT
+        runtime: FLOAT
+        virtual_runtime: FLOAT 
+        reasoning_runtime: FLOAT
+        n_evaluations_computed: INT
+        n_timeouts_occurred: INT
+        experiment_finished: BOOLEAN
+    logtables:
+      incumbents:
+        performance: FLOAT
+        configuration: TEXT
+        after_n_evaluations: INT
+        after_runtime: FLOAT  
+        after_virtual_runtime: FLOAT
+        after_reasoning_runtime: FLOAT

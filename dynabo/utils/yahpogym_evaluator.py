@@ -148,11 +148,11 @@ def get_yahpo_fixed_parameter_combinations(
         job = []
 
         if baseline:
-            job += [{"pibo": False, "dynabo": False, "prior_decay_enumerator": 50}]
+            job += [{"pibo": False, "dynabo": False, "baseline": True}]
         elif pibo:
-            job += [{"pibo": True, "dynabo": False, "prior_decay_enumerator": 50}]
+            job += [{"pibo": True, "dynabo": False, "baseline": False, "prior_decay_enumerator": 200}]
         elif dynabo:
-            job += [{"pibo": False, "dynabo": True, "prior_decay_enumerator": 50}]
+            job += [{"pibo": False, "dynabo": True, "baseline": False, "prior_decay_enumerator": 50}]
 
         if with_all_datasets:
             # create ablation and ds_tunability jobs
