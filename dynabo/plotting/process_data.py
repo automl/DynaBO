@@ -54,6 +54,7 @@ def save_join_data(joined_data: pd.DataFrame, path):
 
 
 def scenario_plots(joined_data: pd.DataFrame):
+    # Scenario Plots
     scenarios = joined_data["scenario"].unique()
 
     for scenario in scenarios:
@@ -63,7 +64,7 @@ def scenario_plots(joined_data: pd.DataFrame):
         # Bar Plot of Difficulty
         # Calculate how often hard medium ,...
         difficulty_counts = relevant_df[["hard", "medium", "easy", "super_easy"]].sum()
-        difficulty_counts = difficulty_counts / difficulty_counts.sum()
+        difficulty_counts = difficulty_counts
         sns.barplot(x=difficulty_counts.index, y=difficulty_counts.values, ax=axs[0])
 
         # Violin plot for after_n_evaluations
@@ -76,6 +77,24 @@ def scenario_plots(joined_data: pd.DataFrame):
         fig.suptitle(scenario)
         plt.savefig(f"plots/metadata/difficulty/{scenario}.pdf")
         plt.close()
+
+    # Total Plots
+    fig, axs = plt.subplots(1, 2, figsize=(10, 20))
+    # Bar Plot of Difficulty
+    # Calculate how often hard medium ,...
+    difficulty_counts = joined_data[["hard", "medium", "easy", "super_easy"]].sum()
+    difficulty_counts = difficulty_counts
+    sns.barplot(x=difficulty_counts.index, y=difficulty_counts.values, ax=axs[0])
+
+    # Violin plot for after_n_evaluations
+    sns.violinplot(
+        y="after_n_evaluations",
+        data=joined_data,
+        ax=axs[1],
+    )
+
+    fig.suptitle("Total")
+    plt.savefig("plots/metadata/difficulty/total.pdf")
 
 
 if __name__ == "__main__":
