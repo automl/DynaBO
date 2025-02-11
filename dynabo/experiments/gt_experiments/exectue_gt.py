@@ -101,27 +101,51 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 if __name__ == "__main__":
     intiialise_experiments()
 
-    experimenter = PyExperimenter(
-        experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
-        database_credential_file_path=DB_CRED_FILE_PATH,
-        use_codecarbon=False,
-    )
-    fill = False
-    if fill:
-        experimenter.fill_table_from_combination(
-            parameters={
-                "benchmarklib": ["yahpogym"],
-                "prior_kind": ["good"],
-                "prior_every_n_trials": [50],
-                "validate_prior": [False],
-                "prior_std_denominator": 5,
-                "timeout_total": [86400],
-                "timeout_internal": [1200],
-                "n_trials": [5000],
-                "n_configs_per_hyperparameter": [10],
-                "max_ratio": [0.25],
-                "seed": range(1),
-            },
-            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=True, medium_and_hard_datasets=False, baseline=True),
+    base_parameters = {
+        "benchmarklib": ["yahpogym"],
+        "prior_kind": ["good"],
+        "prior_every_n_trials": [50],
+        "validate_prior": [False],
+        "prior_std_denominator": 5,
+        "timeout_total": [86400],
+        "timeout_internal": [1200],
+        "n_trials": [5000],
+        "n_configs_per_hyperparameter": [10],
+        "max_ratio": [0.25],
+    }
+    all_one_seed = False
+    if all_one_seed:
+        experimenter = PyExperimenter(
+            experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
+            database_credential_file_path=DB_CRED_FILE_PATH,
+            use_codecarbon=False,
         )
-    experimenter.execute(run_experiment, max_experiments=3)
+
+    medium_and_hard = True
+    if medium_and_hard:
+        experimenter = PyExperimenter(
+            experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
+            database_credential_file_path=DB_CRED_FILE_PATH,
+            use_codecarbon=False,
+            table_name="data_generation_medium_hard",
+        )
+
+    fill_table = False
+    if fill_table:
+        if all_one_seed:
+            experimenter.fill_table_from_combination(
+                parameters={**base_parameters, **{"seed": range(1)}},
+                fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=True, medium_and_hard_datasets=False, baseline=True),
+            )
+        if medium_and_hard:
+            experimenter.fill_table_from_combination(
+                parameters={**base_parameters, **{"seed": range(10)}},
+                fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard_datasets=True, baseline=True),
+            )
+
+    execute = True
+    if execute:
+        experimenter.execute(
+            run_experiment=run_experiment,
+            n_jobs=1,
+        )

@@ -1,5 +1,6 @@
 import json
 import time
+from typing import List
 
 import pandas as pd
 from ConfigSpace import Configuration, ConfigurationSpace
@@ -159,8 +160,8 @@ def get_yahpo_fixed_parameter_combinations(
             new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in bench.instances]
             # combine job with new_job
         elif medium_and_hard_datasets:
-            medium_df = get_medium_and_hard_datasets(scenario)
-            new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in medium_df]
+            medium_and_hard_datasets = get_medium_and_hard_datasets(scenario)
+            new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in medium_and_hard_datasets]
         else:
             new_job = [{"scenario": scenario, "dataset": "all", "metric": metric}]
 
@@ -169,8 +170,7 @@ def get_yahpo_fixed_parameter_combinations(
     return jobs
 
 
-def get_medium_and_hard_datasets(scenario: str):
-    prior_df = pd.read_csv("benchmark_data/gt_prior_data/origin_table.csv")
-    medium_df = prior_df[((prior_df["difficulty"] == "medium") | (prior_df["difficulty"] == "hard")) & (prior_df["scenario"] == scenario)]  #
-    medium_df = medium_df[medium_df["prior_trace"].notna()]
-    return medium_df["dataset"].unique().tolist()
+def get_medium_and_hard_datasets(scenario: str) -> List["str"]:
+    difficulty_groups = pd.read_csv("plotting_data/difficulty_groups.csv")
+    medium_and_hard_df = difficulty_groups[(difficulty_groups["scenario"] == scenario) & (difficulty_groups["hard"] | difficulty_groups["medium"])]
+    return medium_and_hard_df["dataset"].tolist()
