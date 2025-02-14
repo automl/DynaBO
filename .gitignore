@@ -133,3 +133,4 @@ plots/scenario_plots/*
 plotting_data/*
 !plotting_data/.gitkeep
 plots/metadata/difficulty/*.pdf
+plots/metadata

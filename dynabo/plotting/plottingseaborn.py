@@ -8,7 +8,7 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from dynabo.plotting.download_all_files import BASELINE_INCUMBENT_PATH, BASELINE_TABLE_PATH, PRIOR_INCUMBENT_PATH, PRIOR_PRIORS_PATH, PRIOR_TABLE_PATH
+from dynabo.data_processing.download_all_files import BASELINE_INCUMBENT_PATH, BASELINE_TABLE_PATH, PRIOR_INCUMBENT_PATH, PRIOR_PRIORS_PATH, PRIOR_TABLE_PATH
 
 
 def merge_df(df: pd.DataFrame, incumbents: pd.DataFrame, priors: Optional[pd.DataFrame]) -> Tuple[pd.DataFrame, Optional[pd.DataFrame]]:

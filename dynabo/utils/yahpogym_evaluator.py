@@ -171,6 +171,6 @@ def get_yahpo_fixed_parameter_combinations(
 
 
 def get_medium_and_hard_datasets(scenario: str) -> List["str"]:
-    difficulty_groups = pd.read_csv("plotting_data/difficulty_groups.csv")
+    difficulty_groups = pd.read_csv("plotting_data/difficulty_groups_one_seed.csv")
     medium_and_hard_df = difficulty_groups[(difficulty_groups["scenario"] == scenario) & (difficulty_groups["hard"] | difficulty_groups["medium"])]
     return medium_and_hard_df["dataset"].tolist()
