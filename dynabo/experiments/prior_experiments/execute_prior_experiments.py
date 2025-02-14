@@ -206,7 +206,7 @@ if __name__ == "__main__":
             },
             fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, pibo=True, dynabo=True),
         )
-    reset = True
+    reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
     execute = True
