@@ -135,12 +135,12 @@ if __name__ == "__main__":
         if all_one_seed:
             experimenter.fill_table_from_combination(
                 parameters={**base_parameters, **{"seed": range(1)}},
-                fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=True, medium_and_hard_datasets=False, baseline=True),
+                fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=True, medium_and_hard=False, baseline=True),
             )
         if medium_and_hard:
             experimenter.fill_table_from_combination(
                 parameters={**base_parameters, **{"seed": range(10)}},
-                fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard_datasets=True, baseline=True),
+                fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, baseline=True),
             )
 
     execute = True

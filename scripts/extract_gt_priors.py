@@ -16,9 +16,5 @@ if __name__ == "__main__":
                 metric_df = dataset_df[dataset_df.metric == metric]
 
                 prior_data_path = create_prior_data_path(scenario, dataset, metric)
-                try:
-                    prior_df = build_prior_dataframe(metric_df)
-                    save_table(prior_df, os.path.join(prior_data_path, "prior_table.csv"))
-                except ValueError as e:
-                    print(f"Error: {e}")
-                    continue
+                prior_df = build_prior_dataframe(metric_df)
+                save_table(prior_df, os.path.join(prior_data_path, "prior_table.csv"))

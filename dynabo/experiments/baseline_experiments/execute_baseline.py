@@ -120,8 +120,8 @@ if __name__ == "__main__":
                 "n_trials": [200],
                 "n_configs_per_hyperparameter": [10],
                 "max_ratio": [0.25],
-                "seed": range(30),
+                "seed": range(10),
             },
-            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard_datasets=True),
+            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, baseline=True, pibo=False, dynabo=False),
         )
-    # experimenter.execute(run_experiment, max_experiments=1)
+    experimenter.execute(run_experiment, max_experiments=1)

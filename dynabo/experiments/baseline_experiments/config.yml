@@ -19,6 +19,15 @@ PY_EXPERIMENTER:
         metric:
           type: VARCHAR(255)
           values: ['acc']
+        dynabo:
+          type: BOOLEAN
+          values: [True]
+        pibo:
+          type: BOOLEAN
+          values: [False]
+        baseline:
+          type: BOOLEAN
+          values: [False]
         timeout_total:
           type: INT
           values: [3600]
@@ -51,10 +60,13 @@ PY_EXPERIMENTER:
         n_timeouts_occurred: INT
         experiment_finished: BOOLEAN
     logtables:
-      incumbents:
+      configs:
         performance: FLOAT
+        incumbent : BOOLEAN
         configuration: TEXT
         after_n_evaluations: INT
         after_runtime: FLOAT  
         after_virtual_runtime: FLOAT
         after_reasoning_runtime: FLOAT
+        average_acquisition_function_impact: LONGTEXT
+        incumbent_acquisition_function_impact: LONGTEXT

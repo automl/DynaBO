@@ -116,7 +116,7 @@ def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: YAHPOGymEval
 
 def get_yahpo_fixed_parameter_combinations(
     with_all_datasets: bool = True,
-    medium_and_hard_datasets: bool = False,
+    medium_and_hard: bool = False,
     pibo: bool = False,
     dynabo: bool = False,
     baseline: bool = False,
@@ -150,16 +150,16 @@ def get_yahpo_fixed_parameter_combinations(
 
         if baseline:
             job += [{"pibo": False, "dynabo": False, "baseline": True}]
-        elif pibo:
+        if pibo:
             job += [{"pibo": True, "dynabo": False, "baseline": False, "prior_decay_enumerator": 200}]
-        elif dynabo:
+        if dynabo:
             job += [{"pibo": False, "dynabo": True, "baseline": False, "prior_decay_enumerator": 50}]
 
         if with_all_datasets:
             # create ablation and ds_tunability jobs
             new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in bench.instances]
             # combine job with new_job
-        elif medium_and_hard_datasets:
+        elif medium_and_hard:
             medium_and_hard_datasets = get_medium_and_hard_datasets(scenario)
             new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in medium_and_hard_datasets]
         else:

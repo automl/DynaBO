@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 
 import numpy as np
 from ConfigSpace import ConfigurationSpace
@@ -42,7 +42,7 @@ class ConfigSpacePdfWrapper:
             else:
                 prior_values *= parameter._pdf(X_col[:, np.newaxis]) + self.prior_floor
 
-        return np.power(prior_values, self.decay_beta /self.iteration_number(n))
+        return np.power(prior_values, self.decay_beta / self.iteration_number(n))
 
     def _compute_discretized_pdf(
         self,
@@ -108,6 +108,8 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
 
         # Tracker for config number
         self.current_config_nuber = None
+        self._average_acquisition_function_impact: Dict[str, float] = None
+        self._incumbent_acquisition_function_impact: Dict[str, float] = None
 
     def dynamic_init(
         self,
@@ -153,5 +155,23 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
             acq_values = self._acquisition_function._compute(X)
 
         # Problem i previously did not consider that we are evaluting 5000 points here
-        prior_values = np.prod([prior.compute_prior(X, self.current_config_nuber) for prior in self._prior_configspaces], axis=0)
-        return acq_values * prior_values
+        prior_values = [prior.compute_prior(X, self.current_config_nuber) for prior in self._prior_configspaces]
+
+        if self._prior_configspaces:
+            af_impact = np.mean(acq_values)
+            prior_impacts = [np.mean(prior_values[i]) for i in range(len(self._prior_configspaces))]
+            self._average_acquisition_function_impact = {
+                "acquisition_function": af_impact,
+                **{f"prior_{i}": prior_impacts[i] for i in range(len(self._prior_configspaces))},
+            }
+
+            result = acq_values * np.prod(prior_values, axis=0)
+            incumbent_index = np.argmax(result)
+            af_impact = acq_values[incumbent_index]
+            prior_impacts = [prior_values[i][incumbent_index] for i in range(len(self._prior_configspaces))]
+            self._incumbent_acquisition_function_impact = {
+                "acquisition_function": af_impact,
+                **{f"prior_{i}": prior_impacts[i] for i in range(len(self._prior_configspaces))},
+            }
+        result = acq_values * np.prod(prior_values, axis=0)
+        return result

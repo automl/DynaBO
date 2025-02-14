@@ -204,9 +204,11 @@ if __name__ == "__main__":
                 "max_ratio": [0.25],
                 "seed": range(10),
             },
-            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard_datasets=True),
+            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, pibo=True, dynabo=True),
         )
-    reset = False
+    reset = True
     if reset:
         experimenter.reset_experiments("running", "error")
-    experimenter.execute(run_experiment, max_experiments=2, random_order=True)
+    execute = True
+    if execute:
+        experimenter.execute(run_experiment, max_experiments=20, random_order=True)
