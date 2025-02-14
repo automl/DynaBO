@@ -106,7 +106,7 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = True
+    fill = False
     if fill:
         experimenter.fill_table_from_combination(
             parameters={
@@ -124,4 +124,6 @@ if __name__ == "__main__":
             },
             fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, baseline=True, pibo=False, dynabo=False),
         )
-    experimenter.execute(run_experiment, max_experiments=1)
+    execute = True
+    if execute:
+        experimenter.execute(run_experiment, max_experiments=1)
