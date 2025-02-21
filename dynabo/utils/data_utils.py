@@ -27,7 +27,7 @@ def connect_to_database() -> PyExperimenter:
 def save_base_table():
     experimenter = connect_to_database()
     base_table = experimenter.get_table()
-    configs = experimenter.get_logtable("incumbents")
+    configs = experimenter.get_logtable("configs")
     configs.drop(columns=["ID"])
     table = base_table.merge(configs, how="left", left_on=["ID"], right_on=["experiment_id"])
     save_table(table)
