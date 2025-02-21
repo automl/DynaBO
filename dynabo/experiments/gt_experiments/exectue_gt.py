@@ -142,6 +142,10 @@ if __name__ == "__main__":
                 parameters={**base_parameters, **{"seed": range(10)}},
                 fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, baseline=True),
             )
+    reset = False
+    if reset:
+        experimenter.reset_experiments("error")
+
     execute = True
     if execute:
         experimenter.execute(run_experiment, max_experiments=1)
