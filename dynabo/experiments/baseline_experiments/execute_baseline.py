@@ -128,4 +128,4 @@ if __name__ == "__main__":
         )
     execute = True
     if execute:
-        experimenter.execute(run_experiment, max_experiments=1)
+        experimenter.execute(run_experiment, max_experiments=4)

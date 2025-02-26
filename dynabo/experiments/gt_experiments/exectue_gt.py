@@ -139,7 +139,7 @@ if __name__ == "__main__":
             table_name="data_generation_medium_hard",
         )
 
-    fill_table = True
+    fill_table = False
     if fill_table:
         if all_one_seed:
             experimenter.fill_table_from_combination(
@@ -155,6 +155,6 @@ if __name__ == "__main__":
     if reset:
         experimenter.reset_experiments("error")
 
-    execute = False
+    execute = True
     if execute:
-        experimenter.execute(run_experiment, max_experiments=1)
+        experimenter.execute(run_experiment, max_experiments=4)

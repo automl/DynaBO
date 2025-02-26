@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH -t 00:5:00
-#SBATCH --array=1-50
+#SBATCH -t 1:00:00
+#SBATCH --array=1-300
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu 4G
 #SBATCH -J dynabo-basleine
@@ -19,4 +19,4 @@ ml Miniforge3
 source /pc2/users/i/intexml9/.bashrc
 conda activate DynaBO
 
-python dynabo/experiments/baseline_experiments/execute_baseline.pys
+python dynabo/experiments/baseline_experiments/execute_baseline.py
