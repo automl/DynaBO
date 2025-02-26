@@ -7,8 +7,8 @@ from smac.acquisition.maximizer import LocalAndSortedRandomSearch
 from smac.main.config_selector import ConfigSelector
 
 from dynabo.smac_additions.dynamic_prior_callback import LogIncumbentCallback
-from dynabo.utils.cluster_utils import intiialise_experiments
-from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator, ask_tell_opt, get_yahpo_fixed_parameter_combinations
+from dynabo.utils.cluster_utils import initialise_experiments
+from dynabo.utils.evaluator import YAHPOGymEvaluator, ask_tell_opt, get_yahpo_fixed_parameter_combinations
 
 EXP_CONFIG_FILE_PATH = "dynabo/experiments/baseline_experiments/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
@@ -84,14 +84,16 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     ask_tell_opt(smac=smac, evaluator=evaluator, timeout=timeout, result_processor=result_processor)
     end_time = time.time()
 
+    optimization_data = evaluator.get_metadata()
+
     result = {
         "initial_design_size": initial_design_size,
-        "final_performance": (-1) * evaluator.incumbent_cost,
+        "final_performance": optimization_data["final_performance"],
         "runtime": round(end_time - start_time, 3),
-        "virtual_runtime": round(evaluator.accumulated_runtime + evaluator.reasoning_runtime, 3),
+        "virtual_runtime": optimization_data["virtual_runtime"],
         "reasoning_runtime": round(evaluator.reasoning_runtime, 3),
-        "n_evaluations_computed": evaluator.eval_counter,
-        "n_timeouts_occurred": evaluator.timeout_counter,
+        "n_evaluations_computed": optimization_data["n_evaluations_computed"],
+        "n_timeouts_occurred": optimization_data["n_timeouts_computed"],
         "experiment_finished": True,
     }
 
@@ -99,7 +101,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
 
 if __name__ == "__main__":
-    intiialise_experiments()
+    initialise_experiments()
 
     experimenter = PyExperimenter(
         experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,

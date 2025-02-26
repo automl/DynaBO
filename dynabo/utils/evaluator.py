@@ -1,5 +1,5 @@
-import json
 import time
+from abc import abstractmethod
 from typing import List
 
 import pandas as pd
@@ -10,43 +10,58 @@ from smac.runhistory import StatusType, TrialInfo, TrialValue
 from yahpo_gym import benchmark_set
 
 
-class YAHPOGymEvaluator:
+class AbstractEvaluator:
     def __init__(
         self,
-        scenario,
-        dataset,
-        internal_timeout=-1,
-        metric="acc",
-        runtime_metric_name="timetrain",
-        result_processor: ResultProcessor = None,
+        scenario: str | int,
+        dataset: int,
     ):
         self.scenario = scenario
         self.dataset = dataset
-        self.metric = metric
-        self.runtime_metric_name = runtime_metric_name
-        self.internal_timeout = internal_timeout
-        self.result_processor = result_processor
-
-        self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario, check=False)
-        self.benchmark.set_instance(value=self.dataset)
 
         self.accumulated_runtime = 0
         self.reasoning_runtime = 0
 
-        self.incumbent_trace = list()
         self.incumbent_cost = None
         self.eval_counter = 0
         self.timeout_counter = 0
 
+    @abstractmethod
+    def train(self, configuration: Configuration, seed: int = 0):
+        pass  # TODO update this to to contain the general function
+
+    @abstractmethod
+    def get_configuration_space(self) -> ConfigurationSpace:
+        pass  # TODO update this to get the correct data
+
+    def get_metadata(self):
+        return {
+            "final_performance": -1 * self.incumbent_cost,
+            "virtual_runtime": round(self.accumulated_runtime + self.reasoning_runtime, 3),
+            "reasoning_runtime": round(self.reasoning_runtime, 3),
+            "n_evaluations_computed": self.eval_counter,
+            "n_timeouts_occurred": self.timeout_counter,
+        }
+
+
+class YAHPOGymEvaluator(AbstractEvaluator):
+    def __init__(
+        self,
+        scenario,
+        dataset,
+        metric="acc",
+        runtime_metric_name="timetrain",
+    ):
+        super().__init__(scenario=scenario, dataset=dataset)
+        self.metric = metric
+        self.runtime_metric_name = runtime_metric_name
+
+        self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario, check=False)
+        self.benchmark.set_instance(value=self.dataset)
+
     def train(self, config: Configuration, seed: int = 0):
         self.eval_counter += 1
         config_dict = dict(config)
-
-        if self.eval_counter % 100 == 0 and self.result_processor is not None:
-            from datetime import datetime
-
-            now = datetime.now()
-            self.result_processor.process_results({"num_evaluations": str(self.eval_counter) + " " + now.strftime("%m/%d/%Y, %H:%M:%S")})
 
         def_conf = dict(self.benchmark.get_opt_space().get_default_configuration())
         for key, value in config_dict.items():
@@ -56,32 +71,10 @@ class YAHPOGymEvaluator:
         performance = round((-1) * res[0][self.metric], 6)
         runtime = round(res[0][self.runtime_metric_name], 3)
 
-        # check whether internal evaluation timeout is set
-        if self.internal_timeout != -1:
-            # check whether timeout is hit
-            if runtime > self.internal_timeout:
-                self.accumulated_runtime += self.internal_timeout
-                self.timeout_counter += 1
-                raise Exception("Internal timeout exceeded")
-
         self.accumulated_runtime = round(self.accumulated_runtime + runtime, 3)
 
         if self.incumbent_cost is None or performance < self.incumbent_cost:
             self.incumbent_cost = performance
-            incumbent_tuple = (
-                round(self.reasoning_runtime + self.accumulated_runtime, 3),
-                (-1) * performance,
-                self.eval_counter,
-                def_conf,
-            )
-            print("new incumbent:", incumbent_tuple)
-            self.incumbent_trace.append(incumbent_tuple)
-            if self.result_processor is not None:
-                self.result_processor.process_results(
-                    {
-                        "incumbent_trace": json.dumps(self.incumbent_trace),
-                    }
-                )
 
         return float(performance), float(runtime)
 

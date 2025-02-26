@@ -14,7 +14,7 @@ from smac.runhistory import TrialInfo, TrialValue
 
 from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.utils.configspace_utils import build_prior_configuration_space
-from dynabo.utils.yahpogym_evaluator import YAHPOGymEvaluator
+from dynabo.utils.evaluator import YAHPOGymEvaluator
 
 PERFORMANCE_INDICATOR_COLUMN = "performance"
 
