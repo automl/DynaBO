@@ -28,6 +28,9 @@ PY_EXPERIMENTER:
         baseline:
           type: BOOLEAN
           values: [False]
+        random:
+          type: BOOLEAN
+          values: [False]
         timeout_total:
           type: INT
           values: [3600]
