@@ -120,6 +120,7 @@ def get_yahpo_fixed_parameter_combinations(
     pibo: bool = False,
     dynabo: bool = False,
     baseline: bool = False,
+    random: bool = False,
 ):
     jobs = []
 
@@ -145,15 +146,17 @@ def get_yahpo_fixed_parameter_combinations(
             metric = "unknown"
 
         # asset pibo, baseliiine or dynabo is set
-        assert pibo or dynabo or baseline
+        assert pibo or dynabo or baseline or random
         job = []
 
         if baseline:
-            job += [{"pibo": False, "dynabo": False, "baseline": True}]
+            job += [{"pibo": False, "dynabo": False, "baseline": True, "random": False}]
         if pibo:
-            job += [{"pibo": True, "dynabo": False, "baseline": False, "prior_decay_enumerator": 200}]
+            job += [{"pibo": True, "dynabo": False, "baseline": False, "random": False, "prior_decay_enumerator": 200}]
         if dynabo:
-            job += [{"pibo": False, "dynabo": True, "baseline": False, "prior_decay_enumerator": 50}]
+            job += [{"pibo": False, "dynabo": True, "baseline": False, "random": False, "prior_decay_enumerator": 50}]
+        if random:
+            job += [{"pibo": False, "dynabo": False, "baseline": False, "random": True}]
 
         if with_all_datasets:
             # create ablation and ds_tunability jobs
