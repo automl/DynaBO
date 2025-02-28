@@ -38,7 +38,6 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     assert dynabo ^ pibo, "Either DynaBO or PiBO must be True"
 
     # SMAC Scenario Values
-    internal_timeout: int = int(config["timeout_internal"])
     timeout: int = int(config["timeout_total"])
     seed: int = int(config["seed"])
     n_trials = int(config["n_trials"])
@@ -63,7 +62,6 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     evaluator: YAHPOGymEvaluator = YAHPOGymEvaluator(
         scenario=scenario,
         dataset=dataset,
-        internal_timeout=internal_timeout,
         metric=metric,
         runtime_metric_name="timetrain" if scenario != "lcbench" else "time",
     )
@@ -170,7 +168,6 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         "virtual_runtime": optimization_data["virtual_runtime"],
         "reasoning_runtime": round(evaluator.reasoning_runtime, 3),
         "n_evaluations_computed": optimization_data["n_evaluations_computed"],
-        "n_timeouts_occurred": optimization_data["n_timeouts_computed"],
         "experiment_finished": True,
     }
 
@@ -185,7 +182,7 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = False
+    fill = True
     if fill:
         experimenter.fill_table_from_combination(
             parameters={
@@ -200,7 +197,6 @@ if __name__ == "__main__":
                 "exponential_prior": [False],
                 "prior_sampling_weight": [0.3],
                 "timeout_total": [86400],
-                "timeout_internal": [1200],
                 "n_trials": [200],
                 "n_configs_per_hyperparameter": [10],
                 "max_ratio": [0.25],
@@ -208,7 +204,7 @@ if __name__ == "__main__":
             },
             fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, pibo=True, dynabo=True),
         )
-    reset = True
+    reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
     execute = True

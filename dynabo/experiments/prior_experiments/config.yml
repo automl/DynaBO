@@ -64,9 +64,6 @@ PY_EXPERIMENTER:
         timeout_total:
           type: INT
           values: [3600]
-        timeout_internal:
-          type: INT
-          values: [300]
         n_trials:
           type: INT
           values: [200]
@@ -90,7 +87,6 @@ PY_EXPERIMENTER:
         virtual_runtime: FLOAT 
         reasoning_runtime: FLOAT
         n_evaluations_computed: INT
-        n_timeouts_occurred: INT
         experiment_finished: BOOLEAN
     logtables:
       configs:

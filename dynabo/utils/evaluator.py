@@ -40,7 +40,6 @@ class AbstractEvaluator:
             "virtual_runtime": round(self.accumulated_runtime + self.reasoning_runtime, 3),
             "reasoning_runtime": round(self.reasoning_runtime, 3),
             "n_evaluations_computed": self.eval_counter,
-            "n_timeouts_occurred": self.timeout_counter,
         }
 
 
