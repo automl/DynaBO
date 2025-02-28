@@ -28,8 +28,8 @@ PY_EXPERIMENTER:
         baseline:
           type: BOOLEAN
           values: [False]
-        radnom:
-          type: BOOLEANM
+        random:
+          type: BOOLEAN
           values: [False]
         prior_kind:
           type: VARCHAR(255)

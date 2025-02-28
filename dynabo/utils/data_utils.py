@@ -57,8 +57,7 @@ def build_prior_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     if len(df) != len(extracted_df):
         print()
     expanded_df = pd.concat([df, extracted_df], axis=1)
-    if len(expanded_df) != len(extracted_df):
-        print
+    expanded_df = expanded_df.drop(columns=["error"])
     return expanded_df
 
 
