@@ -50,8 +50,8 @@ class AbstractEvaluator:
             "n_evaluations_computed": self.eval_counter,
         }
 
-    @abstractmethod
     @staticmethod
+    @abstractmethod
     def get_fixed_hyperparameter_combinations(
         with_all_datasets: bool = True,
         medium_and_hard: bool = False,
@@ -217,7 +217,7 @@ def get_yahpo_fixed_parameter_combinations(
     random: bool = False,
 ):
     if benchmarklib == "yahpogym":
-        YAHPOGymEvaluator.get_fixed_hyperparameter_combinations(
+        jobs = YAHPOGymEvaluator.get_fixed_hyperparameter_combinations(
             with_all_datasets=with_all_datasets,
             medium_and_hard=medium_and_hard,
             pibo=pibo,
@@ -226,7 +226,7 @@ def get_yahpo_fixed_parameter_combinations(
             random=random,
         )
     elif benchmarklib == "bbob":
-        BBOBEvaluator.get_fixed_hyperparameter_combinations(
+        jobs = BBOBEvaluator.get_fixed_hyperparameter_combinations(
             with_all_datasets=with_all_datasets,
             medium_and_hard=medium_and_hard,
             pibo=pibo,
@@ -234,6 +234,7 @@ def get_yahpo_fixed_parameter_combinations(
             baseline=baseline,
             random=random,
         )
+    return jobs
 
 
 def get_medium_and_hard_datasets(scenario: str) -> List["str"]:

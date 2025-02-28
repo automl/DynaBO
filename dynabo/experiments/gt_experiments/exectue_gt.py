@@ -51,6 +51,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     )
 
     if random:
+        initial_design_size = None
         smac = RandomFacade(scenario=smac_scenario, target_function=evaluator.train, callbacks=[incumbent_callback], overwrite=True)
 
     else:
