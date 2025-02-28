@@ -10,7 +10,18 @@ from matplotlib import pyplot as plt
 from dynabo.data_processing.download_all_files import BASELINE_INCUMBENT_PATH, BASELINE_TABLE_PATH, PRIOR_INCUMBENT_PATH, PRIOR_PRIORS_PATH, PRIOR_TABLE_PATH
 
 
-def load_data():
+def load_datageneration_data():
+    main_table = pd.read_csv("plotting_data/datageneration_medium_hard.csv")
+    configs = pd.read_csv("plotting_data/datageneration_incumbent_medium_hard.csv")
+
+    main_table, _ = merge_df(main_table, configs, None)
+
+    max_performances = get_max_performance(baseline_config_df=main_table, prior_config_df=None)
+    main_table = add_regret([main_table], max_performances)[0]
+    return main_table
+
+
+def load_final_data():
     baseline_table = pd.read_csv(BASELINE_TABLE_PATH)
     baseline_config_df = pd.read_csv(BASELINE_INCUMBENT_PATH)
     baseline_config_df, _ = merge_df(baseline_table, baseline_config_df, None)
@@ -28,8 +39,8 @@ def load_data():
     prior_config_df["final_performance"] = prior_config_df.apply(lambda x: x["final_performance"] / 100 if x["scenario"] == "lcbench" else x["final_performance"], axis=1)
     prior_prior_df["final_performance"] = prior_prior_df.apply(lambda x: x["final_performance"] / 100 if x["scenario"] == "lcbench" else x["final_performance"], axis=1)
 
-    max_performances = get_max_performance(baseline_config_df=baseline_config_df, prior_config_df=prior_config_df, ignore_data_generation=True)
-    baseline_config_df, prior_config_df, prior_prior_df = add_regret(baseline_config_df, prior_config_df, prior_prior_df, max_performances)
+    max_performances = get_max_performance(baseline_config_df=baseline_config_df, prior_config_df=prior_config_df)
+    baseline_config_df, prior_config_df, prior_prior_df = add_regret([baseline_config_df, prior_config_df, prior_prior_df], max_performances)
     return baseline_config_df, prior_config_df, prior_prior_df
 
 
@@ -45,30 +56,25 @@ def merge_df(df: pd.DataFrame, incumbents: pd.DataFrame, priors: Optional[pd.Dat
     return incumbent_df, prior_df
 
 
-def get_max_performance(baseline_config_df: pd.DataFrame, prior_config_df: pd.DataFrame, ignore_data_generation: bool) -> Dict[Tuple[str, int], float]:
+def get_max_performance(baseline_config_df: pd.DataFrame, prior_config_df: pd.DataFrame) -> Dict[Tuple[str, int], float]:
     """
     Compute the maximum performance, later needed for regret computation for all experiments. If ignore_data_generation is True, the data generation experiments are ignored.
 
     """
-    # Concat all dfs
-    if ignore_data_generation:
-        all_dfs = [baseline_config_df, prior_config_df]
-
-    else:
-        raise NotImplementedError()
+    all_dfs = [baseline_config_df, prior_config_df]
     concat_df = pd.concat(all_dfs)
     max_performances = concat_df.groupby(["scenario", "dataset"])["performance"].max()
     return max_performances.to_dict()
 
 
-def add_regret(baseline_config_df: pd.DataFrame, prior_config_df: pd.DataFrame, prior_prior_df, max_performances: Dict[Tuple[str, int], float]) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def add_regret(dfs: List[pd.DataFrame], max_performances: Dict[Tuple[str, int], float]) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Add the regret to the dataframes
     """
-    for df in [baseline_config_df, prior_config_df, prior_prior_df]:
+    for df in dfs:
         df["regret"] = df.apply(lambda x: max_performances[(x["scenario"], x["dataset"])] - x["performance"], axis=1)
         df["final_regret"] = df.apply(lambda x: max_performances[(x["scenario"], x["dataset"])] - x["final_performance"], axis=1)
-    return baseline_config_df, prior_config_df, prior_prior_df
+    return dfs
 
 
 def split_df(prior_config_df: pd.DataFrame, prior_prior_df: pd.DataFrame):
@@ -84,7 +90,33 @@ def quantile_ci(data):
     return np.percentile(data, [5, 95.5])
 
 
-def plot_run_seaborn(
+def plot_datageneration_run(
+    data: pd.DataFrame,
+    scenario: str,
+    ax: plt.Axes,
+    min_ntrials=1,
+    max_ntrials=5000,
+    error_bar_type: str = "se",
+):
+    random_incumbent_data = data[(data["scenario"] == scenario) & (data["random"] == True)]
+    smac_incumbent_data = data[(data["scenario"] == scenario) & (data["random"] == False)]
+
+    df_dict = {
+        "random": random_incumbent_data,
+        "smac": smac_incumbent_data,
+    }
+
+    df_dict = extract_incumbent_steps(df_dict=df_dict, min_ntrials=min_ntrials, max_ntrials=max_ntrials)
+
+    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["random"], label="random", ax=ax, errorbar=error_bar_type)
+    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["smac"], label="smac", ax=ax, errorbar=error_bar_type)
+    ax.set_ylabel("Regret")
+
+    # Check highest performacne after 10 trials
+    return ax
+
+
+def plot_final_run(
     baseline_data: pd.DataFrame,
     dynabo_incumbent_data: pd.DataFrame,
     dynabo_prior_data: pd.DataFrame,
@@ -97,22 +129,15 @@ def plot_run_seaborn(
     ax: plt.Axes,
     min_ntrials=1,
     max_ntrials=200,
-    error_bar_type: str = "quantile_ci",
+    error_bar_type: str = "se",
 ):
     # Select relevant data
     df_dict = preprocess(baseline_data, dynabo_incumbent_data, dynabo_prior_data, pibo_incumbent_data, pibo_prior_data, scenario, dataset, prior_kind, use_rejection, ax, min_ntrials, max_ntrials)
 
-    if error_bar_type == "quantile_ci":
-        error_function = ("ci", 95)
-    elif error_bar_type == "stdev":
-        error_function = "sd"
-    elif error_bar_type == "stderr":
-        error_function = "se"
-
     # sns.scatterplot(x="after_n_evaluations", y="regret", ax=ax, data=relevant_dynabo_priors)
-    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["baseline"], label="baseline", ax=ax, errorbar=error_function)
-    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["dynabo_incumbents"], label="dynabo", ax=ax, errorbar=error_function)
-    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["pibo_incumbents"], label="pibo", ax=ax, errorbar=error_function)
+    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["baseline"], label="baseline", ax=ax, errorbar=error_bar_type)
+    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["dynabo_incumbents"], label="dynabo", ax=ax, errorbar=error_bar_type)
+    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["pibo_incumbents"], label="pibo", ax=ax, errorbar=error_bar_type)
     ax.set_ylabel("Regret")
 
     # Check highest performacne after 10 trials
@@ -170,9 +195,13 @@ def preprocess(
         baseline_data, dynabo_incumbent_data, dynabo_prior_data, pibo_incumbent_data, pibo_prior_data, scenario, dataset, prior_kind, use_rejection
     )
 
-    df_dict = extract_incumbent_steps(
-        relevant_baseline=relevant_baseline, relevant_dynabo_incumbents=relevant_dynabo_incumbents, relevant_pibo_incumbents=relevant_pibo_incumbents, min_ntrials=min_ntrials, max_ntrials=max_ntrials
-    )
+    df_dict = {
+        "baseline": relevant_baseline,
+        "dynabo_incumbents": relevant_dynabo_incumbents,
+        "pibo_incumbents": relevant_pibo_incumbents,
+    }
+
+    df_dict = extract_incumbent_steps(df_dict=df_dict, min_ntrials=min_ntrials, max_ntrials=max_ntrials)
 
     return df_dict
 
@@ -234,13 +263,8 @@ def select_relevant_data(
     return relevant_baseline, relevant_dynabo_incumbents, relevant_dynabo_prior, relevant_pibo_incumbents, relevant_pibo_prior
 
 
-def extract_incumbent_steps(relevant_baseline: pd.DataFrame, relevant_dynabo_incumbents: pd.DataFrame, relevant_pibo_incumbents: pd.DataFrame, min_ntrials: int, max_ntrials: int):
+def extract_incumbent_steps(df_dict: Dict[str, pd.DataFrame], min_ntrials: int, max_ntrials: int):
     full_range = pd.DataFrame({"after_n_evaluations": range(min_ntrials, max_ntrials + 1)})
-    df_dict = {
-        "baseline": relevant_baseline,
-        "dynabo_incumbents": relevant_dynabo_incumbents,
-        "pibo_incumbents": relevant_pibo_incumbents,
-    }
 
     # Step 1: Iterate over all DataFrames
     for key in df_dict.keys():
@@ -280,7 +304,9 @@ def extract_incumbent_steps(relevant_baseline: pd.DataFrame, relevant_dynabo_inc
     return df_dict
 
 
-def create_dataset_plots(error_bar_type: str):
+def create_dataset_plots(
+    baseline_config_df: pd.DataFrame, dynabo_incumbent_df: pd.DataFrame, dynabo_prior_df: pd.DataFrame, pibo_incumbent_df: pd.DataFrame, pibo_prior_df: pd.DataFrame, error_bar_type: str
+):
     for scenario in baseline_config_df["scenario"].unique():
         scenario_df = baseline_config_df[baseline_config_df["scenario"] == scenario]
         for dataset in scenario_df["dataset"].unique():
@@ -290,7 +316,7 @@ def create_dataset_plots(error_bar_type: str):
             plot_number = 0
             for prior_kind in ["good", "medium", "misleading"]:
                 ax = axs[plot_number]
-                ax = plot_run_seaborn(
+                ax = plot_final_run(
                     baseline_config_df,
                     dynabo_incumbent_df,
                     dynabo_prior_df,
@@ -329,7 +355,9 @@ def create_dataset_plots(error_bar_type: str):
             save_fig(f"plots/dataset_plots/cdf/{scenario}/{dataset}.pdf")
 
 
-def create_scenario_plots(error_bar_type: str):
+def create_scenario_plots(
+    baseline_config_df: pd.DataFrame, dynabo_incumbent_df: pd.DataFrame, dynabo_prior_df: pd.DataFrame, pibo_incumbent_df: pd.DataFrame, pibo_prior_df: pd.DataFrame, error_bar_type: str
+):
     for scenario in baseline_config_df["scenario"].unique():
         os.makedirs("plots/scenario_plots/regret", exist_ok=True)
         fig, axs = plt.subplots(1, 3, figsize=(18, 6), dpi=300)  # Wider and higher resolution
@@ -337,7 +365,7 @@ def create_scenario_plots(error_bar_type: str):
         plot_number = 0
         for prior_kind in ["good", "medium", "misleading"]:
             ax = axs[plot_number]
-            ax = plot_run_seaborn(
+            ax = plot_final_run(
                 baseline_config_df,
                 dynabo_incumbent_df,
                 dynabo_prior_df,
@@ -377,7 +405,9 @@ def create_scenario_plots(error_bar_type: str):
         save_fig(f"plots/scenario_plots/cdf/{scenario}.pdf")
 
 
-def create_overall_plot(error_bar_type: str):
+def create_overall_plot(
+    baseline_config_df: pd.DataFrame, dynabo_incumbent_df: pd.DataFrame, dynabo_prior_df: pd.DataFrame, pibo_incumbent_df: pd.DataFrame, pibo_prior_df: pd.DataFrame, error_bar_type: str
+):
     os.makedirs("plots/scenario_plots/regret", exist_ok=True)
 
     # Improved figure layout
@@ -392,7 +422,7 @@ def create_overall_plot(error_bar_type: str):
         ax = axs[plot_number]
 
         # Call the plotting function
-        ax = plot_run_seaborn(
+        ax = plot_final_run(
             baseline_config_df,
             dynabo_incumbent_df,
             dynabo_prior_df,
@@ -476,10 +506,27 @@ def remove_weird_datasets(
     return baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df
 
 
-if __name__ == "__main__":
-    baseline_config_df, prior_config_df, prior_prior_df = load_data()
-
+def plot_final_results():
+    baseline_config_df, prior_config_df, prior_prior_df = load_final_data()
     dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df = split_df(prior_config_df=prior_config_df, prior_prior_df=prior_prior_df)
-    create_dataset_plots(error_bar_type="stderr")
-    create_scenario_plots(error_bar_type="stderr")
-    create_overall_plot(error_bar_type="stderr")
+    create_dataset_plots(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df)
+    create_scenario_plots(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df)
+    create_overall_plot(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df)
+
+
+def plot_datageneration():
+    data = load_datageneration_data()
+    fig, axs = plt.subplots(1, len(data["scenario"].unique()), figsize=(32, 18), dpi=300)
+    axs = axs.flatten()
+    for scenario, ax in zip(data["scenario"].unique(), axs):
+        plot_datageneration_run(data, scenario, ax)
+        ax.set_title(scenario)
+    fig.legend()
+    save_fig(
+        "plots/data_generation/joined.pdf",
+    )
+
+
+if __name__ == "__main__":
+    # plot_final_results()
+    plot_datageneration()

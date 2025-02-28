@@ -2,8 +2,9 @@ import time
 from abc import abstractmethod
 from typing import List
 
+import ioh
 import pandas as pd
-from ConfigSpace import Configuration, ConfigurationSpace
+from ConfigSpace import Configuration, ConfigurationSpace, Float
 from py_experimenter.result_processor import ResultProcessor
 from smac.facade.hyperparameter_optimization_facade import HyperparameterOptimizationFacade
 from smac.runhistory import StatusType, TrialInfo, TrialValue
@@ -27,8 +28,15 @@ class AbstractEvaluator:
         self.timeout_counter = 0
 
     @abstractmethod
-    def train(self, configuration: Configuration, seed: int = 0):
-        pass  # TODO update this to to contain the general function
+    def train(self, config: Configuration, seed: int = 0):
+        performance, runtime = self._train(config=config, seed=seed)
+
+        self.accumulated_runtime = round(self.accumulated_runtime + runtime, 3)
+
+        if self.incumbent_cost is None or performance < self.incumbent_cost:
+            self.incumbent_cost = performance
+
+        return float(performance), float(runtime)
 
     @abstractmethod
     def get_configuration_space(self) -> ConfigurationSpace:
@@ -42,12 +50,24 @@ class AbstractEvaluator:
             "n_evaluations_computed": self.eval_counter,
         }
 
+    @abstractmethod
+    @staticmethod
+    def get_fixed_hyperparameter_combinations(
+        with_all_datasets: bool = True,
+        medium_and_hard: bool = False,
+        pibo: bool = False,
+        dynabo: bool = False,
+        baseline: bool = False,
+        random: bool = False,
+    ):
+        pass
+
 
 class YAHPOGymEvaluator(AbstractEvaluator):
     def __init__(
         self,
-        scenario,
-        dataset,
+        scenario: str,
+        dataset: int,
         metric="acc",
         runtime_metric_name="timetrain",
     ):
@@ -58,30 +78,111 @@ class YAHPOGymEvaluator(AbstractEvaluator):
         self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario, check=False)
         self.benchmark.set_instance(value=self.dataset)
 
-    def train(self, config: Configuration, seed: int = 0):
-        self.eval_counter += 1
-        config_dict = dict(config)
-
-        def_conf = dict(self.benchmark.get_opt_space().get_default_configuration())
-        for key, value in config_dict.items():
-            def_conf[key] = value
-
-        res = self.benchmark.objective_function(configuration=def_conf)
+    def _train(self, config: Configuration, seed: int = 0):
+        res = self.benchmark.objective_function(configuration=config)
         performance = round((-1) * res[0][self.metric], 6)
         runtime = round(res[0][self.runtime_metric_name], 3)
-
-        self.accumulated_runtime = round(self.accumulated_runtime + runtime, 3)
-
-        if self.incumbent_cost is None or performance < self.incumbent_cost:
-            self.incumbent_cost = performance
-
-        return float(performance), float(runtime)
+        return performance, runtime
 
     def get_configuration_space(self) -> ConfigurationSpace:
         return self.benchmark.get_opt_space(drop_fidelity_params=True)
 
+    @staticmethod
+    def get_fixed_hyperparameter_combinations(
+        with_all_datasets: bool = True,
+        medium_and_hard: bool = False,
+        pibo: bool = False,
+        dynabo: bool = False,
+        baseline: bool = False,
+        random: bool = False,
+    ):
+        jobs = []
 
-def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: YAHPOGymEvaluator, result_processor: ResultProcessor, timeout: int):
+        # Add all YAHPO-Gym Evaluations
+        for scenario in [
+            "rbv2_ranger",
+            "rbv2_xgboost",
+            "rbv2_svm",
+            "rbv2_glmnet",
+            "lcbench",
+            "nb301",
+            "rbv2_aknn",
+            "rbv2_rpart",
+            "rbv2_super",
+        ]:
+            # asset pibo, baseliiine or dynabo is set
+            assert pibo or dynabo or baseline or random
+            job = []
+            bench = benchmark_set.BenchmarkSet(scenario=scenario)
+            if "val_accuracy" in bench.config.y_names:
+                metric = "val_accuracy"
+            elif "acc" in bench.config.y_names:
+                metric = "acc"
+            else:
+                metric = "unknown"
+
+            if baseline:
+                job += [{"pibo": False, "dynabo": False, "baseline": True, "random": False}]
+            if pibo:
+                job += [{"pibo": True, "dynabo": False, "baseline": False, "random": False, "prior_decay_enumerator": 200}]
+            if dynabo:
+                job += [{"pibo": False, "dynabo": True, "baseline": False, "random": False, "prior_decay_enumerator": 50}]
+            if random:
+                job += [{"pibo": False, "dynabo": False, "baseline": False, "random": True}]
+
+            if with_all_datasets:
+                # create ablation and ds_tunability jobs
+                new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in bench.instances]
+                # combine job with new_job
+            elif medium_and_hard:
+                medium_and_hard_datasets = get_medium_and_hard_datasets(scenario)
+                new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in medium_and_hard_datasets]
+            else:
+                new_job = [{"scenario": scenario, "dataset": "all", "metric": metric}]
+
+            jobs += [dict(**j, **nj) for j in job for nj in new_job]
+
+        return jobs
+
+
+class BBOBEvaluator(AbstractEvaluator):
+    def __init__(self, scenario: int, dataset: str, dimension: int):
+        super().__init__(int(scenario), dataset)
+        self.dimension = dimension
+
+        self.problem = ioh.get_problem(
+            fid=int(scenario),
+            instance=dataset,
+            dimension=dimension,
+            # problem_type=ProblemType.BBOB,
+        )
+
+    def get_configuration_space(self):
+        upper_bounds = self.problem.bounds.ub
+        lower_bounds = self.problem.bounds.lb
+        hps = [Float(name=f"x{i}", bounds=[lower_bounds[i], upper_bounds[i]]) for i in range(10)]
+        configuration_space = ConfigurationSpace()
+        configuration_space.add(hps)
+        return configuration_space
+
+    def train(self, config: Configuration, seed: int):
+        values = config.values()
+        performance = self.problem(values)
+        return performance, 0
+
+    @staticmethod
+    def get_fixed_hyperparameter_combinations(
+        with_all_datasets: bool = True,
+        medium_and_hard: bool = False,
+        pibo: bool = False,
+        dynabo: bool = False,
+        baseline: bool = False,
+        random: bool = False,
+    ):
+        pass
+
+
+def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: AbstractEvaluator, result_processor: ResultProcessor, timeout: int):
     while smac.runhistory.finished < smac.scenario.n_trials:
         start_ask = time.time()
         trial_info: TrialInfo = smac.ask()
@@ -107,6 +208,7 @@ def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: YAHPOGymEval
 
 
 def get_yahpo_fixed_parameter_combinations(
+    benchmarklib: str = "yahpogym",
     with_all_datasets: bool = True,
     medium_and_hard: bool = False,
     pibo: bool = False,
@@ -114,55 +216,24 @@ def get_yahpo_fixed_parameter_combinations(
     baseline: bool = False,
     random: bool = False,
 ):
-    jobs = []
-
-    # Add all YAHPO-Gym Evaluations
-    for scenario in [
-        "rbv2_ranger",
-        "rbv2_xgboost",
-        "rbv2_svm",
-        "rbv2_glmnet",
-        "lcbench",
-        "nb301",
-        "rbv2_aknn",
-        "rbv2_rpart",
-        "rbv2_super",
-    ]:
-        bench = benchmark_set.BenchmarkSet(scenario=scenario)
-
-        if "val_accuracy" in bench.config.y_names:
-            metric = "val_accuracy"
-        elif "acc" in bench.config.y_names:
-            metric = "acc"
-        else:
-            metric = "unknown"
-
-        # asset pibo, baseliiine or dynabo is set
-        assert pibo or dynabo or baseline or random
-        job = []
-
-        if baseline:
-            job += [{"pibo": False, "dynabo": False, "baseline": True, "random": False}]
-        if pibo:
-            job += [{"pibo": True, "dynabo": False, "baseline": False, "random": False, "prior_decay_enumerator": 200}]
-        if dynabo:
-            job += [{"pibo": False, "dynabo": True, "baseline": False, "random": False, "prior_decay_enumerator": 50}]
-        if random:
-            job += [{"pibo": False, "dynabo": False, "baseline": False, "random": True}]
-
-        if with_all_datasets:
-            # create ablation and ds_tunability jobs
-            new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in bench.instances]
-            # combine job with new_job
-        elif medium_and_hard:
-            medium_and_hard_datasets = get_medium_and_hard_datasets(scenario)
-            new_job = [{"scenario": scenario, "dataset": dataset, "metric": metric} for dataset in medium_and_hard_datasets]
-        else:
-            new_job = [{"scenario": scenario, "dataset": "all", "metric": metric}]
-
-        jobs += [dict(**j, **nj) for j in job for nj in new_job]
-
-    return jobs
+    if benchmarklib == "yahpogym":
+        YAHPOGymEvaluator.get_fixed_hyperparameter_combinations(
+            with_all_datasets=with_all_datasets,
+            medium_and_hard=medium_and_hard,
+            pibo=pibo,
+            dynabo=dynabo,
+            baseline=baseline,
+            random=random,
+        )
+    elif benchmarklib == "bbob":
+        BBOBEvaluator.get_fixed_hyperparameter_combinations(
+            with_all_datasets=with_all_datasets,
+            medium_and_hard=medium_and_hard,
+            pibo=pibo,
+            dynabo=dynabo,
+            baseline=baseline,
+            random=random,
+        )
 
 
 def get_medium_and_hard_datasets(scenario: str) -> List["str"]:

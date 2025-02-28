@@ -124,7 +124,7 @@ if __name__ == "__main__":
                 "max_ratio": [0.25],
                 "seed": range(10),
             },
-            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, baseline=True, pibo=False, dynabo=False),
+            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, baseline=False, pibo=False, dynabo=False, random=True),
         )
     execute = True
     if execute:

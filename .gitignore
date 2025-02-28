@@ -134,3 +134,4 @@ plotting_data/*
 !plotting_data/.gitkeep
 plots/metadata/difficulty/*.pdf
 plots/metadata
+plots/data_generation/joined.pdf
