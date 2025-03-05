@@ -3,11 +3,12 @@ from abc import abstractmethod
 from typing import List
 
 import ioh
+import numpy as np
 import pandas as pd
 from ConfigSpace import Configuration, ConfigurationSpace, Float
 from py_experimenter.result_processor import ResultProcessor
 from smac.facade.hyperparameter_optimization_facade import HyperparameterOptimizationFacade
-from smac.runhistory import StatusType, TrialInfo, TrialValue
+from smac.runhistory import TrialInfo, TrialValue
 from yahpo_gym import benchmark_set
 
 
@@ -27,7 +28,6 @@ class AbstractEvaluator:
         self.eval_counter = 0
         self.timeout_counter = 0
 
-    @abstractmethod
     def train(self, config: Configuration, seed: int = 0):
         performance, runtime = self._train(config=config, seed=seed)
 
@@ -37,6 +37,10 @@ class AbstractEvaluator:
             self.incumbent_cost = performance
 
         return float(performance), float(runtime)
+
+    @abstractmethod
+    def _train(self, config: Configuration, seed: int = 0):
+        pass
 
     @abstractmethod
     def get_configuration_space(self) -> ConfigurationSpace:
@@ -79,7 +83,14 @@ class YAHPOGymEvaluator(AbstractEvaluator):
         self.benchmark.set_instance(value=self.dataset)
 
     def _train(self, config: Configuration, seed: int = 0):
+        # Start with default config and replace values. Otherwise YahpoGym fails
+        final_config = self.benchmark._get_config_space().get_default_configuration()
+        for name, value in config.items():
+            final_config[name] = value
+
         res = self.benchmark.objective_function(configuration=config)
+        if np.isnan(res[0]["acc"]):
+            pass
         performance = round((-1) * res[0][self.metric], 6)
         runtime = round(res[0][self.runtime_metric_name], 3)
         return performance, runtime
@@ -165,7 +176,7 @@ class BBOBEvaluator(AbstractEvaluator):
         configuration_space.add(hps)
         return configuration_space
 
-    def train(self, config: Configuration, seed: int):
+    def _train(self, config: Configuration, seed: int):
         values = config.values()
         performance = self.problem(values)
         return performance, 0
@@ -192,11 +203,8 @@ def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: AbstractEval
         ask_runtime = round(end_ask - start_ask, 3)
         evaluator.reasoning_runtime += ask_runtime
 
-        try:
-            cost, runtime = evaluator.train(dict(trial_info.config))
-            trial_value = TrialValue(cost=cost, time=runtime)
-        except Exception:
-            trial_value = TrialValue(cost=0, status=StatusType.TIMEOUT)
+        cost, runtime = evaluator.train(trial_info.config)
+        trial_value = TrialValue(cost=cost, time=runtime)
 
         start_tell = time.time()
         smac.tell(info=trial_info, value=trial_value)

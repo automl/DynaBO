@@ -104,7 +104,6 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         "virtual_runtime": optimization_data["virtual_runtime"],
         "reasoning_runtime": round(evaluator.reasoning_runtime, 3),
         "n_evaluations_computed": optimization_data["n_evaluations_computed"],
-        "n_timeouts_occurred": optimization_data["n_timeouts_computed"],
         "experiment_finished": True,
     }
 
@@ -119,7 +118,7 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = True
+    fill = False
     if fill:
         experimenter.fill_table_from_combination(
             parameters={
@@ -139,4 +138,4 @@ if __name__ == "__main__":
         )
     execute = True
     if execute:
-        experimenter.execute(run_experiment, max_experiments=4)
+        experimenter.execute(run_experiment, max_experiments=10, random_order=True)

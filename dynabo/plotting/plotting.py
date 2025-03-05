@@ -332,8 +332,8 @@ def create_dataset_plots(
                     error_bar_type=error_bar_type,
                 )
                 plot_number += 1
-                set_ax_style(ax, prior_kind=prior_kind, x_label="Number of Evaluations", y_label="Regret")
-            set_fig_style(fig, f"Regret on {scenario} {dataset}")
+                set_ax_style(ax, prior_kind=prior_kind, x_label="Number of Trials", y_label="Regret")
+            set_fig_style(fig, axs, f"Regret on {scenario} {dataset}")
             save_fig(f"plots/dataset_plots/regret/{scenario}/{dataset}.pdf")
 
             os.makedirs(f"plots/dataset_plots/cdf/{scenario}", exist_ok=True)
@@ -382,7 +382,7 @@ def create_scenario_plots(
             )
             plot_number += 1
             set_ax_style(ax, prior_kind=prior_kind, x_label="Number of Evaluations", y_label="Regret")
-        set_fig_style(fig, f"Average regret on {scenario}")
+        set_fig_style(fig, axs, f"Average regret on {scenario}")
         save_fig(f"plots/scenario_plots/regret/{scenario}.pdf")
         print(f"Saved {scenario}.png")
 
@@ -401,7 +401,7 @@ def create_scenario_plots(
             ax=ax,
         )
         set_ax_style(ax, prior_kind=prior_kind, x_label="Regret", y_label="CDF")
-        set_fig_style(fig, f"CDF of Regret on {scenario}")
+        set_fig_style(fig, axs, f"CDF of Regret on {scenario}")
         save_fig(f"plots/scenario_plots/cdf/{scenario}.pdf")
 
 
@@ -442,7 +442,7 @@ def create_overall_plot(
 
         plot_number += 1
 
-    set_fig_style(fig, "Overall Regret Across Different Priors")
+    set_fig_style(fig, axs, "Overall Regret Across Different Priors")
 
     save_fig("plots/scenario_plots/regret/overall.pdf")
 
@@ -464,20 +464,38 @@ def create_overall_plot(
 
 
 def set_ax_style(ax, prior_kind: str, x_label, y_label):
-    ax.legend(loc="best", frameon=True, fancybox=True, shadow=True, fontsize=12)
+    # Remove ax legend
+    ax.legend().remove()
 
     # Improve title aesthetics
-    ax.set_title(f"Prior: {prior_kind.capitalize()}", fontsize=16, fontweight="bold", pad=10)
+    ax.set_title(
+        f"Prior: {prior_kind.capitalize()}",
+        fontsize=30,
+        fontweight="bold",
+    )
 
     # Enhance axes labels and grid
     ax.grid(True, linestyle="--", alpha=0.6)
-    ax.tick_params(axis="both", labelsize=12)
-    ax.set_xlabel(x_label, fontsize=14, fontweight="bold")
-    ax.set_ylabel(y_label, fontsize=14, fontweight="bold")
+    ax.tick_params(axis="both", labelsize=20)
+    ax.set_xlabel(x_label, fontsize=25, fontweight="bold")
+    ax.set_ylabel(y_label, fontsize=25, fontweight="bold")
 
 
-def set_fig_style(fig, title: str):
-    fig.suptitle(title, fontsize=18, fontweight="bold", y=1.05)
+def set_fig_style(fig, axs, title: str):
+    fig.suptitle(title, fontsize=25, fontweight="bold", y=1)
+
+    # Extract all plotted lines from axs and only keep unique lines
+    label_line_dict = {line.get_label(): line for ax in axs for line in ax.get_lines()}
+    labels, lines = zip(*label_line_dict.items())
+
+    fig.legend(
+        lines,
+        labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.0),
+        ncol=3,
+        fontsize=20,
+    )
 
     # Adjust layout for better spacing
     fig.tight_layout()
@@ -509,9 +527,12 @@ def remove_weird_datasets(
 def plot_final_results():
     baseline_config_df, prior_config_df, prior_prior_df = load_final_data()
     dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df = split_df(prior_config_df=prior_config_df, prior_prior_df=prior_prior_df)
-    create_dataset_plots(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df)
-    create_scenario_plots(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df)
-    create_overall_plot(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df)
+    baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df = remove_weird_datasets(
+        baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df
+    )
+    # create_dataset_plots(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, error_bar_type="se")
+    create_scenario_plots(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, error_bar_type="se")
+    create_overall_plot(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, error_bar_type="se")
 
 
 def plot_datageneration():
@@ -528,5 +549,5 @@ def plot_datageneration():
 
 
 if __name__ == "__main__":
-    # plot_final_results()
-    plot_datageneration()
+    plot_final_results()
+    # plot_datageneration()
