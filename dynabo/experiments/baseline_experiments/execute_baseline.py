@@ -119,6 +119,8 @@ if __name__ == "__main__":
         use_codecarbon=False,
     )
     fill = False
+    smac_baseline = False
+    random_baseline = True
     if fill:
         experimenter.fill_table_from_combination(
             parameters={
