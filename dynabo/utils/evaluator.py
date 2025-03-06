@@ -88,7 +88,7 @@ class YAHPOGymEvaluator(AbstractEvaluator):
         for name, value in config.items():
             final_config[name] = value
 
-        res = self.benchmark.objective_function(configuration=config)
+        res = self.benchmark.objective_function(configuration=final_config)
         if np.isnan(res[0]["acc"]):
             pass
         performance = round((-1) * res[0][self.metric], 6)

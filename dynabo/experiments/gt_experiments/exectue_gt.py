@@ -24,7 +24,6 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     random: bool = bool(config["random"])
 
     # SMAC Scenario Values
-    internal_timeout: int = int(config["timeout_internal"])
     timeout: int = int(config["timeout_total"])
     seed: int = int(config["seed"])
     n_trials = int(config["n_trials"])
@@ -36,7 +35,6 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     evaluator: YAHPOGymEvaluator = YAHPOGymEvaluator(
         scenario=scenario,
         dataset=dataset,
-        internal_timeout=internal_timeout,
         metric=metric,
         runtime_metric_name="timetrain" if scenario != "lcbench" else "time",
     )
@@ -119,7 +117,7 @@ if __name__ == "__main__":
         "prior_std_denominator": 5,
         "timeout_total": [86400],
         "timeout_internal": [1200],
-        "n_trials": [5000],
+        "n_trials": [5000000],
         "n_configs_per_hyperparameter": [10],
         "max_ratio": [0.25],
     }
@@ -140,7 +138,7 @@ if __name__ == "__main__":
             table_name="data_generation_medium_hard",
         )
 
-    fill_table = False
+    fill_table = True
     if fill_table:
         if all_one_seed:
             experimenter.fill_table_from_combination(
@@ -149,13 +147,13 @@ if __name__ == "__main__":
             )
         if medium_and_hard:
             experimenter.fill_table_from_combination(
-                parameters={**base_parameters, **{"seed": range(10)}},
+                parameters={**base_parameters, **{"seed": range(1)}},
                 fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, random=True),
             )
     reset = False
     if reset:
         experimenter.reset_experiments("error")
 
-    execute = True
+    execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=4)
