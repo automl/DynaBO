@@ -171,13 +171,13 @@ class BBOBEvaluator(AbstractEvaluator):
     def get_configuration_space(self):
         upper_bounds = self.problem.bounds.ub
         lower_bounds = self.problem.bounds.lb
-        hps = [Float(name=f"x{i}", bounds=[lower_bounds[i], upper_bounds[i]]) for i in range(10)]
+        hps = [Float(name=f"x{i}", bounds=[lower_bounds[i], upper_bounds[i]]) for i in range(self.dimension)]
         configuration_space = ConfigurationSpace()
         configuration_space.add(hps)
         return configuration_space
 
     def _train(self, config: Configuration, seed: int):
-        values = config.values()
+        values = list(config.values())
         performance = self.problem(values)
         return performance, 0
 
