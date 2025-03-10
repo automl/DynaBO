@@ -115,6 +115,7 @@ config/database_credentials.yml
 benchmark_data/yahpo_data
 benchmark_data/gt_prior_data/origin_table.csv
 benchmark_data/prior_data
+benchmark_data/pd1/
 
 # logs
 logs
@@ -135,3 +136,4 @@ plotting_data/*
 plots/metadata/difficulty/*.pdf
 plots/metadata
 plots/data_generation/joined.pdf
+data
