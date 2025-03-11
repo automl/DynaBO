@@ -3,6 +3,7 @@ import time
 from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
 from smac import HyperparameterOptimizationFacade, RandomFacade, Scenario
+from smac.acquisition.function import LCB
 from smac.acquisition.maximizer import LocalAndSortedRandomSearch
 from smac.main.config_selector import ConfigSelector
 
@@ -27,6 +28,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     timeout: int = int(config["timeout_total"])
     seed: int = int(config["seed"])
     n_trials = int(config["n_trials"])
+    acquisition_function = config["acquisition_function"]
 
     # Initial Design values
     n_configs_per_hyperparameter = int(config["n_configs_per_hyperparameter"])
@@ -60,7 +62,12 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
         initial_design = HyperparameterOptimizationFacade.get_initial_design(scenario=smac_scenario, n_configs=initial_design_size)
 
-        acquisition_function = HyperparameterOptimizationFacade.get_acquisition_function(scenario=scenario)
+        if acquisition_function == "expected_improvement":
+            acquisition_function = HyperparameterOptimizationFacade.get_acquisition_function(scenario=scenario)
+        elif acquisition_function == "confidence_bound":
+            acquisition_function = LCB()
+        else:
+            raise ValueError(f"Acquisition function {acquisition_function} not known.")
 
         local_and_prior_search = LocalAndSortedRandomSearch(
             configspace=configuration_space,
@@ -117,7 +124,7 @@ if __name__ == "__main__":
         "prior_std_denominator": 5,
         "timeout_total": [86400],
         "timeout_internal": [1200],
-        "n_trials": [5000000],
+        "n_trials": [5000],
         "n_configs_per_hyperparameter": [10],
         "max_ratio": [0.25],
     }
@@ -147,8 +154,10 @@ if __name__ == "__main__":
             )
         if medium_and_hard:
             experimenter.fill_table_from_combination(
-                parameters={**base_parameters, **{"seed": range(1)}},
-                fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, random=True),
+                parameters={**base_parameters, **{"seed": range(10)}},
+                fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(
+                    with_all_datasets=False, medium_and_hard=True, baseline=True, random=False, acquisition_function="confidence_bound"
+                ),
             )
     reset = False
     if reset:
@@ -156,4 +165,4 @@ if __name__ == "__main__":
 
     execute = False
     if execute:
-        experimenter.execute(run_experiment, max_experiments=4)
+        experimenter.execute(run_experiment, max_experiments=1)

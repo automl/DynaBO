@@ -100,6 +100,7 @@ class YAHPOGymEvaluator(AbstractEvaluator):
 
     @staticmethod
     def get_fixed_hyperparameter_combinations(
+        acquisition_function: str,
         with_all_datasets: bool = True,
         medium_and_hard: bool = False,
         pibo: bool = False,
@@ -133,11 +134,11 @@ class YAHPOGymEvaluator(AbstractEvaluator):
                 metric = "unknown"
 
             if baseline:
-                job += [{"pibo": False, "dynabo": False, "baseline": True, "random": False}]
+                job += [{"pibo": False, "dynabo": False, "baseline": True, "acquisition_function": acquisition_function, "random": False}]
             if pibo:
-                job += [{"pibo": True, "dynabo": False, "baseline": False, "random": False, "prior_decay_enumerator": 200}]
+                job += [{"pibo": True, "dynabo": False, "baseline": False, "acquisition_function": acquisition_function, "random": False, "prior_decay_enumerator": 200}]
             if dynabo:
-                job += [{"pibo": False, "dynabo": True, "baseline": False, "random": False, "prior_decay_enumerator": 50}]
+                job += [{"pibo": False, "dynabo": True, "baseline": False, "acquisition_function": acquisition_function, "random": False, "prior_decay_enumerator": 50}]
             if random:
                 job += [{"pibo": False, "dynabo": False, "baseline": False, "random": True}]
 
@@ -217,6 +218,7 @@ def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: AbstractEval
 
 def get_yahpo_fixed_parameter_combinations(
     benchmarklib: str = "yahpogym",
+    acquisition_function: str = "expected_improvement",
     with_all_datasets: bool = True,
     medium_and_hard: bool = False,
     pibo: bool = False,
@@ -226,6 +228,7 @@ def get_yahpo_fixed_parameter_combinations(
 ):
     if benchmarklib == "yahpogym":
         jobs = YAHPOGymEvaluator.get_fixed_hyperparameter_combinations(
+            acquisition_function=acquisition_function,
             with_all_datasets=with_all_datasets,
             medium_and_hard=medium_and_hard,
             pibo=pibo,
