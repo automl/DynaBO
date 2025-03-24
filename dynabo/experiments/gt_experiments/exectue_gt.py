@@ -101,12 +101,11 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
     result = {
         "initial_design_size": initial_design_size,
-        "final_performance": optimization_data["final_performance"],
         "runtime": round(end_time - start_time, 3),
+        "reasoning_runtime": optimization_data["reasoning_runtime"],
+        "final_performance": optimization_data["final_performance"],
         "virtual_runtime": optimization_data["virtual_runtime"],
-        "reasoning_runtime": round(evaluator.reasoning_runtime, 3),
         "n_evaluations_computed": optimization_data["n_evaluations_computed"],
-        "n_timeouts_occurred": optimization_data["n_timeouts_computed"],
         "experiment_finished": True,
     }
 
