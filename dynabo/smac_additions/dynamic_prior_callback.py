@@ -288,13 +288,58 @@ class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback):
 
 
 class PiBOWellPerformingPriorCallback(PiBOAbstractPriorCallback):
+    def __init__(
+        self,
+        scenario,
+        dataset,
+        metric,
+        base_path,
+        initial_design_size,
+        prior_every_n_trials,
+        validate_prior,
+        n_prior_validation_samples,
+        prior_validation_p_value,
+        prior_std_denominator,
+        prior_decay_enumerator,
+        prior_decay_denominator,
+        exponential_prior,
+        prior_sampling_weight,
+        no_incumbent_percentile: float,
+        result_processor=None,
+        evaluator=None,
+    ):
+        super().__init__(
+            scenario,
+            dataset,
+            metric,
+            base_path,
+            initial_design_size,
+            prior_every_n_trials,
+            validate_prior,
+            n_prior_validation_samples,
+            prior_validation_p_value,
+            prior_std_denominator,
+            prior_decay_enumerator,
+            prior_decay_denominator,
+            exponential_prior,
+            prior_sampling_weight,
+            result_processor,
+            evaluator,
+        )
+        self.no_incumbent_percentile = no_incumbent_percentile
+
     def sample_prior(self, smbo, incumbent_performance) -> Optional[pd.DataFrame]:
         # Select all configurations that have a better performance than the incumbent
         # Chekc whether the valeus are sorted
-        better_performing_configs = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] > incumbent_performance]
-        better_performing_configs = better_performing_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+        if self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance]:
+            relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance]
+            relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+        else:
+            relevant_configs = self.prior_data.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+            # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
+            relevant_configs = relevant_configs.head(int(self.no_incumbent_percentile * relevant_configs.shape[0]))
 
-        return self.draw_sample(better_performing_configs, smbo.intensifier._rng)
+        return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
 
 class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback):
