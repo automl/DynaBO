@@ -51,6 +51,7 @@ def build_prior_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     Given a dataframe, that is allready reduced to just one scenarion, dataset, metric combiantion, this function
     extracts the columns encoded in `incumbent_trace` into seperate columns.
     """
+    df = df[df["random"] == 0]
     df = df.reset_index(drop=True)
     extracted_df = extract_dataframe_from_column(df)
     df = df.drop(columns=["configuration"])
