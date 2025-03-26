@@ -3,7 +3,6 @@ from abc import abstractmethod
 from typing import List
 
 import ioh
-import numpy as np
 import pandas as pd
 from ConfigSpace import Configuration, ConfigurationSpace, Float
 from py_experimenter.result_processor import ResultProcessor
@@ -79,18 +78,18 @@ class YAHPOGymEvaluator(AbstractEvaluator):
         self.metric = metric
         self.runtime_metric_name = runtime_metric_name
 
-        self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario, check=False)
+        self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario)
         self.benchmark.set_instance(value=self.dataset)
+        self.default_fidelity_config = self.benchmark.get_fidelity_space().get_default_configuration()
 
     def _train(self, config: Configuration, seed: int = 0):
-        # Start with default config and replace values. Otherwise YahpoGym fails
-        final_config = self.benchmark._get_config_space().get_default_configuration()
-        for name, value in config.items():
-            final_config[name] = value
+        final_config = dict(config)
+
+        for fidelity_param, value in self.default_fidelity_config.items():
+            final_config[fidelity_param] = value
+        final_config["task_id"] = self.dataset
 
         res = self.benchmark.objective_function(configuration=final_config)
-        if np.isnan(res[0]["acc"]):
-            pass
         performance = round((-1) * res[0][self.metric], 6)
         runtime = round(res[0][self.runtime_metric_name], 3)
         return performance, runtime

@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table:
-      name: prior_approaches
+      name: prior_approaches_updated
       keyfields:
         benchmarklib:
           type: VARCHAR(255)
@@ -31,6 +31,9 @@ PY_EXPERIMENTER:
         random:
           type: BOOLEAN
           values: [False]
+        acquisition_function:
+          type: VARCHAR(500)
+          values: ["expected_improvement"]
         prior_kind:
           type: VARCHAR(255)
           values: ['good']
@@ -61,6 +64,9 @@ PY_EXPERIMENTER:
         prior_sampling_weight:
           type: FLOAT
           values: [0.3]
+        no_incumbent_percentile:
+          type: FLOAT
+          values: [0.01]
         timeout_total:
           type: INT
           values: [3600]

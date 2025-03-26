@@ -127,15 +127,16 @@ if __name__ == "__main__":
         "n_configs_per_hyperparameter": [10],
         "max_ratio": [0.25],
     }
-    all_one_seed = False
+    all_one_seed = True
     if all_one_seed:
         experimenter = PyExperimenter(
             experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
             database_credential_file_path=DB_CRED_FILE_PATH,
             use_codecarbon=False,
+            table_name="data_generation_new",
         )
 
-    medium_and_hard = True
+    medium_and_hard = False
     if medium_and_hard:
         experimenter = PyExperimenter(
             experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
@@ -149,7 +150,9 @@ if __name__ == "__main__":
         if all_one_seed:
             experimenter.fill_table_from_combination(
                 parameters={**base_parameters, **{"seed": range(1)}},
-                fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=True, medium_and_hard=False, baseline=True),
+                fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(
+                    with_all_datasets=True, medium_and_hard=False, baseline=True, random=False, acquisition_function="confidence_bound"
+                ),
             )
         if medium_and_hard:
             experimenter.fill_table_from_combination(
@@ -164,4 +167,4 @@ if __name__ == "__main__":
 
     execute = False
     if execute:
-        experimenter.execute(run_experiment, max_experiments=1)
+        experimenter.execute(run_experiment, max_experiments=3)

@@ -1,4 +1,5 @@
 import time
+from functools import partial
 
 from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
@@ -56,6 +57,9 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     prior_decay_enumerator = float(config["prior_decay_enumerator"])
     prior_decay_denominator = float(config["prior_decay_denominator"])
 
+    # Extract Information of what happens in case of no incumbent
+    no_incumbent_percentile = config["no_incumbent_percentile"]
+
     exponential_prior = config["exponential_prior"]
     prior_sampling_weight = config["prior_sampling_weight"]
 
@@ -101,7 +105,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
     if pibo:
         if prior_kind == "good":
-            PriorCallbackClass = PiBOWellPerformingPriorCallback
+            PriorCallbackClass = partial(PiBOWellPerformingPriorCallback, no_incumbent_percentile=no_incumbent_percentile)
         elif prior_kind == "medium":
             PriorCallbackClass = PiBOMediumPriorCallback
         elif prior_kind == "misleading":
@@ -112,7 +116,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             raise ValueError(f"Prior kind {prior_kind} not supported")
     elif dynabo:
         if prior_kind == "good":
-            PriorCallbackClass = DynaBOWellPerformingPriorCallback
+            PriorCallbackClass = partial(DynaBOWellPerformingPriorCallback, no_incumbent_percentile=no_incumbent_percentile)
         elif prior_kind == "medium":
             PriorCallbackClass = DynaBOMediumPriorCallback
         elif prior_kind == "misleading":
@@ -187,7 +191,7 @@ if __name__ == "__main__":
         experimenter.fill_table_from_combination(
             parameters={
                 "benchmarklib": ["yahpogym"],
-                "prior_kind": ["good", "medium", "misleading"],
+                "prior_kind": ["good"],
                 "prior_every_n_trials": [50],
                 "validate_prior": [False],
                 "n_prior_validation_samples": [500],
@@ -196,6 +200,7 @@ if __name__ == "__main__":
                 "prior_decay_denominator": [10],
                 "exponential_prior": [False],
                 "prior_sampling_weight": [0.3],
+                "no_incumbent_percentile": [0.01],
                 "timeout_total": [86400],
                 "n_trials": [200],
                 "n_configs_per_hyperparameter": [10],
@@ -209,4 +214,4 @@ if __name__ == "__main__":
         experimenter.reset_experiments("running", "error")
     execute = True
     if execute:
-        experimenter.execute(run_experiment, max_experiments=22, random_order=True)
+        experimenter.execute(run_experiment, max_experiments=10, random_order=True)
