@@ -549,5 +549,5 @@ def plot_datageneration():
 
 
 if __name__ == "__main__":
-    plot_final_results()
-    # plot_datageneration()
+    # plot_final_results()
+    plot_datageneration()

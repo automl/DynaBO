@@ -18,7 +18,7 @@ PRIOR_INCUMBENT_PATH = "plotting_data/prior_incumbent.csv"
 PRIOR_PRIORS_PATH = "plotting_data/prior_priors.csv"
 
 if __name__ == "__main__":
-    data_generation_one_seed_experimenter = PyExperimenter(DATA_GENERATION_CONFIG_PATH, CREDENTIALS_PATH)
+    data_generation_one_seed_experimenter = PyExperimenter(DATA_GENERATION_CONFIG_PATH, CREDENTIALS_PATH, table_name="data_generation_new")
     data_generation_medium_hard_experimenter = PyExperimenter(DATA_GENERATION_CONFIG_PATH, CREDENTIALS_PATH, table_name="data_generation_medium_hard")
     baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH)
     prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH)
