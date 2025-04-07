@@ -69,4 +69,6 @@ def build_prior_configuration_space(configuration_space: ConfigurationSpace, pri
             raise NotImplementedError(f"Hyperparameter {hyperparameter} not supported.")
 
         new_configuration_space.add(new_hyperparameter)
+    conditions = configuration_space.get_conditions()
+    new_configuration_space.add_conditions(conditions)
     return new_configuration_space

@@ -136,7 +136,13 @@ class AbstractPriorCallback(Callback, ABC):
             if prior_accepted:
                 self.set_prior(smbo, prior_configspace)
             self.log_prior(
-                smbo=smbo, performance=performance, config=logging_config, prior_accepted=prior_accepted, prior_mean_acq_value=prior_mean_acq_value, origin_mean_acq_value=origin_mean_acq_value, superior_configuration=superior_configuraitons,
+                smbo=smbo,
+                performance=performance,
+                config=logging_config,
+                prior_accepted=prior_accepted,
+                prior_mean_acq_value=prior_mean_acq_value,
+                origin_mean_acq_value=origin_mean_acq_value,
+                superior_configuration=superior_configuraiton,
             )
 
         return super().on_ask_start(smbo)
@@ -185,7 +191,7 @@ class AbstractPriorCallback(Callback, ABC):
         prior_performance = sampled_config[PERFORMANCE_INDICATOR_COLUMN].values[0]
 
         # Check if the sampled configuration is better than the incumbent
-        superior_configruation = sampled_config[sampled_config[PERFORMANCE_INDICATOR_COLUMN] < incumbent_performance]
+        superior_configuration = prior_performance > incumbent_performance
 
         if sampled_config is None:
             raise ValueError("No prior configuration could be sampled.")
@@ -198,7 +204,7 @@ class AbstractPriorCallback(Callback, ABC):
         origin_configspace = smbo._configspace
         prior_configspace = build_prior_configuration_space(origin_configspace, hyperparameter_config, prior_std_denominator=self.prior_std_denominator * self.prior_number)
 
-        return prior_configspace, origin_configspace, performance, hyperparameter_config, superior_configruation
+        return prior_configspace, origin_configspace, performance, hyperparameter_config, superior_configuration
 
     def set_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace):
         smbo.intensifier.config_selector._acquisition_maximizer.dynamic_init(prior_configspace)
@@ -215,7 +221,7 @@ class AbstractPriorCallback(Callback, ABC):
         Samples a prior from the prior data.
         """
 
-    def log_prior(self, smbo: SMBO, performance: float, config: Dict, prior_accepted: bool, prior_mean_acq_value: float, origin_mean_acq_value: float, superior_configuration:bool):
+    def log_prior(self, smbo: SMBO, performance: float, config: Dict, prior_accepted: bool, prior_mean_acq_value: float, origin_mean_acq_value: float, superior_configuration: bool):
         """
         Logs the prior data.
         """
@@ -312,7 +318,7 @@ class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback):
 
     def sample_prior(self, smbo, incumbent_performance) -> Optional[pd.DataFrame]:
         # Select all configurations that have a better performance than the incumbent
-        # Chekc whether the valeus are sorted
+        # Check whether the values are sorted
         if (self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance).any():
             relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance]
             relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN)

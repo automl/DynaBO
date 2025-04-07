@@ -3,7 +3,7 @@ import os
 from dynabo.utils.data_utils import build_prior_dataframe, create_prior_data_path, load_df, save_base_table, save_table
 
 if __name__ == "__main__":
-    save_base_table()
+    save_base_table("data_generation_medium_hard_new")
 
     base_df = load_df()
     for scenario in base_df.scenario.unique():

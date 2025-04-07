@@ -11,24 +11,20 @@ def create_prior_data_path(scenario: str, dataset: str, metric: str):
     return os.path.join("benchmark_data", "prior_data", scenario, str(dataset), metric)
 
 
-def connect_to_database() -> PyExperimenter:
+def connect_to_database(table_name: str) -> PyExperimenter:
     EXP_CONFIG_FILE_PATH = "dynabo/experiments/gt_experiments/config.yml"
     DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
-    experimenter = PyExperimenter(
-        experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
-        database_credential_file_path=DB_CRED_FILE_PATH,
-        use_codecarbon=False,
-    )
+    experimenter = PyExperimenter(experiment_configuration_file_path=EXP_CONFIG_FILE_PATH, database_credential_file_path=DB_CRED_FILE_PATH, use_codecarbon=False, table_name=table_name)
 
     return experimenter
 
 
-def save_base_table():
-    experimenter = connect_to_database()
+def save_base_table(table_name):
+    experimenter = connect_to_database(table_name)
     base_table = experimenter.get_table()
     configs = experimenter.get_logtable("configs")
-    configs.drop(columns=["ID"])
+    configs = configs.drop(columns=["ID"])
     table = base_table.merge(configs, how="left", left_on=["ID"], right_on=["experiment_id"])
     save_table(table)
     return table

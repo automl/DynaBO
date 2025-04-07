@@ -191,7 +191,7 @@ if __name__ == "__main__":
         experimenter.fill_table_from_combination(
             parameters={
                 "benchmarklib": ["yahpogym"],
-                "prior_kind": ["good"],
+                "prior_kind": ["good", "medium", "misleading"],
                 "prior_every_n_trials": [50],
                 "validate_prior": [False],
                 "n_prior_validation_samples": [500],
@@ -214,4 +214,4 @@ if __name__ == "__main__":
         experimenter.reset_experiments("running", "error")
     execute = False
     if execute:
-        experimenter.execute(run_experiment, max_experiments=10, random_order=True)
+        experimenter.execute(run_experiment, max_experiments=20, random_order=True)
