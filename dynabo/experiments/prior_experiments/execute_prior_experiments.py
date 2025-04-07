@@ -186,7 +186,7 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = False
+    fill = True
     if fill:
         experimenter.fill_table_from_combination(
             parameters={
@@ -207,11 +207,11 @@ if __name__ == "__main__":
                 "max_ratio": [0.25],
                 "seed": range(10),
             },
-            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, pibo=True, dynabo=True),
+            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, pibo=True, dynabo=True, acquisition_function="expected_improvement"),
         )
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = True
+    execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=10, random_order=True)

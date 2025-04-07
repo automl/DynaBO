@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table:
-      name: prior_approaches_updated
+      name: prior_approaches_new
       keyfields:
         benchmarklib:
           type: VARCHAR(255)
@@ -107,7 +107,7 @@ PY_EXPERIMENTER:
         incumbent_acquisition_function_impact: LONGTEXT
       priors:
         prior_accepted: BOOLEAN
-        no_superior_configuration: BOOLEAN
+        superior_configuration: BOOLEAN
         performance: FLOAT
         prior_mean_acq_value: FLOAT
         origin_mean_acq_value: FLOAT

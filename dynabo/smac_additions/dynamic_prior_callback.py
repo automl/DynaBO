@@ -129,18 +129,15 @@ class AbstractPriorCallback(Callback, ABC):
         smbo.intensifier.config_selector._acquisition_function.current_config_nuber = smbo.runhistory.finished
 
         if self.intervene(smbo):
-            prior_configspace, origin_configpsace, performance, logging_config = self.construct_prior(smbo)
+            prior_configspace, origin_configpsace, performance, logging_config, superior_configuraiton = self.construct_prior(smbo)
 
-            if prior_configspace is not None:
-                prior_accepted, prior_mean_acq_value, origin_mean_acq_value = self.accept_prior(smbo, prior_configspace, origin_configpsace)
+            prior_accepted, prior_mean_acq_value, origin_mean_acq_value = self.accept_prior(smbo, prior_configspace, origin_configpsace)
 
-                if prior_accepted:
-                    self.set_prior(smbo, prior_configspace)
-                self.log_prior(
-                    smbo=smbo, performance=performance, config=logging_config, prior_accepted=prior_accepted, prior_mean_acq_value=prior_mean_acq_value, origin_mean_acq_value=origin_mean_acq_value
-                )
-            else:
-                self.log_no_prior()
+            if prior_accepted:
+                self.set_prior(smbo, prior_configspace)
+            self.log_prior(
+                smbo=smbo, performance=performance, config=logging_config, prior_accepted=prior_accepted, prior_mean_acq_value=prior_mean_acq_value, origin_mean_acq_value=origin_mean_acq_value, superior_configuration=superior_configuraitons,
+            )
 
         return super().on_ask_start(smbo)
 
@@ -175,7 +172,7 @@ class AbstractPriorCallback(Callback, ABC):
     def intervene(self, smbo: SMBO) -> bool:
         pass
 
-    def construct_prior(self, smbo: SMBO) -> Tuple[ConfigurationSpace, ConfigurationSpace, float, Dict]:
+    def construct_prior(self, smbo: SMBO) -> Tuple[ConfigurationSpace, ConfigurationSpace, float, Dict, bool]:
         """
         Sets a new prior on the acquisition function and configspace.
         """
@@ -185,9 +182,13 @@ class AbstractPriorCallback(Callback, ABC):
         incumbent_performance = (-1) * smbo.runhistory.get_cost(current_incumbent)
 
         sampled_config = self.sample_prior(smbo, incumbent_performance)
+        prior_performance = sampled_config[PERFORMANCE_INDICATOR_COLUMN].values[0]
+
+        # Check if the sampled configuration is better than the incumbent
+        superior_configruation = sampled_config[sampled_config[PERFORMANCE_INDICATOR_COLUMN] < incumbent_performance]
 
         if sampled_config is None:
-            return None, None, None, None
+            raise ValueError("No prior configuration could be sampled.")
 
         performance = sampled_config[PERFORMANCE_INDICATOR_COLUMN].values[0]
         hyperparameter_config = sampled_config[[col for col in sampled_config.columns if col.startswith("config_")]]
@@ -197,7 +198,7 @@ class AbstractPriorCallback(Callback, ABC):
         origin_configspace = smbo._configspace
         prior_configspace = build_prior_configuration_space(origin_configspace, hyperparameter_config, prior_std_denominator=self.prior_std_denominator * self.prior_number)
 
-        return prior_configspace, origin_configspace, performance, hyperparameter_config
+        return prior_configspace, origin_configspace, performance, hyperparameter_config, superior_configruation
 
     def set_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace):
         smbo.intensifier.config_selector._acquisition_maximizer.dynamic_init(prior_configspace)
@@ -214,7 +215,7 @@ class AbstractPriorCallback(Callback, ABC):
         Samples a prior from the prior data.
         """
 
-    def log_prior(self, smbo: SMBO, performance: float, config: Dict, prior_accepted: bool, prior_mean_acq_value: float, origin_mean_acq_value: float):
+    def log_prior(self, smbo: SMBO, performance: float, config: Dict, prior_accepted: bool, prior_mean_acq_value: float, origin_mean_acq_value: float, superior_configuration:bool):
         """
         Logs the prior data.
         """
@@ -223,7 +224,7 @@ class AbstractPriorCallback(Callback, ABC):
                 {
                     "priors": {
                         "prior_accepted": prior_accepted,
-                        "no_superior_configuration": False,
+                        "superior_configuration": superior_configuration,
                         "performance": performance,
                         "prior_mean_acq_value": prior_mean_acq_value,
                         "origin_mean_acq_value": origin_mean_acq_value,
@@ -232,16 +233,6 @@ class AbstractPriorCallback(Callback, ABC):
                         "after_runtime": self.evaluator.accumulated_runtime,
                         "after_virtual_runtime": self.evaluator.accumulated_runtime + self.evaluator.reasoning_runtime,
                         "after_reasoning_runtime": self.evaluator.reasoning_runtime,
-                    }
-                }
-            )
-
-    def log_no_prior(self):
-        if self.result_processor is not None:
-            self.result_processor.process_logs(
-                {
-                    "priors": {
-                        "no_superior_configuration": True,
                     }
                 }
             )
