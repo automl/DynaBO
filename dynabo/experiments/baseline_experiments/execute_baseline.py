@@ -118,26 +118,23 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = False
-    smac_baseline = False
-    random_baseline = True
+    smac_baseline = True
+    random_baseline = False
+    fill = True
     if fill:
         experimenter.fill_table_from_combination(
             parameters={
                 "benchmarklib": ["yahpogym"],
-                "prior_kind": ["good"],
-                "prior_every_n_trials": [50],
-                "validate_prior": [False],
-                "prior_std_denominator": 5,
                 "timeout_total": [86400],
-                "timeout_internal": [1200],
                 "n_trials": [200],
                 "n_configs_per_hyperparameter": [10],
                 "max_ratio": [0.25],
                 "seed": range(10),
             },
-            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, baseline=False, pibo=False, dynabo=False, random=True),
+            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(
+                with_all_datasets=False, medium_and_hard=True, baseline=smac_baseline, pibo=False, dynabo=False, random=random_baseline
+            ),
         )
-    execute = True
+    execute = False
     if execute:
-        experimenter.execute(run_experiment, max_experiments=10, random_order=True)
+        experimenter.execute(run_experiment, max_experiments=18, random_order=True)

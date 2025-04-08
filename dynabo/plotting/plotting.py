@@ -28,6 +28,7 @@ def load_final_data():
 
     prior_table = pd.read_csv(PRIOR_TABLE_PATH)
     prior_configs = pd.read_csv(PRIOR_INCUMBENT_PATH)
+
     prior_priors = pd.read_csv(PRIOR_PRIORS_PATH)
     prior_config_df, prior_prior_df = merge_df(prior_table, prior_configs, prior_priors)
 
@@ -351,7 +352,7 @@ def create_dataset_plots(
                 ax=ax,
             )
             set_ax_style(ax, prior_kind=prior_kind, x_label="Regret", y_label="CDF")
-            set_fig_style(fig, f"CDF of Regret on {scenario} {dataset}")
+            set_fig_style(fig, [ax], f"CDF of Regret on {scenario} {dataset}")
             save_fig(f"plots/dataset_plots/cdf/{scenario}/{dataset}.pdf")
 
 
@@ -527,10 +528,10 @@ def remove_weird_datasets(
 def plot_final_results():
     baseline_config_df, prior_config_df, prior_prior_df = load_final_data()
     dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df = split_df(prior_config_df=prior_config_df, prior_prior_df=prior_prior_df)
-    baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df = remove_weird_datasets(
-        baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df
-    )
-    # create_dataset_plots(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, error_bar_type="se")
+    # baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df = remove_weird_datasets(
+    #    baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df
+    # )
+    create_dataset_plots(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, error_bar_type="se")
     create_scenario_plots(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, error_bar_type="se")
     create_overall_plot(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, error_bar_type="se")
 
@@ -549,5 +550,5 @@ def plot_datageneration():
 
 
 if __name__ == "__main__":
-    # plot_final_results()
-    plot_datageneration()
+    plot_final_results()
+    # plot_datageneration()
