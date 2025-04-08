@@ -191,7 +191,7 @@ class AbstractPriorCallback(Callback, ABC):
         prior_performance = sampled_config[PERFORMANCE_INDICATOR_COLUMN].values[0]
 
         # Check if the sampled configuration is better than the incumbent
-        superior_configuration = prior_performance > incumbent_performance
+        superior_configuration = bool(prior_performance > incumbent_performance)
 
         if sampled_config is None:
             raise ValueError("No prior configuration could be sampled.")
