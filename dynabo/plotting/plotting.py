@@ -136,9 +136,9 @@ def plot_final_run(
     df_dict = preprocess(baseline_data, dynabo_incumbent_data, dynabo_prior_data, pibo_incumbent_data, pibo_prior_data, scenario, dataset, prior_kind, use_rejection, ax, min_ntrials, max_ntrials)
 
     # sns.scatterplot(x="after_n_evaluations", y="regret", ax=ax, data=relevant_dynabo_priors)
-    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["baseline"], label="baseline", ax=ax, errorbar=error_bar_type)
-    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["dynabo_incumbents"], label="dynabo", ax=ax, errorbar=error_bar_type)
-    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["pibo_incumbents"], label="pibo", ax=ax, errorbar=error_bar_type)
+    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["baseline"], label="Vanilla-BO", ax=ax, errorbar=error_bar_type)
+    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["dynabo_incumbents"], label="Dynamic Prior", ax=ax, errorbar=error_bar_type)
+    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["pibo_incumbents"], label="PiBO", ax=ax, errorbar=error_bar_type)
     ax.set_ylabel("Regret")
 
     # Check highest performacne after 10 trials
@@ -468,9 +468,16 @@ def set_ax_style(ax, prior_kind: str, x_label, y_label):
     # Remove ax legend
     ax.legend().remove()
 
+    if prior_kind == "good":
+        prior_name = "Informative"
+    elif prior_kind == "medium":
+        prior_name = "Mixed"
+    elif prior_kind == "misleading":
+        prior_name = "Misleading"
+
     # Improve title aesthetics
     ax.set_title(
-        f"Prior: {prior_kind.capitalize()}",
+        f"Prior: {prior_name}",
         fontsize=30,
         fontweight="bold",
     )

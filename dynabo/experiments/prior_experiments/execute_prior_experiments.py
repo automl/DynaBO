@@ -193,7 +193,7 @@ if __name__ == "__main__":
                 "benchmarklib": ["yahpogym"],
                 "prior_kind": ["good", "medium", "misleading"],
                 "prior_every_n_trials": [50],
-                "validate_prior": [False],
+                "validate_prior": [True],
                 "n_prior_validation_samples": [500],
                 "prior_validation_p_value": [0.05],
                 "prior_std_denominator": 5,
