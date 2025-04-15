@@ -142,7 +142,7 @@ def plot_final_run(
     ax.set_ylabel("Regret")
 
     # Check highest performacne after 10 trials
-    highest_regret = max([df_dict[i][df_dict["baseline"]["after_n_evaluations"] == 10]["regret"].mean() for i in df_dict.keys()])
+    highest_regret = max([df_dict[i][df_dict[i]["after_n_evaluations"] == 10]["regret"].mean() for i in df_dict.keys()])
     ax.set_ylim(0, highest_regret * 1.1)
 
     return ax
@@ -376,7 +376,7 @@ def create_scenario_plots(
                 None,
                 prior_kind,
                 ax=ax,
-                use_rejection=False,
+                use_rejection=True,
                 min_ntrials=1,
                 max_ntrials=200,
                 error_bar_type=error_bar_type,
@@ -433,7 +433,7 @@ def create_overall_plot(
             None,
             prior_kind,
             ax=ax,
-            use_rejection=False,
+            use_rejection=True,
             min_ntrials=1,
             max_ntrials=200,
             error_bar_type=error_bar_type,
@@ -538,8 +538,8 @@ def plot_final_results():
     # baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df = remove_weird_datasets(
     #    baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df
     # )
-    create_dataset_plots(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, error_bar_type="se")
-    create_scenario_plots(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, error_bar_type="se")
+    # create_dataset_plots(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, error_bar_type="se")
+    # create_scenario_plots(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, error_bar_type="se")
     create_overall_plot(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, error_bar_type="se")
 
 
