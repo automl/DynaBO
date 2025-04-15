@@ -20,6 +20,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     scenario: str = config["scenario"]
     dataset: str = config["dataset"]
     metric: str = config["metric"]
+    inverted_cost: bool = config["inverted_cost"]
 
     # Check whether we use random facade
     random: bool = bool(config["random"])
@@ -35,10 +36,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     max_ratio = float(config["max_ratio"])
 
     evaluator: YAHPOGymEvaluator = YAHPOGymEvaluator(
-        scenario=scenario,
-        dataset=dataset,
-        metric=metric,
-        runtime_metric_name="timetrain" if scenario != "lcbench" else "time",
+        scenario=scenario, dataset=dataset, metric=metric, runtime_metric_name="timetrain" if scenario != "lcbench" else "time", inverted_cost=inverted_cost
     )
 
     configuration_space = evaluator.benchmark.get_opt_space(drop_fidelity_params=True)
@@ -117,10 +115,7 @@ if __name__ == "__main__":
 
     base_parameters = {
         "benchmarklib": ["yahpogym"],
-        "prior_kind": ["good"],
-        "prior_every_n_trials": [50],
-        "validate_prior": [False],
-        "prior_std_denominator": 5,
+        "inverted_cost": [True],
         "timeout_total": [86400],
         "timeout_internal": [1200],
         "n_trials": [5000],
@@ -142,10 +137,9 @@ if __name__ == "__main__":
             experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
             database_credential_file_path=DB_CRED_FILE_PATH,
             use_codecarbon=False,
-            table_name="data_generation_medium_hard_new",
         )
 
-    fill_table = False
+    fill_table = True
     if fill_table:
         if all_one_seed:
             experimenter.fill_table_from_combination(
@@ -158,7 +152,7 @@ if __name__ == "__main__":
             experimenter.fill_table_from_combination(
                 parameters={**base_parameters, **{"seed": range(10)}},
                 fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(
-                    with_all_datasets=False, medium_and_hard=True, baseline=True, random=False, acquisition_function="confidence_bound"
+                    with_all_datasets=False, medium_and_hard=True, baseline=True, random=False, acquisition_function="expected_improvement"
                 ),
             )
     reset = False
@@ -167,4 +161,4 @@ if __name__ == "__main__":
 
     execute = True
     if execute:
-        experimenter.execute(run_experiment, max_experiments=3)
+        experimenter.execute(run_experiment, max_experiments=1)

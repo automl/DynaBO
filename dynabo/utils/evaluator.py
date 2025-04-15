@@ -67,16 +67,11 @@ class AbstractEvaluator:
 
 
 class YAHPOGymEvaluator(AbstractEvaluator):
-    def __init__(
-        self,
-        scenario: str,
-        dataset: int,
-        metric="acc",
-        runtime_metric_name="timetrain",
-    ):
+    def __init__(self, scenario: str, dataset: int, metric="acc", runtime_metric_name="timetrain", inverted_cost: bool = False):
         super().__init__(scenario=scenario, dataset=dataset)
         self.metric = metric
         self.runtime_metric_name = runtime_metric_name
+        self.inverted_cost = inverted_cost
 
         self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario)
         self.benchmark.set_instance(value=self.dataset)
@@ -91,6 +86,11 @@ class YAHPOGymEvaluator(AbstractEvaluator):
 
         res = self.benchmark.objective_function(configuration=final_config)
         performance = round((-1) * res[0][self.metric], 6)
+
+        # If we utilize inverted cost, invert the performance values
+        if self.inverted_cost:
+            performance = -1 * performance
+
         runtime = round(res[0][self.runtime_metric_name], 3)
         return performance, runtime
 

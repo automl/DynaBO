@@ -31,6 +31,9 @@ PY_EXPERIMENTER:
         random:
           type: BOOLEAN
           values: [False]
+        inverted_cost:
+          type: BOOLEAN
+          values: [False]
         acquisition_function:
           type: VARCHAR(500)
           values: ["expected_improvement"]
