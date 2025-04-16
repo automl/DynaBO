@@ -160,7 +160,6 @@ class AbstractPriorCallback(Callback, ABC):
             lcb_prior_values = self.lcb(prior_samples).squeeze()
             lcb_incumbent_values = self.lcb(incumbent_samples).squeeze()
 
-            # TODO Double Check the test
             result = mannwhitneyu(
                 lcb_prior_values,
                 lcb_incumbent_values,
