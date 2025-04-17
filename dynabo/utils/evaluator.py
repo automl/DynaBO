@@ -106,6 +106,7 @@ class YAHPOGymEvaluator(AbstractEvaluator):
         dynabo: bool = False,
         baseline: bool = False,
         random: bool = False,
+        decay_enumerator: int = 200,
     ):
         jobs = []
 
@@ -135,9 +136,9 @@ class YAHPOGymEvaluator(AbstractEvaluator):
             if baseline:
                 job += [{"pibo": False, "dynabo": False, "baseline": True, "acquisition_function": acquisition_function, "random": False}]
             if pibo:
-                job += [{"pibo": True, "dynabo": False, "baseline": False, "acquisition_function": acquisition_function, "random": False, "prior_decay_enumerator": 200}]
+                job += [{"pibo": True, "dynabo": False, "baseline": False, "acquisition_function": acquisition_function, "random": False, "prior_decay_enumerator": decay_enumerator}]
             if dynabo:
-                job += [{"pibo": False, "dynabo": True, "baseline": False, "acquisition_function": acquisition_function, "random": False, "prior_decay_enumerator": 50}]
+                job += [{"pibo": False, "dynabo": True, "baseline": False, "acquisition_function": acquisition_function, "random": False, "prior_decay_enumerator": decay_enumerator}]
             if random:
                 job += [{"pibo": False, "dynabo": False, "baseline": False, "random": True}]
 
@@ -224,6 +225,7 @@ def get_yahpo_fixed_parameter_combinations(
     dynabo: bool = False,
     baseline: bool = False,
     random: bool = False,
+    decay_enumerator: int = 200,
 ):
     if benchmarklib == "yahpogym":
         jobs = YAHPOGymEvaluator.get_fixed_hyperparameter_combinations(
@@ -234,6 +236,7 @@ def get_yahpo_fixed_parameter_combinations(
             dynabo=dynabo,
             baseline=baseline,
             random=random,
+            decay_enumerator=decay_enumerator,
         )
     elif benchmarklib == "bbob":
         jobs = BBOBEvaluator.get_fixed_hyperparameter_combinations(
