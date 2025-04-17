@@ -205,9 +205,9 @@ if __name__ == "__main__":
                 "n_trials": [200],
                 "n_configs_per_hyperparameter": [10],
                 "max_ratio": [0.25],
-                "seed": range(10),
+                "seed": range(30),
             },
-            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, pibo=True, dynabo=True, acquisition_function="expected_improvement"),
+            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, pibo=False, dynabo=True, acquisition_function="expected_improvement"),
         )
     reset = False
     if reset:

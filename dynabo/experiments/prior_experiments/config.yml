@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table:
-      name: prior_approaches_with_disregarding
+      name: dynabo
       keyfields:
         benchmarklib:
           type: VARCHAR(255)
