@@ -1,6 +1,6 @@
 import time
 from abc import abstractmethod
-from typing import List
+from typing import List, Optional
 
 import ioh
 import pandas as pd
@@ -100,13 +100,19 @@ class YAHPOGymEvaluator(AbstractEvaluator):
     @staticmethod
     def get_fixed_hyperparameter_combinations(
         acquisition_function: str,
-        with_all_datasets: bool = True,
-        medium_and_hard: bool = False,
-        pibo: bool = False,
-        dynabo: bool = False,
-        baseline: bool = False,
-        random: bool = False,
-        decay_enumerator: int = 200,
+        with_all_datasets: bool,
+        medium_and_hard: bool,
+        pibo: bool,
+        dynabo: bool,
+        baseline: bool,
+        random: bool,
+        decay_enumerator: int,
+        validate_prior: bool,
+        prior_validation_manwhitney: Optional[bool],
+        prior_validation_difference: Optional[bool],
+        n_prior_validation_samples: Optional[int],
+        prior_validation_manwhitney_p: Optional[float],
+        prior_validation_difference_threshold: Optional[float],
     ):
         jobs = []
 
@@ -136,9 +142,24 @@ class YAHPOGymEvaluator(AbstractEvaluator):
             if baseline:
                 job += [{"pibo": False, "dynabo": False, "baseline": True, "acquisition_function": acquisition_function, "random": False}]
             if pibo:
-                job += [{"pibo": True, "dynabo": False, "baseline": False, "acquisition_function": acquisition_function, "random": False, "prior_decay_enumerator": decay_enumerator}]
+                configs = YAHPOGymEvaluator.extract_validate_prior_dict(validate_prior=False)
+                job += [
+                    {"pibo": True, "dynabo": False, "baseline": False, "acquisition_function": acquisition_function, "random": False, "prior_decay_enumerator": decay_enumerator, **config}
+                    for config in configs
+                ]
             if dynabo:
-                job += [{"pibo": False, "dynabo": True, "baseline": False, "acquisition_function": acquisition_function, "random": False, "prior_decay_enumerator": decay_enumerator}]
+                configs = YAHPOGymEvaluator.extract_validate_prior_dict(
+                    validate_prior=validate_prior,
+                    prior_validation_manwhitney=prior_validation_manwhitney,
+                    prior_validation_difference=prior_validation_difference,
+                    n_prior_validation_samples=n_prior_validation_samples,
+                    prior_validation_manwhitney_p=prior_validation_manwhitney_p,
+                    prior_validation_difference_threshold=prior_validation_difference_threshold,
+                )
+                job += [
+                    {"pibo": False, "dynabo": True, "baseline": False, "acquisition_function": acquisition_function, "random": False, "prior_decay_enumerator": decay_enumerator, **config}
+                    for config in configs
+                ]
             if random:
                 job += [{"pibo": False, "dynabo": False, "baseline": False, "random": True}]
 
@@ -155,6 +176,50 @@ class YAHPOGymEvaluator(AbstractEvaluator):
             jobs += [dict(**j, **nj) for j in job for nj in new_job]
 
         return jobs
+
+    def extract_validate_prior_dict(
+        validate_prior: bool,
+        prior_validation_manwhitney: Optional[bool],
+        prior_validation_difference: Optional[bool],
+        n_prior_validation_samples: Optional[int],
+        prior_validation_manwhitney_p: Optional[float],
+        prior_validation_difference_threshold: Optional[float],
+    ):
+        configs = list()
+        if validate_prior:
+            if prior_validation_manwhitney:
+                configs += [
+                    {
+                        "validate_prior": True,
+                        "prior_validation_method": "mann_whitney_u",
+                        "n_prior_validation_samples": n_prior_validation_samples,
+                        "prior_validation_manwhitney_p": prior_validation_manwhitney_p,
+                        "prior_validation_difference_threshold": None,
+                    }
+                ]
+            elif prior_validation_difference:
+                configs += [
+                    {
+                        "validate_prior": True,
+                        "prior_validation_method": "difference",
+                        "n_prior_validation_samples": n_prior_validation_samples,
+                        "prior_validation_manwhitney_p": None,
+                        "prior_validation_difference_threshold": prior_validation_difference_threshold,
+                    }
+                ]
+            else:
+                raise ValueError("prior_validation_method must be either 'manwhitney' or 'difference'")
+        else:
+            configs += [
+                {
+                    "validate_prior": False,
+                    "prior_validation_method": None,
+                    "n_prior_validation_samples": None,
+                    "prior_validation_manwhitney_p": None,
+                    "prior_validation_difference_threshold": None,
+                }
+            ]
+        return configs
 
 
 class BBOBEvaluator(AbstractEvaluator):
@@ -217,15 +282,21 @@ def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: AbstractEval
 
 
 def get_yahpo_fixed_parameter_combinations(
-    benchmarklib: str = "yahpogym",
-    acquisition_function: str = "expected_improvement",
-    with_all_datasets: bool = True,
-    medium_and_hard: bool = False,
-    pibo: bool = False,
-    dynabo: bool = False,
-    baseline: bool = False,
-    random: bool = False,
-    decay_enumerator: int = 200,
+    benchmarklib: str,
+    acquisition_function: str,
+    with_all_datasets: bool,
+    medium_and_hard: bool,
+    pibo: bool,
+    dynabo: bool,
+    baseline: bool,
+    random: bool,
+    decay_enumerator: Optional[int] = None,
+    validate_prior: Optional[bool] = None,
+    prior_validation_manwhitney: Optional[bool] = None,
+    prior_validation_difference: Optional[bool] = None,
+    n_prior_validation_samples: Optional[int] = None,
+    prior_validation_manwhitney_p: Optional[float] = None,
+    prior_validation_difference_threshold: Optional[float] = None,
 ):
     if benchmarklib == "yahpogym":
         jobs = YAHPOGymEvaluator.get_fixed_hyperparameter_combinations(
@@ -237,6 +308,12 @@ def get_yahpo_fixed_parameter_combinations(
             baseline=baseline,
             random=random,
             decay_enumerator=decay_enumerator,
+            validate_prior=validate_prior,
+            prior_validation_manwhitney=prior_validation_manwhitney,
+            prior_validation_difference=prior_validation_difference,
+            n_prior_validation_samples=n_prior_validation_samples,
+            prior_validation_manwhitney_p=prior_validation_manwhitney_p,
+            prior_validation_difference_threshold=prior_validation_difference_threshold,
         )
     elif benchmarklib == "bbob":
         jobs = BBOBEvaluator.get_fixed_hyperparameter_combinations(

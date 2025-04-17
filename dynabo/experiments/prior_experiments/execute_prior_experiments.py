@@ -51,8 +51,10 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     prior_kind = config["prior_kind"]
     prior_every_n_trials = int(config["prior_every_n_trials"])
     validate_prior = config["validate_prior"]
+    prior_validation_method = config["prior_validation_method"]
     n_prior_validation_samples = int(config["n_prior_validation_samples"])
-    prior_validation_p_value = float(config["prior_validation_p_value"])
+    prior_validation_manwhitney_p_value = float(config["prior_validation_manwhitney_p"]) if config["prior_validation_manwhitney_p"] else None
+    prior_validation_difference_threshold = float(config["prior_validation_difference_threshold"]) if config["prior_validation_difference_threshold"] else None
     prior_std_denominator = float(config["prior_std_denominator"])
     prior_decay_enumerator = float(config["prior_decay_enumerator"])
     prior_decay_denominator = float(config["prior_decay_denominator"])
@@ -126,6 +128,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         else:
             raise ValueError(f"Prior kind {prior_kind} not supported")
 
+    # TODO  Adapt name of the p value and the trheshold
     prior_callback = PriorCallbackClass(
         scenario=evaluator.scenario,
         dataset=evaluator.dataset,
@@ -134,8 +137,10 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         initial_design_size=initial_design._n_configs,
         prior_every_n_trials=prior_every_n_trials,
         validate_prior=validate_prior,
+        prior_validation_method=prior_validation_method,
         n_prior_validation_samples=n_prior_validation_samples,
-        prior_validation_p_value=prior_validation_p_value,
+        prior_validation_manwhitney_p_value=prior_validation_manwhitney_p_value,
+        prior_validation_difference_threshold=prior_validation_difference_threshold,
         prior_std_denominator=prior_std_denominator,
         prior_decay_enumerator=prior_decay_enumerator,
         prior_decay_denominator=prior_decay_denominator,
@@ -193,9 +198,6 @@ if __name__ == "__main__":
                 "benchmarklib": ["yahpogym"],
                 "prior_kind": ["good", "medium", "misleading"],
                 "prior_every_n_trials": [50],
-                "validate_prior": [True],
-                "n_prior_validation_samples": [500],
-                "prior_validation_p_value": [0.05],
                 "prior_std_denominator": 5,
                 "prior_decay_denominator": [10],
                 "exponential_prior": [False],
@@ -205,13 +207,30 @@ if __name__ == "__main__":
                 "n_trials": [200],
                 "n_configs_per_hyperparameter": [10],
                 "max_ratio": [0.25],
-                "seed": range(30),
+                "seed": range(10),
             },
-            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(with_all_datasets=False, medium_and_hard=True, pibo=False, dynabo=True, acquisition_function="expected_improvement"),
+            # Do not make this method, make this a choice between different xor cases
+            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(
+                benchmarklib="yahpogym",
+                acquisition_function="expected_improvement",
+                with_all_datasets=False,
+                medium_and_hard=True,
+                pibo=False,
+                dynabo=True,
+                baseline=False,
+                random=False,
+                decay_enumerator=200,
+                validate_prior=True,
+                prior_validation_manwhitney=True,
+                prior_validation_difference=True,
+                n_prior_validation_samples=500,
+                prior_validation_manwhitney_p=0.05,
+                prior_validation_difference_threshold=-0.5,
+            ),
         )
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
     execute = False
     if execute:
-        experimenter.execute(run_experiment, max_experiments=20, random_order=True)
+        experimenter.execute(run_experiment, max_experiments=16, random_order=True)

@@ -1,5 +1,6 @@
 import os
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import Dict, Optional, Tuple
 
 import numpy as np
@@ -17,6 +18,11 @@ from dynabo.utils.configspace_utils import build_prior_configuration_space
 from dynabo.utils.evaluator import YAHPOGymEvaluator
 
 PERFORMANCE_INDICATOR_COLUMN = "performance"
+
+
+class PriorValidationMethod(Enum):
+    MANN_WHITNEY_U = "mann_whitney_u"
+    DIFFERENCE = "difference"
 
 
 class LogIncumbentCallback(Callback):
@@ -71,8 +77,10 @@ class AbstractPriorCallback(Callback, ABC):
         initial_design_size: int,
         prior_every_n_trials: int,
         validate_prior: bool,
-        n_prior_validation_samples,
-        prior_validation_p_value: float,
+        prior_validation_method: PriorValidationMethod,
+        n_prior_validation_samples: int,
+        prior_validation_manwhitney_p_value: float,
+        prior_validation_difference_threshold: float,
         prior_std_denominator: float,
         prior_decay_enumerator: int,
         prior_decay_denominator: int,
@@ -89,7 +97,9 @@ class AbstractPriorCallback(Callback, ABC):
         self.initial_design_size = initial_design_size
         self.prior_every_n_trials = prior_every_n_trials
         self.validate_prior = validate_prior
-        self.prior_validation_p_value = prior_validation_p_value
+        self.prior_validation_method = prior_validation_method
+        self.prior_validation_manwhitney_p = prior_validation_manwhitney_p_value
+        self.prior_validation_difference_threshold = prior_validation_difference_threshold
         self.n_prior_validation_samples = n_prior_validation_samples
         self.prior_std_denominator = prior_std_denominator
         self.prior_decay_enumerator = prior_decay_enumerator
@@ -159,17 +169,23 @@ class AbstractPriorCallback(Callback, ABC):
             self.lcb.update(model=smbo.intensifier.config_selector._acquisition_function.model, num_data=smbo.runhistory.finished)
             lcb_prior_values = self.lcb(prior_samples).squeeze()
             lcb_incumbent_values = self.lcb(incumbent_samples).squeeze()
+            if self.prior_validation_method == PriorValidationMethod.MANN_WHITNEY_U:
+                result = mannwhitneyu(
+                    lcb_prior_values,
+                    lcb_incumbent_values,
+                    alternative="less",
+                )
 
-            result = mannwhitneyu(
-                lcb_prior_values,
-                lcb_incumbent_values,
-                alternative="less",
-            )
-
-            if result.pvalue < self.prior_validation_p_value:
-                return False, lcb_prior_values.mean(), lcb_incumbent_values.mean()
-            else:
-                return True, lcb_prior_values.mean(), lcb_incumbent_values.mean()
+                if result.pvalue < self.prior_validation_manwhitney_p:
+                    return False, lcb_prior_values.mean(), lcb_incumbent_values.mean()
+                else:
+                    return True, lcb_prior_values.mean(), lcb_incumbent_values.mean()
+            elif self.prior_validation_method == PriorValidationMethod.DIFFERENCE:
+                result = lcb_prior_values.mean() - lcb_incumbent_values.mean()
+                if result > self.prior_validation_difference_threshold:
+                    return True, lcb_prior_values.mean(), lcb_incumbent_values.mean()
+                else:
+                    return False, lcb_prior_values.mean(), lcb_incumbent_values.mean()
 
         return True, None, None
 
@@ -277,42 +293,11 @@ class PiBOAbstractPriorCallback(AbstractPriorCallback):
 class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback):
     def __init__(
         self,
-        scenario,
-        dataset,
-        metric,
-        base_path,
-        initial_design_size,
-        prior_every_n_trials,
-        validate_prior,
-        n_prior_validation_samples,
-        prior_validation_p_value,
-        prior_std_denominator,
-        prior_decay_enumerator,
-        prior_decay_denominator,
-        exponential_prior,
-        prior_sampling_weight,
         no_incumbent_percentile: float,
-        result_processor=None,
-        evaluator=None,
+        *args,
+        **kwargs,
     ):
-        super().__init__(
-            scenario,
-            dataset,
-            metric,
-            base_path,
-            initial_design_size,
-            prior_every_n_trials,
-            validate_prior,
-            n_prior_validation_samples,
-            prior_validation_p_value,
-            prior_std_denominator,
-            prior_decay_enumerator,
-            prior_decay_denominator,
-            exponential_prior,
-            prior_sampling_weight,
-            result_processor,
-            evaluator,
-        )
+        super().__init__(*args, **kwargs)
         self.no_incumbent_percentile = no_incumbent_percentile
 
     def sample_prior(self, smbo, incumbent_performance) -> Optional[pd.DataFrame]:
@@ -332,42 +317,11 @@ class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback):
 class PiBOWellPerformingPriorCallback(PiBOAbstractPriorCallback):
     def __init__(
         self,
-        scenario,
-        dataset,
-        metric,
-        base_path,
-        initial_design_size,
-        prior_every_n_trials,
-        validate_prior,
-        n_prior_validation_samples,
-        prior_validation_p_value,
-        prior_std_denominator,
-        prior_decay_enumerator,
-        prior_decay_denominator,
-        exponential_prior,
-        prior_sampling_weight,
         no_incumbent_percentile: float,
-        result_processor=None,
-        evaluator=None,
+        *args,
+        **kwargs,
     ):
-        super().__init__(
-            scenario,
-            dataset,
-            metric,
-            base_path,
-            initial_design_size,
-            prior_every_n_trials,
-            validate_prior,
-            n_prior_validation_samples,
-            prior_validation_p_value,
-            prior_std_denominator,
-            prior_decay_enumerator,
-            prior_decay_denominator,
-            exponential_prior,
-            prior_sampling_weight,
-            result_processor,
-            evaluator,
-        )
+        super().__init__(*args, **kwargs)
         self.no_incumbent_percentile = no_incumbent_percentile
 
     def sample_prior(self, smbo, incumbent_performance) -> Optional[pd.DataFrame]:

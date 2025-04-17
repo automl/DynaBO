@@ -43,10 +43,16 @@ PY_EXPERIMENTER:
         validate_prior:
           type: BOOLEAN
           values: [False]
+        prior_validation_method:
+          type: VARCHAR(255)
+          values: ['manwhitney']
         n_prior_validation_samples: 
           type: INT
           values: [500]
-        prior_validation_p_value: 
+        prior_validation_manwhitney_p: 
+          type: FLOAT
+          values: [0.05]
+        prior_validation_difference_threshold:
           type: FLOAT
           values: [0.05]
         prior_std_denominator:
