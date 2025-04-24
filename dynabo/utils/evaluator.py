@@ -207,8 +207,6 @@ class YAHPOGymEvaluator(AbstractEvaluator):
                         "prior_validation_difference_threshold": prior_validation_difference_threshold,
                     }
                 ]
-            else:
-                raise ValueError("prior_validation_method must be either 'manwhitney' or 'difference'")
         else:
             configs += [
                 {
