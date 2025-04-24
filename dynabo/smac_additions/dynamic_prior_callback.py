@@ -169,7 +169,7 @@ class AbstractPriorCallback(Callback, ABC):
             self.lcb.update(model=smbo.intensifier.config_selector._acquisition_function.model, num_data=smbo.runhistory.finished)
             lcb_prior_values = self.lcb(prior_samples).squeeze()
             lcb_incumbent_values = self.lcb(incumbent_samples).squeeze()
-            if self.prior_validation_method == PriorValidationMethod.MANN_WHITNEY_U:
+            if self.prior_validation_method == PriorValidationMethod.MANN_WHITNEY_U.value:
                 result = mannwhitneyu(
                     lcb_prior_values,
                     lcb_incumbent_values,
@@ -180,12 +180,14 @@ class AbstractPriorCallback(Callback, ABC):
                     return False, lcb_prior_values.mean(), lcb_incumbent_values.mean()
                 else:
                     return True, lcb_prior_values.mean(), lcb_incumbent_values.mean()
-            elif self.prior_validation_method == PriorValidationMethod.DIFFERENCE:
+            elif self.prior_validation_method == PriorValidationMethod.DIFFERENCE.value:
                 result = lcb_prior_values.mean() - lcb_incumbent_values.mean()
                 if result > self.prior_validation_difference_threshold:
                     return True, lcb_prior_values.mean(), lcb_incumbent_values.mean()
                 else:
                     return False, lcb_prior_values.mean(), lcb_incumbent_values.mean()
+            else:
+                raise ValueError(f"Prior validation method {self.prior_validation_method} not supported.")
 
         return True, None, None
 

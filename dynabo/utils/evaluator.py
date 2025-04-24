@@ -197,7 +197,7 @@ class YAHPOGymEvaluator(AbstractEvaluator):
                         "prior_validation_difference_threshold": None,
                     }
                 ]
-            elif prior_validation_difference:
+            if prior_validation_difference:
                 configs += [
                     {
                         "validate_prior": True,

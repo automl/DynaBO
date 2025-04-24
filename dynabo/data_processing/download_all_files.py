@@ -25,7 +25,7 @@ if __name__ == "__main__":
     data_generation_medium_hard_experimenter = PyExperimenter(DATA_GENERATION_CONFIG_PATH, CREDENTIALS_PATH, table_name="data_generation_medium_hard_new")
     baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH)
     prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, table_name="prior_approaches_new")
-    prior_experimenter_with_disregarding = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, table_name="prior_approaches_with_disregarding")
+    prior_experimenter_with_disregarding = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, table_name="dynabo")
 
     try:
         data_generation_one_seed_experimenter.get_table().to_csv(DATA_GENERATION_ONE_SEED_PATH, index=False)

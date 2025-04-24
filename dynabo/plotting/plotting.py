@@ -1,8 +1,8 @@
 # %%
+import copy
 import os
 from typing import Dict, List, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
@@ -119,51 +119,38 @@ def split_dynabo_and_pibo(prior_config_df: pd.DataFrame, prior_prior_df: pd.Data
     return dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df
 
 
-def filter_prior_approach(incumbent_df: pd.DataFrame, prior_df: pd.DataFrame, select_dynabo: bool, select_pibo: bool, with_validating: bool):
+def filter_prior_approach(
+    incumbent_df: pd.DataFrame,
+    prior_df: pd.DataFrame,
+    select_dynabo: bool,
+    select_pibo: bool,
+    with_validating: bool,
+    prior_validation_method: str,
+    prior_validation_manwhitney_p: Optional[float],
+    prior_validation_difference_threshold: Optional[float] = None,
+):
     assert select_dynabo ^ select_pibo
     incumbent_df = incumbent_df[(incumbent_df["dynabo"] == select_dynabo) & (incumbent_df["pibo"] == select_pibo) & (incumbent_df["validate_prior"] == with_validating)]
     prior_df = prior_df[(prior_df["dynabo"] == select_dynabo) & (prior_df["pibo"] == select_pibo) & (prior_df["validate_prior"] == with_validating)]
+    if prior_validation_method == "mann_whitney_u":
+        incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "mann_whitney_u"]
+        prior_df = prior_df[prior_df["prior_validation_method"] == "mann_whitney_u"]
+
+        incumbent_df = incumbent_df[incumbent_df["prior_validation_manwhitney_p"] == prior_validation_manwhitney_p]
+        prior_df = prior_df[prior_df["prior_validation_manwhitney_p"] == prior_validation_manwhitney_p]
+
+    elif prior_validation_method == "difference":
+        incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "difference"]
+        prior_df = prior_df[prior_df["prior_validation_method"] == "difference"]
+        incumbent_df = incumbent_df[incumbent_df["prior_validation_difference_threshold"] == prior_validation_difference_threshold]
+        prior_df = prior_df[prior_df["prior_validation_difference_threshold"] == prior_validation_difference_threshold]
+
     return incumbent_df, prior_df
 
 
-def quantile_ci(data):
-    return np.percentile(data, [5, 95.5])
-
-
-def plot_datageneration_run(
-    data: pd.DataFrame,
-    scenario: str,
-    ax: plt.Axes,
-    min_ntrials=1,
-    max_ntrials=5000,
-    error_bar_type: str = "se",
-):
-    random_incumbent_data = data[(data["scenario"] == scenario) & (data["random"] == True)]
-    smac_incumbent_data = data[(data["scenario"] == scenario) & (data["random"] == False)]
-
-    df_dict = {
-        "random": random_incumbent_data,
-        "smac": smac_incumbent_data,
-    }
-
-    df_dict = extract_incumbent_steps(df_dict=df_dict, min_ntrials=min_ntrials, max_ntrials=max_ntrials)
-
-    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["random"], label="random", ax=ax, errorbar=error_bar_type)
-    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["smac"], label="smac", ax=ax, errorbar=error_bar_type)
-    ax.set_ylabel("Regret")
-
-    # Check highest performacne after 10 trials
-    return ax
-
-
 def plot_final_run(
-    baseline_data: pd.DataFrame,
-    dynabo_incumbent_data_with_validation: pd.DataFrame,
-    dynabo_prior_data_with_validation: pd.DataFrame,
-    dynabo_incumbent_df_without_validation: pd.DataFrame,
-    dynabo_prior_df_without_validation: pd.DataFrame,
-    pibo_incumbent_data: pd.DataFrame,
-    pibo_prior_data: pd.DataFrame,
+    config_dict: Dict[str, pd.DataFrame],
+    prior_dict: Dict[str, pd.DataFrame],
     scenario: str,
     dataset: str,
     prior_kind: str,
@@ -172,188 +159,97 @@ def plot_final_run(
     max_ntrials=200,
     error_bar_type: str = "se",
 ):
+    config_dict = copy.deepcopy(config_dict)
+    prior_dict = copy.deepcopy(prior_dict)
     # Select relevant data
-    df_dict = preprocess(
-        baseline_data,
-        dynabo_incumbent_data_with_validation,
-        dynabo_prior_data_with_validation,
-        dynabo_incumbent_df_without_validation,
-        dynabo_prior_df_without_validation,
-        pibo_incumbent_data,
-        pibo_prior_data,
+    config_dict, prior_dict = preprocess_configs(
+        config_dict,
+        prior_dict,
         scenario,
         dataset,
         prior_kind,
-        ax,
         min_ntrials,
         max_ntrials,
     )
 
-    # sns.scatterplot(x="after_n_evaluations", y="regret", ax=ax, data=relevant_dynabo_priors)
-    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["baseline"], label="Vanilla-BO", ax=ax, errorbar=error_bar_type)
-    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["dynabo_incumbents_with_validation"], label="Dynamic Prior with Validation", ax=ax, errorbar=error_bar_type)
-    sns.lineplot(
-        x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["dynabo_incumbents_without_validation"], label="Dynamic Prior without Validation", ax=ax, errorbar=error_bar_type
-    )
-    sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df_dict["pibo_incumbents"], label="PiBO", ax=ax, errorbar=error_bar_type)
-    ax.set_ylabel("Regret")
+    for key, df in config_dict.items():
+        sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df, label=key, ax=ax, errorbar=error_bar_type)
 
     # Check highest performacne after 10 trials
-    highest_regret = max([df_dict[i][df_dict[i]["after_n_evaluations"] == 40]["regret"].mean() for i in df_dict.keys()])
-    smallest_regret = min([df_dict[i][df_dict[i]["after_n_evaluations"] == 200]["regret"].mean() for i in df_dict.keys()])
-    ax.set_ylim(smallest_regret * 0.9, highest_regret * 1.1)
+    highest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == 40]["regret"].mean()
+    smallest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == 200]["regret"].mean()
+
+    # TODO this is the issue
+    ax.set_ylim(smallest_regret * 0.1, highest_regret * 1.1)
+    ax.set_ylabel("Regret")
 
     return ax
 
 
-def plot_cdf(
-    baseline_data: pd.DataFrame,
-    dynabo_incumbent_data: pd.DataFrame,
-    dynabo_prior_data: pd.DataFrame,
-    pibo_incumbent_data: pd.DataFrame,
-    pibo_prior_data: pd.DataFrame,
-    scenario: str,
-    dataset: str,
-    ax: plt.Axes,
-):
-    relevant_baseline, relevant_dynabo_incumbents_good, _, relevant_pibo_incumbents_good, _ = select_relevant_data(
-        baseline_data, dynabo_incumbent_data, dynabo_prior_data, pibo_incumbent_data, pibo_prior_data, scenario, dataset, "good"
-    )
-    _, relevant_dynabo_incumbents_medium, _, relevant_pibo_incumbents_medium, _ = select_relevant_data(
-        baseline_data, dynabo_incumbent_data, dynabo_prior_data, pibo_incumbent_data, pibo_prior_data, scenario, dataset, "medium"
-    )
-    _, relevant_dynabo_incumbents_misleading, _, relevant_pibo_incumbents_misleading, _ = select_relevant_data(
-        baseline_data, dynabo_incumbent_data, dynabo_prior_data, pibo_incumbent_data, pibo_prior_data, scenario, dataset, "misleading"
-    )
-
-    sns.ecdfplot(x="final_regret", data=relevant_baseline, ax=ax, label="baseline")
-    sns.ecdfplot(x="final_regret", data=relevant_dynabo_incumbents_good, ax=ax, label="dynabo_good")
-    sns.ecdfplot(x="final_regret", data=relevant_dynabo_incumbents_medium, ax=ax, label="dynabo_medium")
-    sns.ecdfplot(x="final_regret", data=relevant_dynabo_incumbents_misleading, ax=ax, label="dynabo_misleading")
-    ax.set_ylabel("CDF")
-    ax.set_xlabel("Regret")
-    return ax
-
-
-def preprocess(
-    baseline_data: pd.DataFrame,
-    dynabo_incumbent_data_with_validation: pd.DataFrame,
-    dynabo_prior_data_with_validation: pd.DataFrame,
-    dynabo_incumbent_data_without_validation: pd.DataFrame,
-    dynabo_prior_data_without_validation: pd.DataFrame,
-    pibo_incumbent_data: pd.DataFrame,
-    pibo_prior_data: pd.DataFrame,
+def preprocess_configs(
+    config_dict: Dict[str, pd.DataFrame],
+    prior_dict: Dict[str, pd.DataFrame],
     scenario: str,
     dataset: str,
     prior_kind: str,
-    ax: plt.Axes,
     min_ntrials=1,
     max_ntrials=200,
 ):
-    # TODO continue here
-    (
-        relevant_baseline,
-        dynabo_incumbent_data_with_validation,
-        dynabo_prior_data_with_validation,
-        dynabo_incumbent_data_without_validation,
-        dynabo_prior_data_without_validation,
-        pibo_incumbent_data,
-        pibo_priors,
-    ) = select_relevant_data(
-        baseline_data,
-        dynabo_incumbent_data_with_validation,
-        dynabo_prior_data_with_validation,
-        dynabo_incumbent_data_without_validation,
-        dynabo_prior_data_without_validation,
-        pibo_incumbent_data,
-        pibo_prior_data,
+    config_dict, prior_dict = select_relevant_data(
+        config_dict,
+        prior_dict,
         scenario,
         dataset,
         prior_kind,
     )
 
-    # TODO continue here
-    df_dict = {
-        "baseline": relevant_baseline,
-        "dynabo_incumbents_with_validation": dynabo_incumbent_data_with_validation,
-        "dynabo_incumbents_without_validation": dynabo_incumbent_data_without_validation,
-        "pibo_incumbents": pibo_incumbent_data,
-    }
+    config_dict = extract_incumbent_steps(df_dict=config_dict, min_ntrials=min_ntrials, max_ntrials=max_ntrials)
 
-    df_dict = extract_incumbent_steps(df_dict=df_dict, min_ntrials=min_ntrials, max_ntrials=max_ntrials)
-
-    return df_dict
+    return config_dict, prior_dict
 
 
 def select_relevant_data(
-    baseline_data: pd.DataFrame,
-    dynabo_incumbent_data_with_validation: pd.DataFrame,
-    dynabo_prior_data_with_validation: pd.DataFrame,
-    dynabo_incumbent_data_without_validation: pd.DataFrame,
-    dynabo_prior_data_without_validation: pd.DataFrame,
-    pibo_incumbent_data: pd.DataFrame,
-    pibo_prior_data: pd.DataFrame,
+    config_dict: Dict[str, pd.DataFrame],
+    prior_dict: Dict[str, pd.DataFrame],
     scenario: str,
     dataset: str,
     prior_kind: str,
 ):
-    # Select relevant based on incumbnet, and priorkind
-    relevant_baseline = baseline_data[baseline_data["incumbent"] == 1]
+    # Select configuraitons that should be plotted
+    for key in config_dict.keys():
+        df = config_dict[key]
+        # only consider incumbent
+        df = df[(df["incumbent"] == 1)]
 
-    relevant_dynabo_incumbents_with_validation = dynabo_incumbent_data_with_validation[
-        (dynabo_incumbent_data_with_validation["prior_kind"] == prior_kind) & (dynabo_incumbent_data_with_validation["incumbent"] == 1)
-    ]
-    relevant_dynabo_prior_with_validation = dynabo_prior_data_with_validation[(dynabo_prior_data_with_validation["prior_kind"] == prior_kind)]
+        # If priors used only select the relevant prior
+        if any(df["dynabo"] == True) or any(df["pibo"] == True):
+            df = df[df["prior_kind"] == prior_kind]
+        config_dict[key] = df
 
-    relevant_dynabo_incumbents_without_validation = dynabo_incumbent_data_without_validation[
-        (dynabo_incumbent_data_without_validation["prior_kind"] == prior_kind) & (dynabo_incumbent_data_without_validation["incumbent"] == 1)
-    ]
-    relevant_dynabo_prior_without_validation = dynabo_prior_data_without_validation[(dynabo_prior_data_without_validation["prior_kind"] == prior_kind)]
-
-    relevant_pibo_incumbents = pibo_incumbent_data[(pibo_incumbent_data["prior_kind"] == prior_kind) & (pibo_incumbent_data["incumbent"] == 1)]
-    relevant_pibo_prior = pibo_prior_data[(pibo_prior_data["prior_kind"] == prior_kind)]
+    # Select the priors that sohuld be plotted
+    for key in prior_dict.keys():
+        df = prior_dict[key]
+        # If priors used only select the relevant prior
+        if any(df["dynabo"] == True) or any(df["pibo"] == True):
+            df = df[(df["prior_kind"] == prior_kind)]
+        prior_dict[key] = df
 
     if scenario is not None:  # Select relevant based on scenario
-        relevant_baseline = relevant_baseline[(relevant_baseline["scenario"] == scenario)]
-
-        relevant_dynabo_incumbents_with_validation = relevant_dynabo_incumbents_with_validation[(relevant_dynabo_incumbents_with_validation["scenario"] == scenario)]
-        relevant_dynabo_prior_with_validation = relevant_dynabo_prior_with_validation[(relevant_dynabo_prior_with_validation["scenario"] == scenario)]
-
-        relevant_dynabo_incumbents_without_validation = relevant_dynabo_incumbents_without_validation[(relevant_dynabo_incumbents_without_validation["scenario"] == scenario)]
-        relevant_dynabo_prior_without_validation = relevant_dynabo_prior_without_validation[(relevant_dynabo_prior_without_validation["scenario"] == scenario)]
-
-        relevant_pibo_incumbents = relevant_pibo_incumbents[(relevant_pibo_incumbents["scenario"] == scenario)]
-        relevant_pibo_prior = relevant_pibo_prior[(relevant_pibo_prior["scenario"] == scenario)]
+        config_dict = {key: df[(df["scenario"] == scenario)] for key, df in config_dict.items()}
+        prior_dict = {key: df[(df["scenario"] == scenario)] for key, df in prior_dict.items()}
 
     if scenario is not None and dataset is not None:  # select relevant based on dataset
-        relevant_baseline = relevant_baseline[(relevant_baseline["dataset"] == dataset)]
+        config_dict = {key: df[(df["dataset"] == dataset)] for key, df in config_dict.items()}
+        prior_dict = {key: df[(df["dataset"] == dataset)] for key, df in prior_dict.items()}
 
-        relevant_dynabo_incumbents_with_validation = relevant_dynabo_incumbents_with_validation[(relevant_dynabo_incumbents_with_validation["dataset"] == dataset)]
-        relevant_dynabo_prior_with_validation = relevant_dynabo_prior_with_validation[(relevant_dynabo_prior_with_validation["dataset"] == dataset)]
-
-        relevant_dynabo_incumbents_without_validation = relevant_dynabo_incumbents_without_validation[(relevant_dynabo_incumbents_without_validation["dataset"] == dataset)]
-        relevant_dynabo_prior_without_validation = relevant_dynabo_prior_without_validation[(relevant_dynabo_prior_without_validation["dataset"] == dataset)]
-
-        relevant_pibo_incumbents = relevant_pibo_incumbents[(relevant_pibo_incumbents["dataset"] == dataset)]
-        relevant_pibo_prior = relevant_pibo_prior[(relevant_pibo_prior["dataset"] == dataset)]
-
-    return (
-        relevant_baseline,
-        relevant_dynabo_incumbents_with_validation,
-        relevant_dynabo_prior_with_validation,
-        relevant_dynabo_incumbents_without_validation,
-        relevant_dynabo_prior_without_validation,
-        relevant_pibo_incumbents,
-        relevant_pibo_prior,
-    )
+    return config_dict, prior_dict
 
 
 def extract_incumbent_steps(df_dict: Dict[str, pd.DataFrame], min_ntrials: int, max_ntrials: int):
     full_range = pd.DataFrame({"after_n_evaluations": range(min_ntrials, max_ntrials + 1)})
 
     # Step 1: Iterate over all DataFrames
-    for key in df_dict.keys():
-        df = df_dict[key]
+    for key, df in df_dict.items():
         local = list()
         # Ensure sorting
         df.sort_values(["scenario", "dataset", "seed", "after_n_evaluations"], inplace=True)
@@ -390,23 +286,23 @@ def extract_incumbent_steps(df_dict: Dict[str, pd.DataFrame], min_ntrials: int, 
 
 
 def create_dataset_plots(
-    baseline_config_df: pd.DataFrame, dynabo_incumbent_df: pd.DataFrame, dynabo_prior_df: pd.DataFrame, pibo_incumbent_df: pd.DataFrame, pibo_prior_df: pd.DataFrame, error_bar_type: str
+    config_dict: Dict[str, pd.DataFrame],
+    prior_dict: Dict[str, pd.DataFrame],
+    error_bar_type: str,
+    scenarios: List[str],
 ):
-    for scenario in baseline_config_df["scenario"].unique():
-        scenario_df = baseline_config_df[baseline_config_df["scenario"] == scenario]
-        for dataset in scenario_df["dataset"].unique():
-            os.makedirs(f"plots/dataset_plots/regret/{scenario}", exist_ok=True)
+    for scenario in scenarios:
+        datasets = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["scenario"] == scenario]["dataset"].unique()
+        for dataset in datasets:
+            os.makedirs("plots/dataset_plots/regret/scenario", exist_ok=True)
             fig, axs = plt.subplots(1, 3, figsize=(18, 6), dpi=300)  # Wider and higher resolution
             axs = axs.flatten()
             plot_number = 0
             for prior_kind in ["good", "medium", "misleading"]:
                 ax = axs[plot_number]
                 ax = plot_final_run(
-                    baseline_config_df,
-                    dynabo_incumbent_df,
-                    dynabo_prior_df,
-                    pibo_incumbent_df,
-                    pibo_prior_df,
+                    config_dict,
+                    prior_dict,
                     scenario,
                     dataset,
                     prior_kind,
@@ -416,22 +312,19 @@ def create_dataset_plots(
                     error_bar_type=error_bar_type,
                 )
                 plot_number += 1
-                set_ax_style(ax, prior_kind=prior_kind, x_label="Number of Trials", y_label="Regret")
-            set_fig_style(fig, axs, f"Regret on {scenario} {dataset}")
-            save_fig(f"plots/dataset_plots/regret/{scenario}/{dataset}.pdf")
+                set_ax_style(ax, prior_kind=prior_kind, x_label="Number of Evaluations", y_label="Regret")
+            set_fig_style(fig, axs, f"Average regret on {scenario}")
+            save_fig(f"plots/dataset_plots/regret/scenario/{dataset}.pdf")
+            print(f"Saved {scenario}")
 
 
 def create_scenario_plots(
-    baseline_config_df: pd.DataFrame,
-    dynabo_incumbent_df_with_validation: pd.DataFrame,
-    dynabo_prior_df_with_validation: pd.DataFrame,
-    dynabo_incumbent_df_without_validation: pd.DataFrame,
-    dynabo_prior_df_without_validation: pd.DataFrame,
-    pibo_incumbent_df: pd.DataFrame,
-    pibo_prior_df: pd.DataFrame,
+    config_dict: Dict[str, pd.DataFrame],
+    prior_dict: Dict[str, pd.DataFrame],
     error_bar_type: str,
+    scenarios: List[str],
 ):
-    for scenario in baseline_config_df["scenario"].unique():
+    for scenario in scenarios:
         os.makedirs("plots/scenario_plots/regret", exist_ok=True)
         fig, axs = plt.subplots(1, 3, figsize=(18, 6), dpi=300)  # Wider and higher resolution
         axs = axs.flatten()
@@ -439,13 +332,8 @@ def create_scenario_plots(
         for prior_kind in ["good", "medium", "misleading"]:
             ax = axs[plot_number]
             ax = plot_final_run(
-                baseline_config_df,
-                dynabo_incumbent_df_with_validation,
-                dynabo_prior_df_with_validation,
-                dynabo_incumbent_df_without_validation,
-                dynabo_prior_df_without_validation,
-                pibo_incumbent_df,
-                pibo_prior_df,
+                config_dict,
+                prior_dict,
                 scenario,
                 None,
                 prior_kind,
@@ -462,13 +350,8 @@ def create_scenario_plots(
 
 
 def create_overall_plot(
-    baseline_config_df: pd.DataFrame,
-    dynabo_incumbent_df_with_validation: pd.DataFrame,
-    dynabo_prior_df_with_validation: pd.DataFrame,
-    dynabo_incumbent_df_without_validation: pd.DataFrame,
-    dynabo_prior_df_without_validation: pd.DataFrame,
-    pibo_incumbent_df: pd.DataFrame,
-    pibo_prior_df: pd.DataFrame,
+    config_dict: Dict[str, pd.DataFrame],
+    prior_dict: Dict[str, pd.DataFrame],
     error_bar_type: str,
 ):
     os.makedirs("plots/scenario_plots/regret", exist_ok=True)
@@ -482,13 +365,8 @@ def create_overall_plot(
 
         # Call the plotting function
         ax = plot_final_run(
-            baseline_config_df,
-            dynabo_incumbent_df_with_validation,
-            dynabo_prior_df_with_validation,
-            dynabo_incumbent_df_without_validation,
-            dynabo_prior_df_without_validation,
-            pibo_incumbent_df,
-            pibo_prior_df,
+            config_dict,
+            prior_dict,
             None,
             None,
             prior_kind,
@@ -504,7 +382,7 @@ def create_overall_plot(
 
     set_fig_style(fig, axs, "Overall Regret Across Different Priors")
 
-    save_fig("plots/scenario_plots/regret/overall.pdf")
+    save_fig("plots/scenario_plots/regret/overall.png")
 
 
 def set_ax_style(ax, prior_kind: str, x_label, y_label):
@@ -577,51 +455,89 @@ def remove_weird_datasets(
 
 def plot_final_results():
     baseline_config_df, prior_config_df, prior_prior_df = load_performance_data()
-    dynabo_incumbent_df_with_validation, dynabo_prior_df_with_validation = filter_prior_approach(
-        incumbent_df=prior_config_df, prior_df=prior_prior_df, select_dynabo=True, select_pibo=False, with_validating=True
+    dynabo_incumbent_df_with_validation_05, dynabo_prior_df_with_validation_05 = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        with_validating=True,
+        prior_validation_method="mann_whitney_u",
+        prior_validation_manwhitney_p=0.05,
+        prior_validation_difference_threshold=None,
     )
+    dynabo_incumbent_df_with_validation_difference_05, dynabo_prior_df_with_validation_difference_05 = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        with_validating=True,
+        prior_validation_method="difference",
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=-0.5,
+    )
+    dynabo_incumbent_df_with_validation_difference_1, dynabo_prior_df_with_validation_difference_1 = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        with_validating=True,
+        prior_validation_method="difference",
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=-1,
+    )
+
     dynabo_incumbent_df_without_validation, dynabo_prior_df_without_validation = filter_prior_approach(
-        incumbent_df=prior_config_df, prior_df=prior_prior_df, select_dynabo=True, select_pibo=False, with_validating=False
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        with_validating=False,
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=0.05,  # TODO change this to none after downloading data again
+        prior_validation_difference_threshold=None,
     )
     pibo_incumbent_df_without_validation, pibo_prior_df_without_validation = filter_prior_approach(
-        incumbent_df=prior_config_df, prior_df=prior_prior_df, select_dynabo=False, select_pibo=True, with_validating=False
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=False,
+        select_pibo=True,
+        with_validating=False,
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
     )
-    # baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df = remove_weird_datasets(
-    #    baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df
+
+    config_dict = {
+        "Vanilla BO": baseline_config_df,
+        "DynaBO, p=None": dynabo_incumbent_df_without_validation,
+        "DynaBO, MWU p=0.05": dynabo_incumbent_df_with_validation_05,
+        "DynaBO, difference=-1": dynabo_incumbent_df_with_validation_difference_1,
+        "PiBO": pibo_incumbent_df_without_validation,
+    }
+
+    prior_dict = {
+        "DynaBO, p=None": dynabo_prior_df_without_validation,
+        "DynaBO, MWU p=0.05": dynabo_prior_df_with_validation_05,
+        "DynaBO, difference=-1": dynabo_prior_df_with_validation_difference_1,
+        "PiBO": pibo_prior_df_without_validation,
+    }
+    # create_dataset_plots(
+    #    config_dict=config_dict,
+    #    prior_dict=prior_dict,
+    #    error_bar_type="se",
+    #    scenarios=baseline_config_df["scenario"].unique(),
     # )
-    # create_dataset_plots(baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df, error_bar_type="se")
+
     create_scenario_plots(
-        baseline_config_df,
-        dynabo_incumbent_df_with_validation,
-        dynabo_prior_df_with_validation,
-        dynabo_incumbent_df_without_validation,
-        dynabo_prior_df_without_validation,
-        pibo_incumbent_df_without_validation,
-        pibo_prior_df_without_validation,
+        config_dict,
+        prior_dict,
         error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
     )
     create_overall_plot(
-        baseline_config_df,
-        dynabo_incumbent_df_with_validation,
-        dynabo_prior_df_with_validation,
-        dynabo_incumbent_df_without_validation,
-        dynabo_prior_df_without_validation,
-        pibo_incumbent_df_without_validation,
-        pibo_prior_df_without_validation,
+        config_dict,
+        prior_dict,
         error_bar_type="se",
-    )
-
-
-def plot_datageneration():
-    data = load_datageneration_data()
-    fig, axs = plt.subplots(1, len(data["scenario"].unique()), figsize=(32, 18), dpi=300)
-    axs = axs.flatten()
-    for scenario, ax in zip(data["scenario"].unique(), axs):
-        plot_datageneration_run(data, scenario, ax)
-        ax.set_title(scenario)
-    fig.legend()
-    save_fig(
-        "plots/data_generation/joined.pdf",
     )
 
 

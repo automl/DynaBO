@@ -221,16 +221,16 @@ if __name__ == "__main__":
                 random=False,
                 decay_enumerator=200,
                 validate_prior=True,
-                prior_validation_manwhitney=True,
+                prior_validation_manwhitney=False,
                 prior_validation_difference=True,
                 n_prior_validation_samples=500,
                 prior_validation_manwhitney_p=0.05,
-                prior_validation_difference_threshold=-0.5,
+                prior_validation_difference_threshold=-1,
             ),
         )
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = False
+    execute = True
     if execute:
         experimenter.execute(run_experiment, max_experiments=16, random_order=True)
