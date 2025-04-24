@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table:
-      name: dynabo_test
+      name: dynabo
       keyfields:
         benchmarklib:
           type: VARCHAR(255)
