@@ -382,7 +382,7 @@ def create_overall_plot(
 
     set_fig_style(fig, axs, "Overall Regret Across Different Priors")
 
-    save_fig("plots/scenario_plots/regret/overall.png")
+    save_fig("plots/scenario_plots/regret/overall.pdf")
 
 
 def set_ax_style(ax, prior_kind: str, x_label, y_label):
@@ -512,6 +512,7 @@ def plot_final_results():
         "DynaBO, p=None": dynabo_incumbent_df_without_validation,
         "DynaBO, MWU p=0.05": dynabo_incumbent_df_with_validation_05,
         "DynaBO, difference=-1": dynabo_incumbent_df_with_validation_difference_1,
+        "DynaBO, difference=-0.5": dynabo_incumbent_df_with_validation_difference_05,
         "PiBO": pibo_incumbent_df_without_validation,
     }
 
@@ -528,16 +529,16 @@ def plot_final_results():
     #    scenarios=baseline_config_df["scenario"].unique(),
     # )
 
+    create_overall_plot(
+        config_dict,
+        prior_dict,
+        error_bar_type="se",
+    )
     create_scenario_plots(
         config_dict,
         prior_dict,
         error_bar_type="se",
         scenarios=baseline_config_df["scenario"].unique(),
-    )
-    create_overall_plot(
-        config_dict,
-        prior_dict,
-        error_bar_type="se",
     )
 
 

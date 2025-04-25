@@ -179,11 +179,11 @@ class YAHPOGymEvaluator(AbstractEvaluator):
 
     def extract_validate_prior_dict(
         validate_prior: bool,
-        prior_validation_manwhitney: Optional[bool],
-        prior_validation_difference: Optional[bool],
-        n_prior_validation_samples: Optional[int],
-        prior_validation_manwhitney_p: Optional[float],
-        prior_validation_difference_threshold: Optional[float],
+        prior_validation_manwhitney: Optional[bool] = None,
+        prior_validation_difference: Optional[bool] = None,
+        n_prior_validation_samples: Optional[int] = None,
+        prior_validation_manwhitney_p: Optional[float] = None,
+        prior_validation_difference_threshold: Optional[float] = None,
     ):
         configs = list()
         if validate_prior:
