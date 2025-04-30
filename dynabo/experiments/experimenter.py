@@ -85,7 +85,6 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         dataset=dataset,
         internal_timeout=internal_timeout,
         metric=metric,
-        runtime_metric_name="time" if scenario == "lcbench" else "timetrain",
         result_processor=result_processor,
     )
 

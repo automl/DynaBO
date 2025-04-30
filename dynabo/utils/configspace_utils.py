@@ -1,13 +1,16 @@
 from typing import Dict
+
 import pandas as pd
 from ConfigSpace import ConfigurationSpace
 from ConfigSpace.hyperparameters import CategoricalHyperparameter, Constant, NormalFloatHyperparameter, NormalIntegerHyperparameter, UniformFloatHyperparameter, UniformIntegerHyperparameter
 
 
-def build_prior_configuration_space(configuration_space: ConfigurationSpace, prior: Dict[str, float]) -> ConfigurationSpace:
+def build_prior_configuration_space(configuration_space: ConfigurationSpace, prior: Dict[str, float], prior_std_denominator: float) -> ConfigurationSpace:
     configspace_name = configuration_space.name
 
+    random_state = configuration_space.random.get_state()
     new_configuration_space = ConfigurationSpace(name=f"{configspace_name}_prior")
+    new_configuration_space.random.set_state(random_state)
 
     for hyperparameter in configuration_space.values():
         if isinstance(hyperparameter, CategoricalHyperparameter):
@@ -31,7 +34,7 @@ def build_prior_configuration_space(configuration_space: ConfigurationSpace, pri
                     lower=hyperparameter.lower,
                     upper=hyperparameter.upper,
                     mu=optimum_choice,
-                    sigma=(hyperparameter.upper - hyperparameter.lower) / 2,
+                    sigma=(hyperparameter.upper - hyperparameter.lower) / prior_std_denominator,
                     log=hyperparameter.log,
                 )
             else:
@@ -50,7 +53,7 @@ def build_prior_configuration_space(configuration_space: ConfigurationSpace, pri
                     lower=hyperparameter.lower,
                     upper=hyperparameter.upper,
                     mu=optimum_choice,
-                    sigma=(hyperparameter.upper - hyperparameter.lower) / 2,
+                    sigma=(hyperparameter.upper - hyperparameter.lower) / prior_std_denominator,
                     log=hyperparameter.log,
                 )
             else:
@@ -66,4 +69,6 @@ def build_prior_configuration_space(configuration_space: ConfigurationSpace, pri
             raise NotImplementedError(f"Hyperparameter {hyperparameter} not supported.")
 
         new_configuration_space.add(new_hyperparameter)
+    conditions = configuration_space.get_conditions()
+    new_configuration_space.add_conditions(conditions)
     return new_configuration_space

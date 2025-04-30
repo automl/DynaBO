@@ -8,3 +8,5 @@ exclude = ["lib/"]
 
 # Specify the line length for style rules.
 line-length = 200
+[lint]
+ignore = ["E712"]

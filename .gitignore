@@ -115,3 +115,27 @@ config/database_credentials.yml
 benchmark_data/yahpo_data
 benchmark_data/gt_prior_data/origin_table.csv
 benchmark_data/prior_data
+benchmark_data/pd1/
+
+# logs
+logs
+dynabo/plots/*.csv
+dynamic_submission.err
+dynabo/plots/*/*.png
+dynabo/plots/scenario_plots/*
+*.zip
+
+# add to gitignore except gitkeep
+plots/dataset_plots/*
+!plots/dataset_plots/.gitkeep
+
+plots/scenario_plots/*
+!plots/scenario_plots/.gitkeep
+plotting_data/*
+!plotting_data/.gitkeep
+plots/metadata/difficulty/*.pdf
+plots/metadata
+plots/data_generation/joined.pdf
+data
+plots_old
+plots_without_disregarding

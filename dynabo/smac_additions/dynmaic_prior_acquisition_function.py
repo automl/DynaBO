@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 
 import numpy as np
 from ConfigSpace import ConfigurationSpace
@@ -18,18 +18,18 @@ logger = get_logger(__name__)
 class ConfigSpacePdfWrapper:
     def __init__(self, configspace: ConfigurationSpace, decay_beta: float, prior_start: int, prior_floor: float, discretize: bool, discrete_bins_factor: float):
         self.configspace = configspace
-        self._decay_beta = decay_beta
-        self._prior_start = prior_start
-        self._prior_floor = prior_floor
+        self.decay_beta = decay_beta
+        self.prior_start = prior_start
+        self.prior_floor = prior_floor
 
         # Variables to discretize
         self._discretize = discretize
         self._discrete_bins_factor = discrete_bins_factor
 
     def iteration_number(self, n: int):
-        return n - self._prior_start
+        return n - self.prior_start + 1
 
-    def compute_prior(self, X, n: int):
+    def compute_prior(self, X, n):
         # Compute the prior for the configurations
         prior_values = np.ones((len(X), 1))
         # iterate over the hyperparmeters (alphabetically sorted) and the columns, which come
@@ -37,12 +37,12 @@ class ConfigSpacePdfWrapper:
         for parameter, X_col in zip(self.configspace.values(), X.T):
             if self._discretize and isinstance(parameter, FloatHyperparameter):
                 assert self._discrete_bins_factor is not None
-                number_of_bins = int(np.ceil(self._discrete_bins_factor * self._decay_beta / (self.iteration_number(n))))
-                prior_values *= self._compute_discretized_pdf(parameter, X_col, number_of_bins) + self._prior_floor
+                number_of_bins = int(np.ceil(self._discrete_bins_factor * self.decay_beta / self.iteration_number(n)))
+                prior_values *= self._compute_discretized_pdf(parameter, X_col, number_of_bins) + self.prior_floor
             else:
-                prior_values *= parameter._pdf(X_col[:, np.newaxis]) + self._prior_floor
+                prior_values *= parameter._pdf(X_col[:, np.newaxis]) + self.prior_floor
 
-        return np.power(prior_values, self._decay_beta / self.iteration_number(n))
+        return np.power(prior_values, self.decay_beta / self.iteration_number(n))
 
     def _compute_discretized_pdf(
         self,
@@ -106,6 +106,11 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
             acquisition_type = self._acquisition_function
         self._rescale = isinstance(acquisition_type, (LCB, TS))
 
+        # Tracker for config number
+        self.current_config_nuber = None
+        self._average_acquisition_function_impact: Dict[str, float] = None
+        self._incumbent_acquisition_function_impact: Dict[str, float] = None
+
     def dynamic_init(
         self,
         acquisition_function: AbstractAcquisitionFunction,
@@ -141,12 +146,6 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
         np.ndarray [N, 1]
             Prior-weighted acquisition function values of X
         """
-        # If we only used the initial design, we now sample the first configuration
-        if self._current_config_number is None:
-            self._current_config_number = self._initial_design_size + 1
-        else:
-            self._current_config_number += 1
-
         if self._rescale:
             # for TS and UCB, we need to scale the function values to not run into issues
             # of negative values or issues of varying magnitudes (here, they are both)
@@ -156,5 +155,23 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
             acq_values = self._acquisition_function._compute(X)
 
         # Problem i previously did not consider that we are evaluting 5000 points here
-        prior_values = np.prod([prior.compute_prior(X, self._current_config_number) for prior in self._prior_configspaces], axis=0)
-        return acq_values * prior_values
+        prior_values = [prior.compute_prior(X, self.current_config_nuber) for prior in self._prior_configspaces]
+
+        if self._prior_configspaces:
+            af_impact = np.mean(acq_values)
+            prior_impacts = [np.mean(prior_values[i]) for i in range(len(self._prior_configspaces))]
+            self._average_acquisition_function_impact = {
+                "acquisition_function": af_impact,
+                **{f"prior_{i}": prior_impacts[i] for i in range(len(self._prior_configspaces))},
+            }
+
+            result = acq_values * np.prod(prior_values, axis=0)
+            incumbent_index = np.argmax(result)
+            af_impact = acq_values[incumbent_index]
+            prior_impacts = [prior_values[i][incumbent_index] for i in range(len(self._prior_configspaces))]
+            self._incumbent_acquisition_function_impact = {
+                "acquisition_function": af_impact,
+                **{f"prior_{i}": prior_impacts[i] for i in range(len(self._prior_configspaces))},
+            }
+        result = acq_values * np.prod(prior_values, axis=0)
+        return result
