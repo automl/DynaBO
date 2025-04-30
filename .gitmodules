@@ -1,0 +1,4 @@
+[submodule "CARP-S"]
+	path = CARP-S
+	url = git@github.com:automl/CARP-S.git
+	branch = development
