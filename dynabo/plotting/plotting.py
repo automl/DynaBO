@@ -13,9 +13,6 @@ from dynabo.data_processing.download_all_files import (
     PRIOR_INCUMBENT_PATH,
     PRIOR_PRIORS_PATH,
     PRIOR_TABLE_PATH,
-    PRIOR_WITH_DISREGARDING_INCUMBENT_PATH,
-    PRIOR_WITH_DISREGARDING_PRIORS_PATH,
-    PRIOR_WITH_DISREGARDING_TABLE_PATH,
 )
 
 
@@ -45,18 +42,10 @@ def load_performance_data():
     baseline_config_df = pd.read_csv(BASELINE_INCUMBENT_PATH)
     baseline_config_df, _ = merge_df(baseline_table, baseline_config_df, None)
 
-    prior_table_without_disregarding = pd.read_csv(PRIOR_TABLE_PATH)
-    prior_configs_without_disregarding = pd.read_csv(PRIOR_INCUMBENT_PATH)
-    prior_priors_without_disregarding = pd.read_csv(PRIOR_PRIORS_PATH)
-    prior_config_without_disregarding, prior_prior_without_disregarding = merge_df(prior_table_without_disregarding, prior_configs_without_disregarding, prior_priors_without_disregarding)
-
-    prior_table_with_disregarding = pd.read_csv(PRIOR_WITH_DISREGARDING_TABLE_PATH)
-    prior_configs_with_disregarding = pd.read_csv(PRIOR_WITH_DISREGARDING_INCUMBENT_PATH)
-    prior_priors_with_disregarding = pd.read_csv(PRIOR_WITH_DISREGARDING_PRIORS_PATH)
-    prior_configs_with_disregarding, prior_priors_with_disregarding = merge_df(prior_table_with_disregarding, prior_configs_with_disregarding, prior_priors_with_disregarding)
-
-    prior_config_df = pd.concat([prior_config_without_disregarding, prior_configs_with_disregarding])
-    prior_priors_df = pd.concat([prior_prior_without_disregarding, prior_priors_with_disregarding])
+    prior_table = pd.read_csv(PRIOR_TABLE_PATH)
+    prior_configs = pd.read_csv(PRIOR_INCUMBENT_PATH)
+    prior_priors = pd.read_csv(PRIOR_PRIORS_PATH)
+    prior_config_df, prior_priors_df = merge_df(prior_table, prior_configs, prior_priors)
 
     # For scenario lcbench divide by final_performance and perforamnce by 100
     baseline_config_df = _clean_lcbench_performance(baseline_config_df)
@@ -64,7 +53,7 @@ def load_performance_data():
     prior_priors_df = _clean_lcbench_performance(prior_priors_df)
 
     max_performances = get_max_performance([baseline_config_df, prior_config_df])
-    baseline_config_df, prior_config_without_disregarding, prior_prior_without_disregarding = add_regret([baseline_config_df, prior_config_df, prior_priors_df], max_performances)
+    baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], max_performances)
     return baseline_config_df, prior_config_df, prior_priors_df
 
 

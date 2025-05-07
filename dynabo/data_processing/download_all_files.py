@@ -16,9 +16,6 @@ BASELINE_INCUMBENT_PATH = "plotting_data/baseline_incumbent.csv"
 PRIOR_TABLE_PATH = "plotting_data/prior.csv"
 PRIOR_INCUMBENT_PATH = "plotting_data/prior_incumbent.csv"
 PRIOR_PRIORS_PATH = "plotting_data/prior_priors.csv"
-PRIOR_WITH_DISREGARDING_TABLE_PATH = "plotting_data/prior_with_disregarding.csv"
-PRIOR_WITH_DISREGARDING_INCUMBENT_PATH = "plotting_data/prior_incumbent_with_disregarding.csv"
-PRIOR_WITH_DISREGARDING_PRIORS_PATH = "plotting_data/prior_priors_with_disregarding.csv"
 
 if __name__ == "__main__":
     data_generation_one_seed_experimenter = PyExperimenter(DATA_GENERATION_CONFIG_PATH, CREDENTIALS_PATH, table_name="data_generation_new")
@@ -47,14 +44,7 @@ if __name__ == "__main__":
 
     try:
         prior_experimenter.get_table().to_csv(PRIOR_TABLE_PATH, index=False)
-        prior_experimenter.get_logtable("configs").to_csv(PRIOR_INCUMBENT_PATH, index=False)
+        prior_experimenter.get_logtable("configs", condition="incumbent = 1").to_csv(PRIOR_INCUMBENT_PATH, index=False)
         prior_experimenter.get_logtable("priors").to_csv(PRIOR_PRIORS_PATH, index=False)
-    except Exception:
-        print("No Prior")
-
-    try:
-        prior_experimenter_with_disregarding.get_table().to_csv(PRIOR_WITH_DISREGARDING_TABLE_PATH, index=False)
-        prior_experimenter_with_disregarding.get_logtable("configs").to_csv(PRIOR_WITH_DISREGARDING_INCUMBENT_PATH, index=False)
-        prior_experimenter_with_disregarding.get_logtable("priors").to_csv(PRIOR_WITH_DISREGARDING_PRIORS_PATH, index=False)
     except Exception:
         print("No Prior")
