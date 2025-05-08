@@ -222,28 +222,6 @@ class YAHPOGymEvaluator(AbstractEvaluator):
         return jobs
 
 
-def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: AbstractEvaluator, result_processor: ResultProcessor, timeout: int):
-    while smac.runhistory.finished < smac.scenario.n_trials:
-        start_ask = time.time()
-        trial_info: TrialInfo = smac.ask()
-        end_ask = time.time()
-
-        # add runtime for ask
-        ask_runtime = round(end_ask - start_ask, 3)
-        evaluator.reasoning_runtime += ask_runtime
-
-        cost, runtime = evaluator.train(trial_info.config)
-        trial_value = TrialValue(cost=cost, time=runtime)
-
-        start_tell = time.time()
-        smac.tell(info=trial_info, value=trial_value)
-        end_tell = time.time()
-
-        # add runtime for tell
-        tell_runtime = round(end_tell - start_tell, 3)
-        evaluator.reasoning_runtime += tell_runtime
-
-
 MFPBENCH_SCENARIO_OPTIONS = ["cifar100_wideresnet_2048", "imagenet_resnet_512", "lm1b_transformer_2048", "translatewmt_xformer_64"]
 
 
@@ -252,33 +230,21 @@ class MFPBenchEvaluator(AbstractEvaluator):
         self,
         scenario,
         seed: int = 42,
-        internal_timeout=-1,
-        result_processor: ResultProcessor = None,
     ):
+        super().__init__(scenario=scenario, dataset=None)
         self.scenario = scenario
-        self.result_processor = result_processor
-        self.internal_timeout = internal_timeout
 
         # setup mfpbench config
         exp_config = OmegaConf.load("CARP-S/carps/configs/task/MFPBench/SO/pd1/" + self.scenario + ".yaml")
         exp_config.seed = seed
-        task = make_task(exp_config)
+        self.task = make_task(exp_config)
 
-        self.task = task
-        self.config_space = task.objective_function.configspace
-        self.objective_function = task.objective_function.evaluate
-
-        self.accumulated_runtime = 0
-        self.reasoning_runtime = 0
-        self.incumbent_trace = list()
-        self.incumbent_cost = None
-        self.eval_counter = 0
-        self.timeout_counter = 0
+        self.config_space = self.get_configuration_space()
 
     def _train(self, config: Configuration, seed: int = 0):
         # We use the full fidelity space
         ti = TrialInfo(config=config, budget=1.0, seed=seed)
-        res = self.objective_function(ti)
+        res = self.task.objective_function.evaluate(ti)
 
         performance = round(float(res.cost), 6)
         runtime = round(float(res.virtual_time), 3)
@@ -286,7 +252,7 @@ class MFPBenchEvaluator(AbstractEvaluator):
         return float(performance), float(runtime)
 
     def get_configuration_space(self) -> ConfigurationSpace:
-        return self.config_space
+        return self.task.objective_function.configspace
 
     @staticmethod
     def get_fixed_hyperparameter_combinations(
@@ -371,6 +337,21 @@ def get_yahpo_fixed_parameter_combinations(
             prior_validation_manwhitney_p=prior_validation_manwhitney_p,
             prior_validation_difference_threshold=prior_validation_difference_threshold,
         )
+    elif benchmarklib == "mfpbench":
+        jobs = MFPBenchEvaluator.get_fixed_hyperparameter_combinations(
+            acquisition_function=acquisition_function,
+            pibo=pibo,
+            dynabo=dynabo,
+            baseline=baseline,
+            random=random,
+            decay_enumerator=decay_enumerator,
+            validate_prior=validate_prior,
+            prior_validation_manwhitney=prior_validation_manwhitney,
+            prior_validation_difference=prior_validation_difference,
+            n_prior_validation_samples=n_prior_validation_samples,
+            prior_validation_manwhitney_p=prior_validation_manwhitney_p,
+            prior_validation_difference_threshold=prior_validation_difference_threshold,
+        )
     return jobs
 
 
@@ -378,3 +359,25 @@ def get_medium_and_hard_datasets(scenario: str) -> List["str"]:
     difficulty_groups = pd.read_csv("plotting_data/difficulty_groups_one_seed.csv")
     medium_and_hard_df = difficulty_groups[(difficulty_groups["scenario"] == scenario) & (difficulty_groups["hard"] | difficulty_groups["medium"])]
     return medium_and_hard_df["dataset"].unique().tolist()
+
+
+def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: AbstractEvaluator, result_processor: ResultProcessor, timeout: int):
+    while smac.runhistory.finished < smac.scenario.n_trials:
+        start_ask = time.time()
+        trial_info: TrialInfo = smac.ask()
+        end_ask = time.time()
+
+        # add runtime for ask
+        ask_runtime = round(end_ask - start_ask, 3)
+        evaluator.reasoning_runtime += ask_runtime
+
+        cost, runtime = evaluator.train(trial_info.config)
+        trial_value = TrialValue(cost=cost, time=runtime)
+
+        start_tell = time.time()
+        smac.tell(info=trial_info, value=trial_value)
+        end_tell = time.time()
+
+        # add runtime for tell
+        tell_runtime = round(end_tell - start_tell, 3)
+        evaluator.reasoning_runtime += tell_runtime

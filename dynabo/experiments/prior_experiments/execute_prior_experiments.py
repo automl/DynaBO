@@ -20,13 +20,15 @@ from dynabo.smac_additions.dynamic_prior_callback import (
 from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 from dynabo.utils.cluster_utils import initialise_experiments
-from dynabo.utils.evaluator import YAHPOGymEvaluator, ask_tell_opt, get_yahpo_fixed_parameter_combinations
+from dynabo.utils.evaluator import MFPBenchEvaluator, YAHPOGymEvaluator, ask_tell_opt, get_yahpo_fixed_parameter_combinations
 
 EXP_CONFIG_FILE_PATH = "dynabo/experiments/prior_experiments/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
 
 def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: dict):
+    benchmarklib: str = config["benchmarklib"]
+
     # Yahpo Values
     scenario: str = config["scenario"]
     dataset: str = config["dataset"]
@@ -65,14 +67,20 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     exponential_prior = config["exponential_prior"]
     prior_sampling_weight = config["prior_sampling_weight"]
 
-    evaluator: YAHPOGymEvaluator = YAHPOGymEvaluator(
-        scenario=scenario,
-        dataset=dataset,
-        metric=metric,
-        runtime_metric_name="timetrain" if scenario != "lcbench" else "time",
-    )
+    if benchmarklib == "yahpogym":
+        evaluator: YAHPOGymEvaluator = YAHPOGymEvaluator(
+            scenario=scenario,
+            dataset=dataset,
+            metric=metric,
+            runtime_metric_name="timetrain" if scenario != "lcbench" else "time",
+        )
+    elif benchmarklib == "mfpbench":
+        evaluator: MFPBenchEvaluator = MFPBenchEvaluator(
+            scenario=scenario,
+            seed=seed,
+        )
 
-    configuration_space = evaluator.benchmark.get_opt_space(drop_fidelity_params=True)
+    configuration_space = evaluator.get_configuration_space()
 
     smac_scenario = Scenario(configspace=configuration_space, deterministic=True, seed=seed, n_trials=n_trials)
 
@@ -93,7 +101,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         acquisition_function=acquisition_function,
         max_steps=500,  # TODO wie viele local search steps sind reasonable?
     )
-    config_selector = ConfigSelector(scenario=smac_scenario, retries=100)
+    config_selector = ConfigSelector(scenario=smac_scenario, max_new_config_tries=100)
 
     intensifier = HyperparameterOptimizationFacade.get_intensifier(
         scenario=smac_scenario,
@@ -191,27 +199,29 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = False
+    benchmarklib = "mfpbench"
+    fill = True
+
     if fill:
         experimenter.fill_table_from_combination(
             parameters={
-                "benchmarklib": ["yahpogym"],
+                "benchmarklib": [benchmarklib],
                 "prior_kind": ["good", "medium", "misleading"],
-                "prior_every_n_trials": [50],
+                "prior_every_n_trials": [10],
                 "prior_std_denominator": 5,
                 "prior_decay_denominator": [10],
                 "exponential_prior": [False],
                 "prior_sampling_weight": [0.3],
                 "no_incumbent_percentile": [0.01],
                 "timeout_total": [86400],
-                "n_trials": [200],
+                "n_trials": [50],
                 "n_configs_per_hyperparameter": [10],
                 "max_ratio": [0.25],
                 "seed": range(30),
             },
             # Do not make this method, make this a choice between different xor cases
             fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(
-                benchmarklib="yahpogym",
+                benchmarklib=benchmarklib,
                 acquisition_function="expected_improvement",
                 with_all_datasets=False,
                 medium_and_hard=True,
@@ -228,9 +238,9 @@ if __name__ == "__main__":
                 prior_validation_difference_threshold=None,
             ),
         )
-    reset = True
+    reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = False
+    execute = True
     if execute:
         experimenter.execute(run_experiment, max_experiments=16, random_order=True)
