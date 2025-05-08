@@ -1,10 +1,11 @@
 import time
 from abc import abstractmethod
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
-import ioh
 import pandas as pd
-from ConfigSpace import Configuration, ConfigurationSpace, Float
+from carps.utils.running import make_task
+from ConfigSpace import Configuration, ConfigurationSpace
+from omegaconf import OmegaConf
 from py_experimenter.result_processor import ResultProcessor
 from smac.facade.hyperparameter_optimization_facade import HyperparameterOptimizationFacade
 from smac.runhistory import TrialInfo, TrialValue
@@ -62,8 +63,51 @@ class AbstractEvaluator:
         dynabo: bool = False,
         baseline: bool = False,
         random: bool = False,
-    ):
+    ) -> List[Dict[str, Any]]:
         pass
+
+    @staticmethod
+    def extract_validate_prior_dict(
+        validate_prior: bool,
+        prior_validation_manwhitney: Optional[bool] = None,
+        prior_validation_difference: Optional[bool] = None,
+        n_prior_validation_samples: Optional[int] = None,
+        prior_validation_manwhitney_p: Optional[float] = None,
+        prior_validation_difference_threshold: Optional[float] = None,
+    ):
+        configs = list()
+        if validate_prior:
+            if prior_validation_manwhitney:
+                configs += [
+                    {
+                        "validate_prior": True,
+                        "prior_validation_method": "mann_whitney_u",
+                        "n_prior_validation_samples": n_prior_validation_samples,
+                        "prior_validation_manwhitney_p": prior_validation_manwhitney_p,
+                        "prior_validation_difference_threshold": None,
+                    }
+                ]
+            if prior_validation_difference:
+                configs += [
+                    {
+                        "validate_prior": True,
+                        "prior_validation_method": "difference",
+                        "n_prior_validation_samples": n_prior_validation_samples,
+                        "prior_validation_manwhitney_p": None,
+                        "prior_validation_difference_threshold": prior_validation_difference_threshold,
+                    }
+                ]
+        else:
+            configs += [
+                {
+                    "validate_prior": False,
+                    "prior_validation_method": None,
+                    "n_prior_validation_samples": None,
+                    "prior_validation_manwhitney_p": None,
+                    "prior_validation_difference_threshold": None,
+                }
+            ]
+        return configs
 
 
 class YAHPOGymEvaluator(AbstractEvaluator):
@@ -113,7 +157,7 @@ class YAHPOGymEvaluator(AbstractEvaluator):
         n_prior_validation_samples: Optional[int],
         prior_validation_manwhitney_p: Optional[float],
         prior_validation_difference_threshold: Optional[float],
-    ):
+    ) -> List[Dict[str, Any]]:
         jobs = []
 
         # Add all YAHPO-Gym Evaluations
@@ -177,85 +221,6 @@ class YAHPOGymEvaluator(AbstractEvaluator):
 
         return jobs
 
-    def extract_validate_prior_dict(
-        validate_prior: bool,
-        prior_validation_manwhitney: Optional[bool] = None,
-        prior_validation_difference: Optional[bool] = None,
-        n_prior_validation_samples: Optional[int] = None,
-        prior_validation_manwhitney_p: Optional[float] = None,
-        prior_validation_difference_threshold: Optional[float] = None,
-    ):
-        configs = list()
-        if validate_prior:
-            if prior_validation_manwhitney:
-                configs += [
-                    {
-                        "validate_prior": True,
-                        "prior_validation_method": "mann_whitney_u",
-                        "n_prior_validation_samples": n_prior_validation_samples,
-                        "prior_validation_manwhitney_p": prior_validation_manwhitney_p,
-                        "prior_validation_difference_threshold": None,
-                    }
-                ]
-            if prior_validation_difference:
-                configs += [
-                    {
-                        "validate_prior": True,
-                        "prior_validation_method": "difference",
-                        "n_prior_validation_samples": n_prior_validation_samples,
-                        "prior_validation_manwhitney_p": None,
-                        "prior_validation_difference_threshold": prior_validation_difference_threshold,
-                    }
-                ]
-        else:
-            configs += [
-                {
-                    "validate_prior": False,
-                    "prior_validation_method": None,
-                    "n_prior_validation_samples": None,
-                    "prior_validation_manwhitney_p": None,
-                    "prior_validation_difference_threshold": None,
-                }
-            ]
-        return configs
-
-
-class BBOBEvaluator(AbstractEvaluator):
-    def __init__(self, scenario: int, dataset: str, dimension: int):
-        super().__init__(int(scenario), dataset)
-        self.dimension = dimension
-
-        self.problem = ioh.get_problem(
-            fid=int(scenario),
-            instance=dataset,
-            dimension=dimension,
-            # problem_type=ProblemType.BBOB,
-        )
-
-    def get_configuration_space(self):
-        upper_bounds = self.problem.bounds.ub
-        lower_bounds = self.problem.bounds.lb
-        hps = [Float(name=f"x{i}", bounds=[lower_bounds[i], upper_bounds[i]]) for i in range(self.dimension)]
-        configuration_space = ConfigurationSpace()
-        configuration_space.add(hps)
-        return configuration_space
-
-    def _train(self, config: Configuration, seed: int):
-        values = list(config.values())
-        performance = self.problem(values)
-        return performance, 0
-
-    @staticmethod
-    def get_fixed_hyperparameter_combinations(
-        with_all_datasets: bool = True,
-        medium_and_hard: bool = False,
-        pibo: bool = False,
-        dynabo: bool = False,
-        baseline: bool = False,
-        random: bool = False,
-    ):
-        pass
-
 
 def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: AbstractEvaluator, result_processor: ResultProcessor, timeout: int):
     while smac.runhistory.finished < smac.scenario.n_trials:
@@ -277,6 +242,99 @@ def ask_tell_opt(smac: HyperparameterOptimizationFacade, evaluator: AbstractEval
         # add runtime for tell
         tell_runtime = round(end_tell - start_tell, 3)
         evaluator.reasoning_runtime += tell_runtime
+
+
+MFPBENCH_SCENARIO_OPTIONS = ["cifar100_wideresnet_2048", "imagenet_resnet_512", "lm1b_transformer_2048", "translatewmt_xformer_64"]
+
+
+class MFPBenchEvaluator(AbstractEvaluator):
+    def __init__(
+        self,
+        scenario,
+        seed: int = 42,
+        internal_timeout=-1,
+        result_processor: ResultProcessor = None,
+    ):
+        self.scenario = scenario
+        self.result_processor = result_processor
+        self.internal_timeout = internal_timeout
+
+        # setup mfpbench config
+        exp_config = OmegaConf.load("CARP-S/carps/configs/task/MFPBench/SO/pd1/" + self.scenario + ".yaml")
+        exp_config.seed = seed
+        task = make_task(exp_config)
+
+        self.task = task
+        self.config_space = task.objective_function.configspace
+        self.objective_function = task.objective_function.evaluate
+
+        self.accumulated_runtime = 0
+        self.reasoning_runtime = 0
+        self.incumbent_trace = list()
+        self.incumbent_cost = None
+        self.eval_counter = 0
+        self.timeout_counter = 0
+
+    def _train(self, config: Configuration, seed: int = 0):
+        # We use the full fidelity space
+        ti = TrialInfo(config=config, budget=1.0, seed=seed)
+        res = self.objective_function(ti)
+
+        performance = round(float(res.cost), 6)
+        runtime = round(float(res.virtual_time), 3)
+
+        return float(performance), float(runtime)
+
+    def get_configuration_space(self) -> ConfigurationSpace:
+        return self.config_space
+
+    @staticmethod
+    def get_fixed_hyperparameter_combinations(
+        acquisition_function: str,
+        pibo: bool,
+        dynabo: bool,
+        baseline: bool,
+        random: bool,
+        decay_enumerator: int,
+        validate_prior: bool,
+        prior_validation_manwhitney: Optional[bool],
+        prior_validation_difference: Optional[bool],
+        n_prior_validation_samples: Optional[int],
+        prior_validation_manwhitney_p: Optional[float],
+        prior_validation_difference_threshold: Optional[float],
+    ) -> List[Dict[str, Any]]:
+        jobs = []
+        for scenario in MFPBENCH_SCENARIO_OPTIONS:
+            # asset pibo, baseliiine or dynabo is set
+            assert pibo or dynabo or baseline or random
+            job = []
+            if baseline:
+                job += [{"pibo": False, "dynabo": False, "baseline": True, "acquisition_function": acquisition_function, "random": False}]
+            if pibo:
+                configs = MFPBenchEvaluator.extract_validate_prior_dict(validate_prior=False)
+                job += [
+                    {"pibo": True, "dynabo": False, "baseline": False, "acquisition_function": acquisition_function, "random": False, "prior_decay_enumerator": decay_enumerator, **config}
+                    for config in configs
+                ]
+            if dynabo:
+                configs = MFPBenchEvaluator.extract_validate_prior_dict(
+                    validate_prior=validate_prior,
+                    prior_validation_manwhitney=prior_validation_manwhitney,
+                    prior_validation_difference=prior_validation_difference,
+                    n_prior_validation_samples=n_prior_validation_samples,
+                    prior_validation_manwhitney_p=prior_validation_manwhitney_p,
+                    prior_validation_difference_threshold=prior_validation_difference_threshold,
+                )
+                job += [
+                    {"pibo": False, "dynabo": True, "baseline": False, "acquisition_function": acquisition_function, "random": False, "prior_decay_enumerator": decay_enumerator, **config}
+                    for config in configs
+                ]
+            if random:
+                job += [{"pibo": False, "dynabo": False, "baseline": False, "random": True}]
+
+            jobs += [dict(**j, **{"scenario": scenario, "dataset": None, "metric": "cost"}) for j in job]
+
+        return jobs
 
 
 def get_yahpo_fixed_parameter_combinations(
@@ -312,15 +370,6 @@ def get_yahpo_fixed_parameter_combinations(
             n_prior_validation_samples=n_prior_validation_samples,
             prior_validation_manwhitney_p=prior_validation_manwhitney_p,
             prior_validation_difference_threshold=prior_validation_difference_threshold,
-        )
-    elif benchmarklib == "bbob":
-        jobs = BBOBEvaluator.get_fixed_hyperparameter_combinations(
-            with_all_datasets=with_all_datasets,
-            medium_and_hard=medium_and_hard,
-            pibo=pibo,
-            dynabo=dynabo,
-            baseline=baseline,
-            random=random,
         )
     return jobs
 
