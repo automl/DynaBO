@@ -9,4 +9,4 @@ smac
 py-experimenter==1.4.2
 yahpo-gym==1.0.2
 matplotlib
-git+https://github.com/tornede/py_experimenter.git@204-table_name-parameter-does-not-adapt-name-of-logtable#egg=py_experimenter
+git+https://github.com/tornede/py_experimenter.git@207-get_table-with-condition#egg=py_experimenter

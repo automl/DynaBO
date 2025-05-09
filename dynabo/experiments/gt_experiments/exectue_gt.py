@@ -129,7 +129,7 @@ if __name__ == "__main__":
         "inverted_cost": [True],
         "timeout_total": [86400],
         "timeout_internal": [1200],
-        "n_trials": [100],
+        "n_trials": [5000],
         "n_configs_per_hyperparameter": [10],
         "max_ratio": [0.25],
     }
@@ -154,13 +154,13 @@ if __name__ == "__main__":
             experimenter.fill_table_from_combination(
                 parameters={**base_parameters, **{"seed": range(10)}},
                 fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(
-                    benchmarklib=benchmarklib, pibo=False, dynabo=False, baseline=True, with_all_datasets=False, medium_and_hard=True, random=False, acquisition_function="expected_improvement"
+                    benchmarklib=benchmarklib, pibo=False, dynabo=False, baseline=True, with_all_datasets=False, medium_and_hard=True, random=False, acquisition_function="confidence_bound"
                 ),
             )
     reset = False
     if reset:
         experimenter.reset_experiments("error")
 
-    execute = True
+    execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=1)

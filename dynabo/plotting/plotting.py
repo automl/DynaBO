@@ -8,11 +8,11 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 from dynabo.data_processing.download_all_files import (
-    BASELINE_INCUMBENT_PATH,
-    BASELINE_TABLE_PATH,
-    PRIOR_INCUMBENT_PATH,
-    PRIOR_PRIORS_PATH,
-    PRIOR_TABLE_PATH,
+    YAHPO_BASELINE_INCUMBENT_PATH,
+    YAHPO_BASELINE_TABLE_PATH,
+    YAHPO_PRIOR_INCUMBENT_PATH,
+    YAHPO_PRIOR_PRIORS_PATH,
+    YAHPO_PRIOR_TABLE_PATH,
 )
 
 
@@ -38,13 +38,13 @@ def load_performance_data():
         df.loc[mask, "final_performance"] = df.loc[mask, "final_performance"] / 100
         return df
 
-    baseline_table = pd.read_csv(BASELINE_TABLE_PATH)
-    baseline_config_df = pd.read_csv(BASELINE_INCUMBENT_PATH)
+    baseline_table = pd.read_csv(YAHPO_BASELINE_TABLE_PATH)
+    baseline_config_df = pd.read_csv(YAHPO_BASELINE_INCUMBENT_PATH)
     baseline_config_df, _ = merge_df(baseline_table, baseline_config_df, None)
 
-    prior_table = pd.read_csv(PRIOR_TABLE_PATH)
-    prior_configs = pd.read_csv(PRIOR_INCUMBENT_PATH)
-    prior_priors = pd.read_csv(PRIOR_PRIORS_PATH)
+    prior_table = pd.read_csv(YAHPO_PRIOR_TABLE_PATH)
+    prior_configs = pd.read_csv(YAHPO_PRIOR_INCUMBENT_PATH)
+    prior_priors = pd.read_csv(YAHPO_PRIOR_PRIORS_PATH)
     prior_config_df, prior_priors_df = merge_df(prior_table, prior_configs, prior_priors)
 
     # For scenario lcbench divide by final_performance and perforamnce by 100

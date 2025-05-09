@@ -7,10 +7,10 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 from dynabo.data_processing.download_all_files import (
-    DATA_GENERATION_INCUMBENT_MEDIUM_HARD_PATH,
-    DATA_GENERATION_INCUMBENT_ONE_SEED_PATH,
-    DATA_GENERATION_MEDIUM_HARD_PATH,
-    DATA_GENERATION_ONE_SEED_PATH,
+    YAHPO_DATA_GENERATION_INCUMBENT_MEDIUM_HARD_PATH,
+    YAHPO_DATA_GENERATION_INCUMBENT_ONE_SEED_PATH,
+    YAHPO_DATA_GENERATION_MEDIUM_HARD_PATH,
+    YHAPO_DATA_GENERATION_ONE_SEED_PATH,
 )
 
 
@@ -18,8 +18,8 @@ def load_data_one_seed():
     """
     Load the data from the csv files.
     """
-    data_generation_table = pd.read_csv(DATA_GENERATION_ONE_SEED_PATH)
-    data_generation_incumbent = pd.read_csv(DATA_GENERATION_INCUMBENT_ONE_SEED_PATH)
+    data_generation_table = pd.read_csv(YHAPO_DATA_GENERATION_ONE_SEED_PATH)
+    data_generation_incumbent = pd.read_csv(YAHPO_DATA_GENERATION_INCUMBENT_ONE_SEED_PATH)
     data_generation_incumbent = data_generation_incumbent.drop(columns=["ID"])
 
     return data_generation_table, data_generation_incumbent
@@ -29,8 +29,8 @@ def load_data_multiple_seeds():
     """
     Load the data from the csv files.
     """
-    data_generation_table = pd.read_csv(DATA_GENERATION_MEDIUM_HARD_PATH)
-    data_generation_incumbent = pd.read_csv(DATA_GENERATION_INCUMBENT_MEDIUM_HARD_PATH)
+    data_generation_table = pd.read_csv(YAHPO_DATA_GENERATION_MEDIUM_HARD_PATH)
+    data_generation_incumbent = pd.read_csv(YAHPO_DATA_GENERATION_INCUMBENT_MEDIUM_HARD_PATH)
     data_generation_incumbent = data_generation_incumbent.drop(columns=["ID"])
 
     return data_generation_table, data_generation_incumbent

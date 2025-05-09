@@ -127,6 +127,7 @@ class AbstractPriorCallback(Callback, ABC):
         """
         Returns the path to the prior data.
         """
+        # TODO adapt
         return os.path.join(base_path, scenario, dataset, metric, "prior_table.csv")
 
     def get_prior_data(
