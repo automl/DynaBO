@@ -1,5 +1,6 @@
 import ast
 import os
+from copy import deepcopy
 from typing import Optional
 
 import pandas as pd
@@ -13,9 +14,9 @@ def create_prior_data_path_yahpo(scenario: str, dataset: str, metric: str):
 
 
 def create_prior_data_path_pd1(scenario: str):
-    if not os.path.exists(os.path.join("benchmark_data", "prior_data", "pd1", scenario)):
-        os.makedirs(os.path.join("benchmark_data", "prior_data", "pd1", scenario))
-    return os.path.join("benchmark_data", "prior_data", "pd1", scenario)
+    if not os.path.exists(os.path.join("benchmark_data", "prior_data", "mfpbench", scenario)):
+        os.makedirs(os.path.join("benchmark_data", "prior_data", "mfpbench", scenario))
+    return os.path.join("benchmark_data", "prior_data", "mfpbench", scenario)
 
 
 def connect_to_database(table_name: str) -> PyExperimenter:
@@ -75,14 +76,14 @@ def filter_incumbents(df: pd.DataFrame, filter_epsilon: float) -> pd.DataFrame:
     """
     if df["scenario"].nunique() > 1:
         raise ValueError("The dataframe contains multiple scenarios. Please filter the dataframe to a single scenario before applying this function.")
-    else:
+    elif df["scenario"][0] == "lcbench":
         filter_epsilon *= 100
-
-    filtered_df = df
+    df = df.sort_values("performance")
+    filtered_df = deepcopy(df)
     min_performance = df["performance"].min()
     max_performance = df["performance"].max()
     for index, row in df.iterrows():
-        if row["performance"] < min_performance + filter_epsilon or row["performance"] > max_performance - filter_epsilon:
+        if row["performance"] < (min_performance + filter_epsilon) or row["performance"] > (max_performance - filter_epsilon):
             filtered_df = filtered_df.drop(index)
         else:
             min_performance = row["performance"]

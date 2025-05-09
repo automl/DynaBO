@@ -138,6 +138,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
     # TODO  Adapt name of the p value and the trheshold
     prior_callback = PriorCallbackClass(
+        benchmarklib=benchmarklib,
         scenario=evaluator.scenario,
         dataset=evaluator.dataset,
         metric=metric,
@@ -226,10 +227,10 @@ if __name__ == "__main__":
                 with_all_datasets=False,
                 medium_and_hard=True,
                 pibo=False,
-                dynabo=True,
+                dynabo=False,
                 baseline=False,
                 random=False,
-                decay_enumerator=200,
+                decay_enumerator=50,
                 validate_prior=False,
                 prior_validation_manwhitney=False,
                 prior_validation_difference=False,
@@ -241,6 +242,6 @@ if __name__ == "__main__":
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = True
+    execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=16, random_order=True)

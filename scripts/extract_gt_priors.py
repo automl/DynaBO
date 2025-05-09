@@ -7,8 +7,8 @@ def extract_gt_priors_pd1():
     """
     This function creates the prior data for the pd1 benchmark.
     """
-    save_base_table("pd1", "data_generation_pd1")
-    base_df = load_df(benchmark_name="pd1")
+    save_base_table("mfpbench", "data_generation_pd1")
+    base_df = load_df(benchmark_name="mfpbench")
     for scenario in base_df.scenario.unique():
         scenario_df = base_df[base_df.scenario == scenario]
         prior_data_path = create_prior_data_path_pd1(scenario)
@@ -36,5 +36,5 @@ def extract_gt_priors_yahpo():
 
 
 if __name__ == "__main__":
-    # extract_gt_priors_pd1()
+    extract_gt_priors_pd1()
     extract_gt_priors_yahpo()

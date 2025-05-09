@@ -70,6 +70,7 @@ class LogIncumbentCallback(Callback):
 class AbstractPriorCallback(Callback, ABC):
     def __init__(
         self,
+        benchmarklib,
         scenario: str,
         dataset: str,
         metric: str,
@@ -90,6 +91,7 @@ class AbstractPriorCallback(Callback, ABC):
         evaluator: YAHPOGymEvaluator = None,
     ):
         super().__init__()
+        self.benchmarklib = benchmarklib
         self.scenario = scenario
         self.dataset = dataset
         self.metric = metric
@@ -116,19 +118,23 @@ class AbstractPriorCallback(Callback, ABC):
         if self.validate_prior:
             self.lcb = LCB()
 
-        self.prior_data_path = self.get_prior_data_path(base_path, scenario, dataset, metric)
+        self.prior_data_path = self.get_prior_data_path(base_path, self.benchmarklib, scenario, dataset, metric)
         self.prior_data = self.get_prior_data()
 
         # Number of the prior
         self.prior_number = 0
 
     @staticmethod
-    def get_prior_data_path(base_path, scenario: str, dataset: str, metric: str) -> str:
+    def get_prior_data_path(base_path, benchmarklib, scenario: str, dataset: str, metric: str) -> str:
         """
         Returns the path to the prior data.
         """
         # TODO adapt
-        return os.path.join(base_path, scenario, dataset, metric, "prior_table.csv")
+        path = os.path.join(base_path, benchmarklib, scenario)
+        if benchmarklib == "yahoo":
+            path = os.path.join(path, dataset, metric)
+        path = os.path.join(path, "prior_table.csv")
+        return path
 
     def get_prior_data(
         self,
