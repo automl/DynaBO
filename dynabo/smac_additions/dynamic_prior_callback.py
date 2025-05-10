@@ -366,7 +366,7 @@ class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback):
             else:
                 relevant_configs = self.prior_data.sort_values(PERFORMANCE_INDICATOR_COLUMN)
                 # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
-                relevant_configs = relevant_configs.head(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0]))
+                relevant_configs = relevant_configs.head(int(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0])))
         else:
             relevant_configs = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] < incumbent_performance]
             relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN, ascending=False)
@@ -394,7 +394,7 @@ class PiBOMediumPriorCallback(PiBOAbstractPriorCallback):
             else:
                 relevant_configs = self.prior_data.sort_values(PERFORMANCE_INDICATOR_COLUMN)
                 # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
-                relevant_configs = relevant_configs.head(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0]))
+                relevant_configs = relevant_configs.head(int(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0])))
         else:
             relevant_configs = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] < incumbent_performance]
             relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN, ascending=False)
