@@ -21,8 +21,8 @@ def extract_gt_priors_yahpo():
     """
     This function creates the prior data for the yahpo benchmark.
     """
-    save_base_table("yahpo", "data_generation_medium_hard_new")
-    base_df = load_df(benchmark_name="yahpo")
+    save_base_table("yahpogym", "data_generation_medium_hard_new")
+    base_df = load_df(benchmark_name="yahpogym")
     for scenario in base_df.scenario.unique():
         scenario_df = base_df[base_df.scenario == scenario]
         for dataset in scenario_df.dataset.unique():
@@ -36,5 +36,5 @@ def extract_gt_priors_yahpo():
 
 
 if __name__ == "__main__":
-    extract_gt_priors_pd1()
+    # extract_gt_priors_pd1()
     extract_gt_priors_yahpo()

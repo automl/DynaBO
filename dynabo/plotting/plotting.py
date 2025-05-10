@@ -57,8 +57,8 @@ def load_performance_data_yahpo():
     prior_config_df = _clean_lcbench_performance(prior_config_df)
     prior_priors_df = _clean_lcbench_performance(prior_priors_df)
 
-    best_performances = get_best_performances([baseline_config_df, prior_config_df], benchmarklib="yahpo")
-    baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], best_performances, benchmarklib="yahpo")
+    best_performances = get_best_performances([baseline_config_df, prior_config_df], benchmarklib="yahpogym")
+    baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], best_performances, benchmarklib="yahpogym")
     return baseline_config_df, prior_config_df, prior_priors_df
 
 
@@ -111,7 +111,7 @@ def get_best_performances(dfs: Tuple[pd.DataFrame], benchmarklib: str) -> Dict[T
     Compute the maximum performance.
     """
     concat_df = pd.concat(dfs)
-    if benchmarklib == "yahpo":
+    if benchmarklib == "yahpogym":
         index = ["scenario", "dataset"]
         best_performances = concat_df.groupby(index)["performance"].max()
     elif benchmarklib == "mfpbench":
@@ -127,7 +127,7 @@ def add_regret(dfs: List[pd.DataFrame], max_performances: Dict[Tuple[str, int], 
     for df in dfs:
         max_perf_series = pd.Series(max_performances)
         # Use the scenario and dataset columns to index the Series—
-        if benchmarklib == "yahpo":
+        if benchmarklib == "yahpogym":
             keys = pd.MultiIndex.from_arrays([df["scenario"], df["dataset"]])
             best_values = max_perf_series.loc[keys].values
             df["regret"] = best_values - df["performance"].values
@@ -208,7 +208,7 @@ def plot_final_run(
     for key, df in config_dict.items():
         sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df, label=key, ax=ax, errorbar=error_bar_type)
 
-    if benchmarklib == "yahpo":
+    if benchmarklib == "yahpogym":
         # Check highest performacne after 10 trials
         highest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == (max_ntrials - 10)]["regret"].mean()
         smallest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == max_ntrials]["regret"].mean()
@@ -295,7 +295,7 @@ def extract_incumbent_steps(df_dict: Dict[str, pd.DataFrame], min_ntrials: int, 
         for scenario in df["scenario"].unique():
             scenario_mask = df["scenario"] == scenario
             scenario_df = df[scenario_mask]
-            if benchmarklib == "yahpo":
+            if benchmarklib == "yahpogym":
                 # Step 3: Iterate over each dataset in the current scenario
                 for dataset in scenario_df["dataset"].unique():
                     dataset_mask = scenario_mask & (df["dataset"] == dataset)
@@ -374,7 +374,7 @@ def create_dataset_plots(
 
 
 def create_scenario_plots(config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], error_bar_type: str, scenarios: List[str], benchmarklib: str):
-    if benchmarklib == "yahpo":
+    if benchmarklib == "yahpogym":
         min_ntrials = 1
         max_n_trials = 200
     elif benchmarklib == "mfpbench":
@@ -413,7 +413,7 @@ def create_overall_plot(
     benchnmarklib: str,
 ):
     os.makedirs(f"plots/scenario_plots/{benchnmarklib}/regret", exist_ok=True)
-    if benchnmarklib == "yahpo":
+    if benchnmarklib == "yahpogym":
         min_ntrials = 1
         max_n_trials = 200
     elif benchnmarklib == "mfpbench":

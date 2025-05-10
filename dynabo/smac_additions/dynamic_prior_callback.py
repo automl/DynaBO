@@ -131,7 +131,7 @@ class AbstractPriorCallback(Callback, ABC):
         """
         # TODO adapt
         path = os.path.join(base_path, benchmarklib, scenario)
-        if benchmarklib == "yahoo":
+        if benchmarklib == "yahpogym":
             path = os.path.join(path, dataset, metric)
         path = os.path.join(path, "prior_table.csv")
         return path
@@ -311,14 +311,14 @@ class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback):
 
     def sample_prior(self, smbo, incumbent_performance) -> Optional[pd.DataFrame]:
         # Select all configurations that have a better performance than the incumbent
-        # Check whether the values are sorted
+        # Chekc whether the valeus are sorted
         if (self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance).any():
             relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance]
             relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN)
         else:
             relevant_configs = self.prior_data.sort_values(PERFORMANCE_INDICATOR_COLUMN)
             # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
-            relevant_configs = relevant_configs.head(int(self.no_incumbent_percentile * relevant_configs.shape[0]))
+            relevant_configs = relevant_configs.head(int(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0])))
 
         return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
@@ -342,22 +342,36 @@ class PiBOWellPerformingPriorCallback(PiBOAbstractPriorCallback):
         else:
             relevant_configs = self.prior_data.sort_values(PERFORMANCE_INDICATOR_COLUMN)
             # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
-            relevant_configs = relevant_configs.head(int(self.no_incumbent_percentile * relevant_configs.shape[0]))
+            relevant_configs = relevant_configs.head(int(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0])))
 
         return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
 
 class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback):
+    def __init__(
+        self,
+        no_incumbent_percentile: float,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.no_incumbent_percentile = no_incumbent_percentile
+
     def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
         # 50 percent likelihood sample better, with 50% likelihood sample worse
         if smbo.intensifier._rng.random() < 0.5:
-            better_performing_configs = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] > incumbent_performance]
-            better_performing_configs = better_performing_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN, ascending=True)
+            if (self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance).any():
+                relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance]
+                relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+            else:
+                relevant_configs = self.prior_data.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+                # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
+                relevant_configs = relevant_configs.head(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0]))
         else:
-            better_performing_configs = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] < incumbent_performance]
-            better_performing_configs = better_performing_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN, ascending=False)
+            relevant_configs = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] < incumbent_performance]
+            relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN, ascending=False)
 
-        return self.draw_sample(better_performing_configs, smbo.intensifier._rng)
+        return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
 
 class PiBOMediumPriorCallback(PiBOAbstractPriorCallback):
@@ -365,13 +379,18 @@ class PiBOMediumPriorCallback(PiBOAbstractPriorCallback):
         # Select all configurations that have a better performance than the incumbent
         # TODO with 50 percent likelihood sample better, with 50% likelihood sample worse. We use the same distribution
         if smbo.intensifier._rng.random() < 0.5:
-            better_performing_configs = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] > incumbent_performance]
-            better_performing_configs = better_performing_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN, ascending=True)
+            if (self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance).any():
+                relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance]
+                relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+            else:
+                relevant_configs = self.prior_data.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+                # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
+                relevant_configs = relevant_configs.head(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0]))
         else:
-            better_performing_configs = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] < incumbent_performance]
-            better_performing_configs = better_performing_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN, ascending=False)
+            relevant_configs = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] < incumbent_performance]
+            relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN, ascending=False)
 
-        return self.draw_sample(better_performing_configs, smbo.intensifier._rng)
+        return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
 
 class DynaBOMisleadingPriorCallback(DynaBOAbstractPriorCallback):

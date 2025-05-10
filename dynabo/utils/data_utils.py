@@ -8,9 +8,9 @@ from py_experimenter.experimenter import PyExperimenter
 
 
 def create_prior_data_path_yahpo(scenario: str, dataset: str, metric: str):
-    if not os.path.exists(os.path.join("benchmark_data", "prior_data", "yahpo", scenario, str(dataset), metric)):
-        os.makedirs(os.path.join("benchmark_data", "prior_data", "yahpo", scenario, str(dataset), metric))
-    return os.path.join("benchmark_data", "prior_data", "yahpo", scenario, str(dataset), metric)
+    if not os.path.exists(os.path.join("benchmark_data", "prior_data", "yahpogym", scenario, str(dataset), metric)):
+        os.makedirs(os.path.join("benchmark_data", "prior_data", "yahpogym", scenario, str(dataset), metric))
+    return os.path.join("benchmark_data", "prior_data", "yahpogym", scenario, str(dataset), metric)
 
 
 def create_prior_data_path_pd1(scenario: str):
@@ -43,7 +43,7 @@ def save_table(table: pd.DataFrame, path: str):
     table.to_csv(path, index=False)
 
 
-def load_df(benchmark_name: str = "yahpo") -> pd.DataFrame:
+def load_df(benchmark_name: str = "yahpogym") -> pd.DataFrame:
     path = f"benchmark_data/gt_prior_data/{benchmark_name}/origin_table.csv"
     return pd.read_csv(path)
 

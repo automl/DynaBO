@@ -200,7 +200,7 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    benchmarklib = "mfpbench"
+    benchmarklib = "yahpogym"
     fill = True
 
     if fill:
@@ -213,9 +213,9 @@ if __name__ == "__main__":
                 "prior_decay_denominator": [10],
                 "exponential_prior": [False],
                 "prior_sampling_weight": [0.3],
-                "no_incumbent_percentile": [0.01],
+                "no_incumbent_percentile": [0.1],
                 "timeout_total": [86400],
-                "n_trials": [50],
+                "n_trials": [200],
                 "n_configs_per_hyperparameter": [10],
                 "max_ratio": [0.25],
                 "seed": range(30),
@@ -227,10 +227,10 @@ if __name__ == "__main__":
                 with_all_datasets=False,
                 medium_and_hard=True,
                 pibo=False,
-                dynabo=False,
+                dynabo=True,
                 baseline=False,
                 random=False,
-                decay_enumerator=50,
+                decay_enumerator=200,
                 validate_prior=False,
                 prior_validation_manwhitney=False,
                 prior_validation_difference=False,
@@ -242,6 +242,6 @@ if __name__ == "__main__":
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = False
+    execute = True
     if execute:
         experimenter.execute(run_experiment, max_experiments=16, random_order=True)
