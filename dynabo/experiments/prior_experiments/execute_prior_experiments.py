@@ -117,7 +117,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         if prior_kind == "good":
             PriorCallbackClass = partial(PiBOWellPerformingPriorCallback, no_incumbent_percentile=no_incumbent_percentile)
         elif prior_kind == "medium":
-            PriorCallbackClass = PiBOMediumPriorCallback
+            PriorCallbackClass = partial(PiBOMediumPriorCallback, no_incumbent_percentile=no_incumbent_percentile)
         elif prior_kind == "misleading":
             PriorCallbackClass = PiBOMisleadingPriorCallback
         elif prior_kind == "deceiving":
@@ -128,7 +128,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         if prior_kind == "good":
             PriorCallbackClass = partial(DynaBOWellPerformingPriorCallback, no_incumbent_percentile=no_incumbent_percentile)
         elif prior_kind == "medium":
-            PriorCallbackClass = DynaBOMediumPriorCallback
+            PriorCallbackClass = partial(DynaBOMediumPriorCallback, no_incumbent_percentile=no_incumbent_percentile)
         elif prior_kind == "misleading":
             PriorCallbackClass = DynaBOMisleadingPriorCallback
         elif prior_kind == "deceiving":
@@ -231,17 +231,17 @@ if __name__ == "__main__":
                 baseline=False,
                 random=False,
                 decay_enumerator=200,
-                validate_prior=False,
+                validate_prior=True,
                 prior_validation_manwhitney=False,
-                prior_validation_difference=False,
-                n_prior_validation_samples=None,
+                prior_validation_difference=True,
+                n_prior_validation_samples=500,
                 prior_validation_manwhitney_p=None,
-                prior_validation_difference_threshold=None,
+                prior_validation_difference_threshold=-1,
             ),
         )
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = True
+    execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=16, random_order=True)

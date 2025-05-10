@@ -375,6 +375,15 @@ class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback):
 
 
 class PiBOMediumPriorCallback(PiBOAbstractPriorCallback):
+    def __init__(
+        self,
+        no_incumbent_percentile: float,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.no_incumbent_percentile = no_incumbent_percentile
+
     def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
         # Select all configurations that have a better performance than the incumbent
         # TODO with 50 percent likelihood sample better, with 50% likelihood sample worse. We use the same distribution
