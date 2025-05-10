@@ -8,6 +8,11 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 from dynabo.data_processing.download_all_files import (
+    PD1_BASELINE_INCUMBENT_PATH,
+    PD1_BASELINE_TABLE_PATH,
+    PD1_PRIOR_INCUMBENT_PATH,
+    PD1_PRIOR_PRIORS_PATH,
+    PD1_PRIOR_TABLE_PATH,
     YAHPO_BASELINE_INCUMBENT_PATH,
     YAHPO_BASELINE_TABLE_PATH,
     YAHPO_PRIOR_INCUMBENT_PATH,
@@ -22,12 +27,12 @@ def load_datageneration_data():
 
     main_table, _ = merge_df(main_table, configs, None)
 
-    max_performances = get_max_performance([main_table])
-    main_table = add_regret([main_table], max_performances)[0]
+    best_performances = get_best_performances([main_table])
+    main_table = add_regret([main_table], best_performances)[0]
     return main_table
 
 
-def load_performance_data():
+def load_performance_data_yahpo():
     """
     Load the performance data, saved in the filesystem. Do some data_cleaning for lcbench and add regret.
     """
@@ -52,8 +57,37 @@ def load_performance_data():
     prior_config_df = _clean_lcbench_performance(prior_config_df)
     prior_priors_df = _clean_lcbench_performance(prior_priors_df)
 
-    max_performances = get_max_performance([baseline_config_df, prior_config_df])
-    baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], max_performances)
+    best_performances = get_best_performances([baseline_config_df, prior_config_df], benchmarklib="yahpo")
+    baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], best_performances, benchmarklib="yahpo")
+    return baseline_config_df, prior_config_df, prior_priors_df
+
+
+def load_performance_data_mfpbench():
+    """
+    Load the performance data for pd1, saved in the filesystem. Do some data cleaning for lcbench and add regret.
+    """
+
+    def invert_performance(df: pd.DataFrame):
+        df["performance"] = df["performance"] * -1
+        df["final_performance"] = df["final_performance"] * -1
+        return df
+
+    baseline_table = pd.read_csv(PD1_BASELINE_TABLE_PATH)
+    baseline_config_df = pd.read_csv(PD1_BASELINE_INCUMBENT_PATH)
+    baseline_config_df, _ = merge_df(baseline_table, baseline_config_df, None)
+
+    prior_table = pd.read_csv(PD1_PRIOR_TABLE_PATH)
+    prior_configs = pd.read_csv(PD1_PRIOR_INCUMBENT_PATH)
+    prior_priors = pd.read_csv(PD1_PRIOR_PRIORS_PATH)
+    prior_config_df, prior_priors_df = merge_df(prior_table, prior_configs, prior_priors)
+
+    baseline_config_df = invert_performance(baseline_config_df)
+    prior_config_df = invert_performance(prior_config_df)
+    prior_priors_df = invert_performance(prior_priors_df)
+
+    best_performances = get_best_performances([baseline_config_df, prior_config_df], benchmarklib="mfpbench")
+    baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], best_performances, benchmarklib="mfpbench")
+
     return baseline_config_df, prior_config_df, prior_priors_df
 
 
@@ -72,30 +106,38 @@ def merge_df(df: pd.DataFrame, incumbents: pd.DataFrame, priors: Optional[pd.Dat
     return incumbent_df, prior_df
 
 
-def get_max_performance(dfs: Tuple[pd.DataFrame]) -> Dict[Tuple[str, int], float]:
+def get_best_performances(dfs: Tuple[pd.DataFrame], benchmarklib: str) -> Dict[Tuple[str, int], float]:
     """
     Compute the maximum performance.
     """
     concat_df = pd.concat(dfs)
-    max_performances = concat_df.groupby(["scenario", "dataset"])["performance"].max()
-    return max_performances.to_dict()
+    if benchmarklib == "yahpo":
+        index = ["scenario", "dataset"]
+        best_performances = concat_df.groupby(index)["performance"].max()
+    elif benchmarklib == "mfpbench":
+        index = ["scenario"]
+        best_performances = concat_df.groupby(index)["performance"].min()
+    return best_performances.to_dict()
 
 
-def add_regret(dfs: List[pd.DataFrame], max_performances: Dict[Tuple[str, int], float]) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def add_regret(dfs: List[pd.DataFrame], max_performances: Dict[Tuple[str, int], float], benchmarklib: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Add the regret to the dataframes.
     """
     for df in dfs:
         max_perf_series = pd.Series(max_performances)
         # Use the scenario and dataset columns to index the Series—
-        keys = pd.MultiIndex.from_arrays([df["scenario"], df["dataset"]])
+        if benchmarklib == "yahpo":
+            keys = pd.MultiIndex.from_arrays([df["scenario"], df["dataset"]])
+            best_values = max_perf_series.loc[keys].values
+            df["regret"] = best_values - df["performance"].values
+            df["final_regret"] = best_values - df["final_performance"].values
+        elif benchmarklib == "mfpbench":
+            keys = df["scenario"]
+            best_values = max_perf_series.loc[keys].values
+            df["regret"] = df["performance"].values - best_values
+            df["final_regret"] = df["final_performance"].values - best_values
 
-        # Retrieve the corresponding max values for each row
-        max_values = max_perf_series.loc[keys].values
-
-        # Compute regret values
-        df["regret"] = max_values - df["performance"].values
-        df["final_regret"] = max_values - df["final_performance"].values
     return dfs
 
 
@@ -144,6 +186,7 @@ def plot_final_run(
     dataset: str,
     prior_kind: str,
     ax: plt.Axes,
+    benchmarklib: str,
     min_ntrials=1,
     max_ntrials=200,
     error_bar_type: str = "se",
@@ -157,6 +200,7 @@ def plot_final_run(
         scenario,
         dataset,
         prior_kind,
+        benchmarklib,
         min_ntrials,
         max_ntrials,
     )
@@ -164,13 +208,17 @@ def plot_final_run(
     for key, df in config_dict.items():
         sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df, label=key, ax=ax, errorbar=error_bar_type)
 
-    # Check highest performacne after 10 trials
-    highest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == 40]["regret"].mean()
-    smallest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == 200]["regret"].mean()
-
-    # TODO this is the issue
-    ax.set_ylim(smallest_regret * 0.1, highest_regret * 1.1)
-    ax.set_ylabel("Regret")
+    if benchmarklib == "yahpo":
+        # Check highest performacne after 10 trials
+        highest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == (max_ntrials - 10)]["regret"].mean()
+        smallest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == max_ntrials]["regret"].mean()
+        ax.set_ylim(smallest_regret * 0.1, highest_regret * 1.1)
+        ax.set_ylabel("Regret")
+    elif benchmarklib == "mfpbench":
+        highest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == (max_ntrials - 20)]["regret"].mean()
+        smallest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == max_ntrials]["regret"].mean()
+        ax.set_ylim(smallest_regret * 0.6, highest_regret * 1.5)
+        ax.set_ylabel("Regret")
 
     return ax
 
@@ -181,6 +229,7 @@ def preprocess_configs(
     scenario: str,
     dataset: str,
     prior_kind: str,
+    benchmarklib: str,
     min_ntrials=1,
     max_ntrials=200,
 ):
@@ -192,7 +241,7 @@ def preprocess_configs(
         prior_kind,
     )
 
-    config_dict = extract_incumbent_steps(df_dict=config_dict, min_ntrials=min_ntrials, max_ntrials=max_ntrials)
+    config_dict = extract_incumbent_steps(df_dict=config_dict, min_ntrials=min_ntrials, max_ntrials=max_ntrials, benchmarklib=benchmarklib)
 
     return config_dict, prior_dict
 
@@ -234,7 +283,7 @@ def select_relevant_data(
     return config_dict, prior_dict
 
 
-def extract_incumbent_steps(df_dict: Dict[str, pd.DataFrame], min_ntrials: int, max_ntrials: int):
+def extract_incumbent_steps(df_dict: Dict[str, pd.DataFrame], min_ntrials: int, max_ntrials: int, benchmarklib: str):
     full_range = pd.DataFrame({"after_n_evaluations": range(min_ntrials, max_ntrials + 1)})
 
     # Step 1: Iterate over all DataFrames
@@ -246,15 +295,32 @@ def extract_incumbent_steps(df_dict: Dict[str, pd.DataFrame], min_ntrials: int, 
         for scenario in df["scenario"].unique():
             scenario_mask = df["scenario"] == scenario
             scenario_df = df[scenario_mask]
+            if benchmarklib == "yahpo":
+                # Step 3: Iterate over each dataset in the current scenario
+                for dataset in scenario_df["dataset"].unique():
+                    dataset_mask = scenario_mask & (df["dataset"] == dataset)
+                    dataset_df = df[dataset_mask]
 
-            # Step 3: Iterate over each dataset in the current scenario
-            for dataset in scenario_df["dataset"].unique():
-                dataset_mask = scenario_mask & (df["dataset"] == dataset)
-                dataset_df = df[dataset_mask]
+                    # Step 4: Iterate over each seed in the current dataset
+                    for seed in dataset_df["seed"].unique():
+                        seed_mask = dataset_mask & (df["seed"] == seed)
 
+                        # Merge the full range with the current group to ensure all `after_n_evaluations` are included
+                        merged_df = full_range.merge(df.loc[seed_mask], on="after_n_evaluations", how="left")
+
+                        merged_df["regret"] = merged_df["regret"].ffill()
+                        merged_df_final = pd.DataFrame(columns=["scenario", "dataset", "seed", "after_n_evaluations", "regret"])
+                        merged_df_final["after_n_evaluations"] = merged_df["after_n_evaluations"]
+                        merged_df_final["regret"] = merged_df["regret"]
+                        merged_df_final["scenario"] = scenario
+                        merged_df_final["dataset"] = dataset
+                        merged_df_final["seed"] = seed
+
+                        local.append(merged_df_final)
+            elif benchmarklib == "mfpbench":
                 # Step 4: Iterate over each seed in the current dataset
-                for seed in dataset_df["seed"].unique():
-                    seed_mask = dataset_mask & (df["seed"] == seed)
+                for seed in scenario_df["seed"].unique():
+                    seed_mask = scenario_mask & (df["seed"] == seed)
 
                     # Merge the full range with the current group to ensure all `after_n_evaluations` are included
                     merged_df = full_range.merge(df.loc[seed_mask], on="after_n_evaluations", how="left")
@@ -264,7 +330,7 @@ def extract_incumbent_steps(df_dict: Dict[str, pd.DataFrame], min_ntrials: int, 
                     merged_df_final["after_n_evaluations"] = merged_df["after_n_evaluations"]
                     merged_df_final["regret"] = merged_df["regret"]
                     merged_df_final["scenario"] = scenario
-                    merged_df_final["dataset"] = dataset
+                    merged_df_final["dataset"] = None
                     merged_df_final["seed"] = seed
 
                     local.append(merged_df_final)
@@ -307,14 +373,15 @@ def create_dataset_plots(
             print(f"Saved {scenario}")
 
 
-def create_scenario_plots(
-    config_dict: Dict[str, pd.DataFrame],
-    prior_dict: Dict[str, pd.DataFrame],
-    error_bar_type: str,
-    scenarios: List[str],
-):
+def create_scenario_plots(config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], error_bar_type: str, scenarios: List[str], benchmarklib: str):
+    if benchmarklib == "yahpo":
+        min_ntrials = 1
+        max_n_trials = 200
+    elif benchmarklib == "mfpbench":
+        min_ntrials = 1
+        max_n_trials = 50
     for scenario in scenarios:
-        os.makedirs("plots/scenario_plots/regret", exist_ok=True)
+        os.makedirs(f"plots/scenario_plots/{benchmarklib}//regret", exist_ok=True)
         fig, axs = plt.subplots(1, 3, figsize=(18, 6), dpi=300)  # Wider and higher resolution
         axs = axs.flatten()
         plot_number = 0
@@ -327,14 +394,15 @@ def create_scenario_plots(
                 None,
                 prior_kind,
                 ax=ax,
-                min_ntrials=1,
-                max_ntrials=200,
+                benchmarklib=benchmarklib,
+                min_ntrials=min_ntrials,
+                max_ntrials=max_n_trials,
                 error_bar_type=error_bar_type,
             )
             plot_number += 1
             set_ax_style(ax, prior_kind=prior_kind, x_label="Number of Evaluations", y_label="Regret")
         set_fig_style(fig, axs, f"Average regret on {scenario}")
-        save_fig(f"plots/scenario_plots/regret/{scenario}.pdf")
+        save_fig(f"plots/scenario_plots/{benchmarklib}/regret/{scenario}.pdf")
         print(f"Saved {scenario}")
 
 
@@ -342,9 +410,15 @@ def create_overall_plot(
     config_dict: Dict[str, pd.DataFrame],
     prior_dict: Dict[str, pd.DataFrame],
     error_bar_type: str,
+    benchnmarklib: str,
 ):
-    os.makedirs("plots/scenario_plots/regret", exist_ok=True)
-
+    os.makedirs(f"plots/scenario_plots/{benchnmarklib}/regret", exist_ok=True)
+    if benchnmarklib == "yahpo":
+        min_ntrials = 1
+        max_n_trials = 200
+    elif benchnmarklib == "mfpbench":
+        min_ntrials = 1
+        max_n_trials = 50
     fig, axs = plt.subplots(1, 3, figsize=(18, 6), dpi=300)
     axs = axs.flatten()
 
@@ -360,8 +434,9 @@ def create_overall_plot(
             None,
             prior_kind,
             ax=ax,
-            min_ntrials=1,
-            max_ntrials=200,
+            benchmarklib=benchnmarklib,
+            min_ntrials=min_ntrials,
+            max_ntrials=max_n_trials,
             error_bar_type=error_bar_type,
         )
 
@@ -371,7 +446,7 @@ def create_overall_plot(
 
     set_fig_style(fig, axs, "Overall Regret Across Different Priors")
 
-    save_fig("plots/scenario_plots/regret/overall.pdf")
+    save_fig(f"plots/scenario_plots/{benchnmarklib}/regret/overall.pdf")
 
 
 def set_ax_style(ax, prior_kind: str, x_label, y_label):
@@ -442,8 +517,8 @@ def remove_weird_datasets(
     return baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df
 
 
-def plot_final_results():
-    baseline_config_df, prior_config_df, prior_prior_df = load_performance_data()
+def plot_final_results_yahpo():
+    baseline_config_df, prior_config_df, prior_prior_df = load_performance_data_yahpo()
     dynabo_incumbent_df_with_validation_05, dynabo_prior_df_with_validation_05 = filter_prior_approach(
         incumbent_df=prior_config_df,
         prior_df=prior_prior_df,
@@ -531,6 +606,84 @@ def plot_final_results():
     )
 
 
+def plot_final_results_mfpbench():
+    # TODO update this
+    baseline_config_df, prior_config_df, prior_prior_df = load_performance_data_mfpbench()
+    dynabo_incumbent_df_with_validation_05, dynabo_prior_df_with_validation_05 = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        with_validating=True,
+        prior_validation_method="mann_whitney_u",
+        prior_validation_manwhitney_p=0.05,
+        prior_validation_difference_threshold=None,
+    )
+    dynabo_incumbent_df_with_validation_difference_05, dynabo_prior_df_with_validation_difference_05 = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        with_validating=True,
+        prior_validation_method="difference",
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=-0.5,
+    )
+    dynabo_incumbent_df_with_validation_difference_1, dynabo_prior_df_with_validation_difference_1 = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        with_validating=True,
+        prior_validation_method="difference",
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=-1,
+    )
+
+    dynabo_incumbent_df_without_validation, dynabo_prior_df_without_validation = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        with_validating=False,
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=0.05,  # TODO change this to none after downloading data again
+        prior_validation_difference_threshold=None,
+    )
+    pibo_incumbent_df_without_validation, pibo_prior_df_without_validation = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=False,
+        select_pibo=True,
+        with_validating=False,
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+    )
+
+    config_dict = {
+        "Vanilla BO": baseline_config_df,
+        "DynaBO, p=None": dynabo_incumbent_df_without_validation,
+        "DynaBO, difference=-1": dynabo_incumbent_df_with_validation_difference_1,
+        "PiBO": pibo_incumbent_df_without_validation,
+    }
+
+    prior_dict = {
+        "DynaBO, p=None": dynabo_prior_df_without_validation,
+        "DynaBO, difference=-1": dynabo_prior_df_with_validation_difference_1,
+        "PiBO": pibo_prior_df_without_validation,
+    }
+    # create_dataset_plots(
+    #    config_dict=config_dict,
+    #    prior_dict=prior_dict,
+    #    error_bar_type="se",
+    #    scenarios=baseline_config_df["scenario"].unique(),
+    # )
+
+    create_overall_plot(config_dict, prior_dict, error_bar_type="se", benchnmarklib="mfpbench")
+    create_scenario_plots(config_dict, prior_dict, error_bar_type="se", scenarios=baseline_config_df["scenario"].unique(), benchmarklib="mfpbench")
+
+
 if __name__ == "__main__":
-    plot_final_results()
+    plot_final_results_mfpbench()
     # plot_datageneration()
