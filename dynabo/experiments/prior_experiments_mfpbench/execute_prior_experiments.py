@@ -22,7 +22,7 @@ from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 from dynabo.utils.cluster_utils import initialise_experiments
 from dynabo.utils.evaluator import MFPBenchEvaluator, YAHPOGymEvaluator, ask_tell_opt, get_yahpo_fixed_parameter_combinations
 
-EXP_CONFIG_FILE_PATH = "dynabo/experiments/prior_experiments/config.yml"
+EXP_CONFIG_FILE_PATH = "dynabo/experiments/prior_experiments_mfpbench/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
 
@@ -200,7 +200,7 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    benchmarklib = "yahpogym"
+    benchmarklib = "mfpbench"
     fill = True
 
     if fill:
@@ -215,7 +215,7 @@ if __name__ == "__main__":
                 "prior_sampling_weight": [0.3],
                 "no_incumbent_percentile": [0.1],
                 "timeout_total": [86400],
-                "n_trials": [200],
+                "n_trials": [50],
                 "n_configs_per_hyperparameter": [10],
                 "max_ratio": [0.25],
                 "seed": range(30),
@@ -230,13 +230,13 @@ if __name__ == "__main__":
                 dynabo=True,
                 baseline=False,
                 random=False,
-                decay_enumerator=200,
+                decay_enumerator=50,
                 validate_prior=True,
                 prior_validation_manwhitney=False,
                 prior_validation_difference=True,
                 n_prior_validation_samples=500,
                 prior_validation_manwhitney_p=None,
-                prior_validation_difference_threshold=-0.5,
+                prior_validation_difference_threshold=0,
             ),
         )
     reset = False

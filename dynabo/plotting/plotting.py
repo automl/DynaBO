@@ -210,7 +210,7 @@ def plot_final_run(
 
     if benchmarklib == "yahpogym":
         # Check highest performacne after 10 trials
-        highest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == (max_ntrials - 10)]["regret"].mean()
+        highest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == (50)]["regret"].mean()
         smallest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == max_ntrials]["regret"].mean()
         ax.set_ylim(smallest_regret * 0.1, highest_regret * 1.1)
         ax.set_ylabel("Regret")
@@ -519,15 +519,15 @@ def remove_weird_datasets(
 
 def plot_final_results_yahpo():
     baseline_config_df, prior_config_df, prior_prior_df = load_performance_data_yahpo()
-    dynabo_incumbent_df_with_validation_05, dynabo_prior_df_with_validation_05 = filter_prior_approach(
+    dynabo_incumbent_df_with_validation_difference_0, dynabo_prior_df_with_validation_difference_0 = filter_prior_approach(
         incumbent_df=prior_config_df,
         prior_df=prior_prior_df,
         select_dynabo=True,
         select_pibo=False,
         with_validating=True,
-        prior_validation_method="mann_whitney_u",
-        prior_validation_manwhitney_p=0.05,
-        prior_validation_difference_threshold=None,
+        prior_validation_method="difference",
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=0,
     )
     dynabo_incumbent_df_with_validation_difference_05, dynabo_prior_df_with_validation_difference_05 = filter_prior_approach(
         incumbent_df=prior_config_df,
@@ -539,6 +539,7 @@ def plot_final_results_yahpo():
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=-0.5,
     )
+
     dynabo_incumbent_df_with_validation_difference_1, dynabo_prior_df_with_validation_difference_1 = filter_prior_approach(
         incumbent_df=prior_config_df,
         prior_df=prior_prior_df,
@@ -557,7 +558,7 @@ def plot_final_results_yahpo():
         select_pibo=False,
         with_validating=False,
         prior_validation_method=None,
-        prior_validation_manwhitney_p=0.05,  # TODO change this to none after downloading data again
+        prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=None,
     )
     pibo_incumbent_df_without_validation, pibo_prior_df_without_validation = filter_prior_approach(
@@ -573,16 +574,17 @@ def plot_final_results_yahpo():
 
     config_dict = {
         "Vanilla BO": baseline_config_df,
-        "DynaBO, p=None": dynabo_incumbent_df_without_validation,
-        "DynaBO, MWU p=0.05": dynabo_incumbent_df_with_validation_05,
-        "DynaBO, difference=-1": dynabo_incumbent_df_with_validation_difference_1,
+        "DynaBO, accept priors": dynabo_incumbent_df_without_validation,
+        "DynaBO, difference=0": dynabo_incumbent_df_with_validation_difference_0,
         "DynaBO, difference=-0.5": dynabo_incumbent_df_with_validation_difference_05,
+        "DynaBO, difference=-1": dynabo_incumbent_df_with_validation_difference_1,
         "PiBO": pibo_incumbent_df_without_validation,
     }
 
     prior_dict = {
         "DynaBO, p=None": dynabo_prior_df_without_validation,
-        "DynaBO, MWU p=0.05": dynabo_prior_df_with_validation_05,
+        "DynaBO, difference=0": dynabo_prior_df_with_validation_difference_0,
+        "DynaBO, difference=-0.5": dynabo_prior_df_with_validation_difference_05,
         "DynaBO, difference=-1": dynabo_prior_df_with_validation_difference_1,
         "PiBO": pibo_prior_df_without_validation,
     }
@@ -597,12 +599,14 @@ def plot_final_results_yahpo():
         config_dict,
         prior_dict,
         error_bar_type="se",
+        benchnmarklib="yahpogym",
     )
     create_scenario_plots(
         config_dict,
         prior_dict,
         error_bar_type="se",
         scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="yahpogym",
     )
 
 
@@ -619,7 +623,7 @@ def plot_final_results_mfpbench():
         prior_validation_manwhitney_p=0.05,
         prior_validation_difference_threshold=None,
     )
-    dynabo_incumbent_df_with_validation_difference_05, dynabo_prior_df_with_validation_difference_05 = filter_prior_approach(
+    dynabo_incumbent_df_with_validation_difference_0, dynabo_prior_df_with_validation_difference_0 = filter_prior_approach(
         incumbent_df=prior_config_df,
         prior_df=prior_prior_df,
         select_dynabo=True,
@@ -627,7 +631,7 @@ def plot_final_results_mfpbench():
         with_validating=True,
         prior_validation_method="difference",
         prior_validation_manwhitney_p=None,
-        prior_validation_difference_threshold=-0.5,
+        prior_validation_difference_threshold=0,
     )
     dynabo_incumbent_df_with_validation_difference_1, dynabo_prior_df_with_validation_difference_1 = filter_prior_approach(
         incumbent_df=prior_config_df,
@@ -639,6 +643,16 @@ def plot_final_results_mfpbench():
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=-1,
     )
+    dynabo_incumbent_df_with_validation_difference_05, dynabo_prior_df_with_validation_difference_05 = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        with_validating=True,
+        prior_validation_method="difference",
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=-0.5,
+    )
 
     dynabo_incumbent_df_without_validation, dynabo_prior_df_without_validation = filter_prior_approach(
         incumbent_df=prior_config_df,
@@ -647,7 +661,7 @@ def plot_final_results_mfpbench():
         select_pibo=False,
         with_validating=False,
         prior_validation_method=None,
-        prior_validation_manwhitney_p=0.05,  # TODO change this to none after downloading data again
+        prior_validation_manwhitney_p=None,  # TODO change this to none after downloading data again
         prior_validation_difference_threshold=None,
     )
     pibo_incumbent_df_without_validation, pibo_prior_df_without_validation = filter_prior_approach(
@@ -664,12 +678,16 @@ def plot_final_results_mfpbench():
     config_dict = {
         "Vanilla BO": baseline_config_df,
         "DynaBO, p=None": dynabo_incumbent_df_without_validation,
+        "DynaBO, difference=0": dynabo_incumbent_df_with_validation_difference_0,
+        "DynaBO, difference=-0.5": dynabo_incumbent_df_with_validation_difference_05,
         "DynaBO, difference=-1": dynabo_incumbent_df_with_validation_difference_1,
         "PiBO": pibo_incumbent_df_without_validation,
     }
 
     prior_dict = {
         "DynaBO, p=None": dynabo_prior_df_without_validation,
+        "DynaBO, difference=0": dynabo_prior_df_with_validation_difference_0,
+        "DynaBO, difference=-0.5": dynabo_prior_df_with_validation_difference_05,
         "DynaBO, difference=-1": dynabo_prior_df_with_validation_difference_1,
         "PiBO": pibo_prior_df_without_validation,
     }
@@ -685,5 +703,5 @@ def plot_final_results_mfpbench():
 
 
 if __name__ == "__main__":
+    # plot_final_results_yahpo()
     plot_final_results_mfpbench()
-    # plot_datageneration()

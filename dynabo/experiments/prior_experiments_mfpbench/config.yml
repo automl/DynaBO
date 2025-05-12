@@ -1,0 +1,124 @@
+PY_EXPERIMENTER:
+  n_jobs: 1
+
+  Database:
+    provider: mysql
+    database: dynabo
+    table:
+      name: dynabo_pd1
+      keyfields:
+        benchmarklib:
+          type: VARCHAR(255)
+          values: ['yahpogym']
+        scenario:
+          type: VARCHAR(255)
+          values: ['rbv2_ranger']
+        dataset:
+          type: VARCHAR(255)
+          values: ['1220']
+        metric:
+          type: VARCHAR(255)
+          values: ['acc']
+        dynabo:
+          type: BOOLEAN
+          values: [True]
+        pibo:
+          type: BOOLEAN
+          values: [False]
+        baseline:
+          type: BOOLEAN
+          values: [False]
+        random:
+          type: BOOLEAN
+          values: [False]
+        acquisition_function:
+          type: VARCHAR(500)
+          values: ["expected_improvement"]
+        prior_kind:
+          type: VARCHAR(255)
+          values: ['good']
+        prior_every_n_trials:
+          type: INT
+          values: [50]
+        validate_prior:
+          type: BOOLEAN
+          values: [False]
+        prior_validation_method:
+          type: VARCHAR(255)
+          values: ['manwhitney']
+        n_prior_validation_samples: 
+          type: INT
+          values: [500]
+        prior_validation_manwhitney_p: 
+          type: FLOAT
+          values: [0.05]
+        prior_validation_difference_threshold:
+          type: FLOAT
+          values: [0.05]
+        prior_std_denominator:
+          type: FLOAT
+          values: [5]
+        prior_decay_enumerator:
+          type: INT
+          values: [50]
+        prior_decay_denominator:
+          type: INT
+          values: [10]
+        exponential_prior:
+          type: BOOLEAN
+          values: [False]
+        prior_sampling_weight:
+          type: FLOAT
+          values: [0.3]
+        no_incumbent_percentile:
+          type: FLOAT
+          values: [0.01]
+        timeout_total:
+          type: INT
+          values: [3600]
+        n_trials:
+          type: INT
+          values: [200]
+        n_configs_per_hyperparameter:
+          type: INT
+          values: [10]
+        max_ratio:
+          type: FLOAT
+          values: [0.25]
+        seed:
+          type: INT
+          values:
+            start: 0
+            stop: 30
+            step: 1
+      result_timestamps: False
+      resultfields:
+        initial_design_size: INT
+        final_performance: FLOAT
+        runtime: FLOAT
+        virtual_runtime: FLOAT 
+        reasoning_runtime: FLOAT
+        n_evaluations_computed: INT
+        experiment_finished: BOOLEAN
+    logtables:
+      configs:
+        performance: FLOAT
+        incumbent: BOOLEAN
+        configuration: TEXT
+        after_n_evaluations: INT
+        after_runtime: FLOAT  
+        after_virtual_runtime: FLOAT
+        after_reasoning_runtime: FLOAT
+        average_acquisition_function_impact: LONGTEXT
+        incumbent_acquisition_function_impact: LONGTEXT
+      priors:
+        prior_accepted: BOOLEAN
+        superior_configuration: BOOLEAN
+        performance: FLOAT
+        prior_mean_acq_value: FLOAT
+        origin_mean_acq_value: FLOAT
+        configuration: TEXT
+        after_n_evaluations: INT
+        after_runtime: FLOAT
+        after_virtual_runtime: FLOAT
+        after_reasoning_runtime: FLOAT
