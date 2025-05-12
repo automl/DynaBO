@@ -94,8 +94,9 @@ class AbstractEvaluator:
                         "prior_validation_method": "difference",
                         "n_prior_validation_samples": n_prior_validation_samples,
                         "prior_validation_manwhitney_p": None,
-                        "prior_validation_difference_threshold": prior_validation_difference_threshold,
+                        "prior_validation_difference_threshold": x,
                     }
+                    for x in prior_validation_difference_threshold
                 ]
         else:
             configs += [
