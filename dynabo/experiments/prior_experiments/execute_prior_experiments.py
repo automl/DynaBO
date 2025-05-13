@@ -208,7 +208,7 @@ if __name__ == "__main__":
             parameters={
                 "benchmarklib": [benchmarklib],
                 "prior_kind": ["good", "medium", "misleading"],
-                "prior_every_n_trials": [10],
+                "prior_every_n_trials": [50],
                 "prior_std_denominator": 5,
                 "prior_decay_denominator": [10],
                 "exponential_prior": [False],
@@ -236,7 +236,7 @@ if __name__ == "__main__":
                 prior_validation_difference=True,
                 n_prior_validation_samples=500,
                 prior_validation_manwhitney_p=None,
-                prior_validation_difference_threshold=-0.5,
+                prior_validation_difference_threshold=[-2, 0.5, 1, 2],
             ),
         )
     reset = False
@@ -244,4 +244,4 @@ if __name__ == "__main__":
         experimenter.reset_experiments("running", "error")
     execute = False
     if execute:
-        experimenter.execute(run_experiment, max_experiments=16, random_order=True)
+        experimenter.execute(run_experiment, max_experiments=7, random_order=True)
