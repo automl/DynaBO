@@ -77,9 +77,11 @@ install: clean ## install the package to the active Python's site-packages
 	pip install -e lib/SMAC3
 	git clone https://github.com/benjamc/yahpo_gym.git lib/yahpo_gym
 	pip install -e lib/yahpo_gym/yahpo_gym
-	git clone https://github.com/slds-lmu/yahpo_data.git benchmark_data/yahpo_data
 	python scripts/patch_yahpo_configspace.py
 	pip install ConfigSpace --upgrade
+	cd CARP-S 
+	make benchmark
+	pip install -e CARP-S
 
 check:
 	pre-commit run --all-files
