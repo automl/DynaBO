@@ -1,8 +1,0 @@
-[project]
-name = "DynaBO"
-version = "0.1.0"
-requires-python = ">=3.10"
-readme = "README.md"
-description = "Python Boilerplate that contains all the code you need to create a Python package."
-license = { file = "LICENSE" }
-authors = [{ name = "AutoML Hannover", email = "l.fehring@ai.uni-hannover.de" }]

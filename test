@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "/opt/anaconda3/envs/DynaBO/lib/python3.10/site-packages/py_experimenter/experimenter.py", line 433, in _execute_experiment
-    final_status = experiment_function(keyfield_values, result_processor, self.config.custom_configuration.custom_values)
-  File "/Users/lukasfehring/Desktop/DynaBO/dynabo/experiments/dynabo_experiments/execute_dynamic_prior.py", line 138, in run_experiment
-    smac = HyperparameterOptimizationFacade(
-TypeError: AbstractFacade.__init__() got an unexpected keyword argument 'conifg_selector'
