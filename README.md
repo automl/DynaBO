@@ -25,3 +25,4 @@ To replicate our experiments you need to execute the following steps
 1. Create gt_data needed for priors by running: ``dynabo/experiments/gt_experiments/exectue_gt.py`` for both ``mfbench`` and ``yahpogym``. (As described in the paper, we executed one seed for one seed initially, and then only considered the learners classified as medium and hard.)
 2. Create priors by running ``dynabo/data_processing/extract_gt_priors.py``
 3. Execute the baselines, dynabo, and πBO using the scripts located in ``dynabo/experiments``. In our experiments ran slurm jobs utilizing the scripts in ``cluster_scripts``.
+4. Create plots using ``dynabo/plotting/plotting.py``.
