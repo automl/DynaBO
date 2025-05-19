@@ -80,7 +80,7 @@ install: clean ## install the package to the active Python's site-packages
 	python scripts/patch_yahpo_configspace.py
 	pip install ConfigSpace --upgrade
 	cd CARP-S 
-	make benchmark
+	make benchmark_mfpbench
 	pip install -e CARP-S
 
 check:
