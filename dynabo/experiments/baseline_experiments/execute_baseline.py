@@ -8,49 +8,41 @@ from smac.main.config_selector import ConfigSelector
 
 from dynabo.smac_additions.dynamic_prior_callback import LogIncumbentCallback
 from dynabo.utils.cluster_utils import initialise_experiments
-from dynabo.utils.evaluator import MFPBenchEvaluator, YAHPOGymEvaluator, ask_tell_opt, get_yahpo_fixed_parameter_combinations
+from dynabo.utils.configuration_data_classes import (
+    BenchmarkConfig,
+    InitialDesignConfig,
+    SMACConfig,
+)
+from dynabo.utils.evaluator import MFPBenchEvaluator, YAHPOGymEvaluator, ask_tell_opt, fill_table
 
 EXP_CONFIG_FILE_PATH = "dynabo/experiments/baseline_experiments/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
 
 def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: dict):
-    benchmarklib: str = config["benchmarklib"]
+    # Extract all configurations
+    benchmark_cfg = BenchmarkConfig.from_config(config)
+    baseline = bool(config["baseline"])
+    random = bool(config["random"])
+    smac_cfg = SMACConfig.from_config(config)
+    initial_design_cfg = InitialDesignConfig.from_config(config)
 
-    # Yahpo Values
-    scenario: str = config["scenario"]
-    dataset: str = config["dataset"]
-    metric: str = config["metric"]
-
-    # Baselien or Random
-    baseline: bool = bool(config["baseline"])
-    random: bool = bool(config["random"])
-
-    # SMAC Scenario Values
-    timeout: int = int(config["timeout_total"])
-    seed: int = int(config["seed"])
-    n_trials = int(config["n_trials"])
-
-    # Initial Design values
-    n_configs_per_hyperparameter = int(config["n_configs_per_hyperparameter"])
-    max_ratio = float(config["max_ratio"])
-
-    if benchmarklib == "yahpogym":
+    if benchmark_cfg.benchmarklib == "yahpogym":
         evaluator: YAHPOGymEvaluator = YAHPOGymEvaluator(
-            scenario=scenario,
-            dataset=dataset,
-            metric=metric,
-            runtime_metric_name="timetrain" if scenario != "lcbench" else "time",
+            scenario=benchmark_cfg.scenario,
+            dataset=benchmark_cfg.dataset,
+            metric=benchmark_cfg.metric,
+            runtime_metric_name="timetrain" if benchmark_cfg.scenario != "lcbench" else "time",
         )
-    elif benchmarklib == "mfpbench":
+    elif benchmark_cfg.benchmarklib == "mfpbench":
         evaluator: MFPBenchEvaluator = MFPBenchEvaluator(
-            scenario=scenario,
-            seed=seed,
+            scenario=benchmark_cfg.scenario,
+            seed=smac_cfg.seed,
         )
 
     configuration_space = evaluator.get_configuration_space()
 
-    smac_scenario = Scenario(configspace=configuration_space, deterministic=True, seed=seed, n_trials=n_trials)
+    smac_scenario = Scenario(configspace=configuration_space, deterministic=True, seed=smac_cfg.seed, n_trials=smac_cfg.n_trials)
 
     incumbent_callback = LogIncumbentCallback(
         result_processor=result_processor,
@@ -58,14 +50,14 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     )
 
     if baseline:
-        initial_design_size = n_configs_per_hyperparameter * len(configuration_space)
-        max_initial_design_size = int(max(1, min(initial_design_size, (max_ratio * smac_scenario.n_trials))))
+        initial_design_size = initial_design_cfg.n_configs_per_hyperparameter * len(configuration_space)
+        max_initial_design_size = int(max(1, min(initial_design_size, (initial_design_cfg.max_ratio * smac_scenario.n_trials))))
         if initial_design_size != max_initial_design_size:
             initial_design_size = max_initial_design_size
 
         initial_design = HyperparameterOptimizationFacade.get_initial_design(scenario=smac_scenario, n_configs=initial_design_size)
 
-        acquisition_function = HyperparameterOptimizationFacade.get_acquisition_function(scenario=scenario)
+        acquisition_function = HyperparameterOptimizationFacade.get_acquisition_function(scenario=smac_scenario)
 
         local_and_prior_search = LocalAndSortedRandomSearch(
             configspace=configuration_space,
@@ -100,7 +92,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         )
 
     start_time = time.time()
-    ask_tell_opt(smac=smac, evaluator=evaluator, timeout=timeout, result_processor=result_processor)
+    ask_tell_opt(smac=smac, evaluator=evaluator, timeout=smac_cfg.timeout, result_processor=result_processor)
     end_time = time.time()
 
     optimization_data = evaluator.get_metadata()
@@ -120,7 +112,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
 if __name__ == "__main__":
     initialise_experiments()
-    benchmarklib = "mfpbench"
+    benchmarklib = "yahpogym"
     experimenter = PyExperimenter(
         experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
         database_credential_file_path=DB_CRED_FILE_PATH,
@@ -128,35 +120,26 @@ if __name__ == "__main__":
     )
     smac_baseline = True
     random_baseline = False
-    fill = True
+    fill = False
     if fill:
-        experimenter.fill_table_from_combination(
-            parameters={
-                "benchmarklib": [benchmarklib],
-                "timeout_total": [86400],
-                "n_trials": [50],
-                "n_configs_per_hyperparameter": [10],
-                "max_ratio": [0.25],
-                "seed": range(30),
+        fill_table(
+            py_experimenter=experimenter,
+            common_parameters={
+                "acquisition_function": ["expected_improvement"],
+                "timeout_total": [3600],
+                "n_trials": [200],
+                "initial_design__n_configs_per_hyperparameter": [10],
+                "initial_design__max_ratio": [0.25],
+                "seed": list(range(10)),
             },
-            fixed_parameter_combinations=get_yahpo_fixed_parameter_combinations(
-                benchmarklib=benchmarklib,
-                acquisition_function="expected_improvement",
-                with_all_datasets=False,
-                medium_and_hard=True,
-                pibo=False,
-                dynabo=False,
-                baseline=True,
-                random=False,
-                decay_enumerator=None,
-                validate_prior=False,
-                prior_validation_manwhitney=False,
-                prior_validation_difference=False,
-                n_prior_validation_samples=None,
-                prior_validation_manwhitney_p=None,
-                prior_validation_difference_threshold=None,
-            ),
+            benchmarklib=benchmarklib,
+            benchmark_parameters={
+                "with_all_datasets": False,
+                "medium_and_hard": True,
+            },
+            approach="baseline",
+            approach_parameters=None,
         )
-    execute = False
+    execute = True
     if execute:
         experimenter.execute(run_experiment, max_experiments=1, random_order=True)

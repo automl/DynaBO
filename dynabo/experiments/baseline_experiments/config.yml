@@ -5,53 +5,36 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table:
-      name: baseline_pd1
+      name: baseline
       keyfields:
-        benchmarklib:
+        acquisition_function: # Common
           type: VARCHAR(255)
-          values: ['yahpogym']
-        scenario:
-          type: VARCHAR(255)
-          values: ['rbv2_ranger']
-        dataset:
-          type: VARCHAR(255)
-          values: ['1220']
-        metric:
-          type: VARCHAR(255)
-          values: ['acc']
-        dynabo:
-          type: BOOLEAN
-          values: [True]
-        pibo:
-          type: BOOLEAN
-          values: [False]
-        baseline:
-          type: BOOLEAN
-          values: [False]
-        random:
-          type: BOOLEAN
-          values: [False]
-        acquisition_function:
-          type: VARCHAR(500)
-          values: ["expected_improvement"]
-        timeout_total:
+        timeout_total: # Common
           type: INT
-          values: [3600]
-        n_trials:
+        n_trials: # Common
           type: INT
-          values: [200]
-        n_configs_per_hyperparameter:
+        initial_design__n_configs_per_hyperparameter: # Common
           type: INT
-          values: [10]
-        max_ratio:
+        initial_design__max_ratio: # Common
           type: FLOAT
-          values: [0.25]
-        seed:
+        seed: # Common
           type: INT
-          values:
-            start: 0
-            stop: 30
-            step: 1
+        benchmarklib: # Benchmark
+          type: VARCHAR(255)
+        scenario: # Benchmark
+          type: VARCHAR(255)
+        dataset: # Benchmark
+          type: VARCHAR(255)
+        metric: # Benchmark
+          type: VARCHAR(255)
+        baseline: # approach
+          type: BOOLEAN
+        random: # approach
+          type: BOOLEAN
+        pibo: # approach
+          type: BOOLEAN
+        dynabo: # approach
+          type: BOOLEAN
       result_timestamps: False
       resultfields:
         initial_design_size: INT
@@ -64,7 +47,7 @@ PY_EXPERIMENTER:
     logtables:
       configs:
         performance: FLOAT
-        incumbent : BOOLEAN
+        incumbent: BOOLEAN
         configuration: TEXT
         after_n_evaluations: INT
         after_runtime: FLOAT  

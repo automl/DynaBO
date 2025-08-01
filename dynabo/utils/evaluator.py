@@ -226,7 +226,7 @@ def fill_table(
     benchmarklib: str,
     benchmark_parameters: Dict[str, Any],
     approach: str,
-    approach_parameters: Dict[str, Any],
+    approach_parameters: Optional[Dict[str, Any]],
 ):
     common_dict = extract_common_config(
         acquisition_function=common_parameters["acquisition_function"],
@@ -249,7 +249,7 @@ def fill_table(
         approach_dict = get_random_dict()
     elif approach == "pibo":
         approach_dict = get_pibo_dict(
-            prior_kind=approach_parameters["prior_kind"],
+            prior_kind_choices=approach_parameters["prior_kind_choices"],
             no_incumbent_percentile=approach_parameters["no_incumbent_percentile"],
             prior_std_denominator=approach_parameters["prior_std_denominator"],
             prior_decay_enumerator=approach_parameters["prior_decay_enumerator"],
@@ -343,11 +343,17 @@ def get_pibo_dict(
             "dynabo": False,
             "baseline": False,
             "random": False,
+            "prior_decay_enumerator": prior_decay_enumerator,
+            "prior_decay_denominator": prior_decay_denominator,
+            "prior_chance_theta": None,
             "prior_kind": prior_kind,
             "no_incumbent_percentile": no_incumbent_percentile,
             "prior_std_denominator": prior_std_denominator,
-            "prior_decay_enumerator": prior_decay_enumerator,
-            "prior_decay_denominator": prior_decay_denominator,
+            "validate_prior": None,
+            "prior_validation_method": None,
+            "n_prior_validation_samples": None,
+            "prior_validation_manwhitney_p": None,
+            "prior_validation_difference_threshold": None,
         }
         for prior_kind in prior_kind_choices
     ]
