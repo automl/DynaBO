@@ -4,93 +4,60 @@ PY_EXPERIMENTER:
   Database:
     provider: mysql
     database: dynabo
-    table:
-      name: dynabo_pd1_3priors
+    table: 
+      name: dynabo_mfpbench
       keyfields:
-        benchmarklib:
+        acquisition_function: # Common
           type: VARCHAR(255)
-          values: ['yahpogym']
-        scenario:
+        timeout_total: # Common
+          type: INT
+        n_trials: # Common
+          type: INT
+        initial_design__n_configs_per_hyperparameter: # Common
+          type: INT
+        initial_design__max_ratio: # Common
+          type: FLOAT
+        seed: # Common
+          type: INT
+        benchmarklib: # Benchmark
           type: VARCHAR(255)
-          values: ['rbv2_ranger']
-        dataset:
+        scenario: # Benchmark
           type: VARCHAR(255)
-          values: ['1220']
-        metric:
+        dataset: # Benchmark
           type: VARCHAR(255)
-          values: ['acc']
-        dynabo:
-          type: BOOLEAN
-          values: [True]
-        pibo:
-          type: BOOLEAN
-          values: [False]
-        baseline:
-          type: BOOLEAN
-          values: [False]
-        random:
-          type: BOOLEAN
-          values: [False]
-        acquisition_function:
-          type: VARCHAR(500)
-          values: ["expected_improvement"]
-        prior_kind:
+        metric: # Benchmark
           type: VARCHAR(255)
-          values: ['good']
-        prior_every_n_trials:
-          type: INT
-          values: [50]
-        validate_prior:
+        baseline: # approach
           type: BOOLEAN
-          values: [False]
-        prior_validation_method:
+        random: # approach
+          type: BOOLEAN
+        pibo: # approach
+          type: BOOLEAN
+        dynabo: # approach
+          type: BOOLEAN
+        prior_decay_enumerator: # approach
+          type: INT
+        prior_decay_denominator: # approach
+          type: INT
+        prior_chance_theta: # approach
+          type: FLOAT
+        prior_kind: # approach
           type: VARCHAR(255)
-          values: ['manwhitney']
-        n_prior_validation_samples: 
-          type: INT
-          values: [500]
-        prior_validation_manwhitney_p: 
+        no_incumbent_percentile: # approach
           type: FLOAT
-          values: [0.05]
-        prior_validation_difference_threshold:
-          type: FLOAT
-          values: [0.05]
-        prior_std_denominator:
-          type: FLOAT
-          values: [5]
-        prior_decay_enumerator:
+        prior_std_denominator: # approach
           type: INT
-          values: [50]
-        prior_decay_denominator:
-          type: INT
-          values: [10]
-        exponential_prior:
+        validate_prior: # approach
           type: BOOLEAN
-          values: [False]
-        prior_sampling_weight:
+        prior_validation_method: # approach
+          type: VARCHAR(255)
+        n_prior_validation_samples: # approach
+          type: INT
+        prior_validation_manwhitney_p: # approach
           type: FLOAT
-          values: [0.3]
-        no_incumbent_percentile:
+        prior_validation_difference_threshold: # approach
           type: FLOAT
-          values: [0.01]
-        timeout_total:
-          type: INT
-          values: [3600]
-        n_trials:
-          type: INT
-          values: [200]
-        n_configs_per_hyperparameter:
-          type: INT
-          values: [10]
-        max_ratio:
-          type: FLOAT
-          values: [0.25]
-        seed:
-          type: INT
-          values:
-            start: 0
-            stop: 30
-            step: 1
+
       result_timestamps: False
       resultfields:
         initial_design_size: INT

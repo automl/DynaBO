@@ -219,6 +219,10 @@ class MFPBenchEvaluator(AbstractEvaluator):
     def get_configuration_space(self) -> ConfigurationSpace:
         return self.task.objective_function.configspace
 
+    @staticmethod
+    def get_datasets(with_all_datasets: bool, medium_and_hard: bool) -> List[Dict[str, Any]]:
+        return [{"benchmarklib": "mfpbench", "scenario": scenario, "dataset": None, "metric": "cost"} for scenario in MFPBENCH_SCENARIO_OPTIONS]
+
 
 def fill_table(
     py_experimenter: PyExperimenter,
@@ -316,7 +320,10 @@ def extract_benchmark_config(
         )
 
     elif benchmarklib == "mfpbench":
-        raise NotImplementedError("MFPBench does not support with_all_datasets or medium_and_hard filtering.")
+        return MFPBenchEvaluator.get_datasets(
+            with_all_datasets=with_all_datasets,
+            medium_and_hard=medium_and_hard,
+        )
 
     else:
         raise NotImplementedError(f"Benchmarklib {benchmarklib} is not implemented.")
