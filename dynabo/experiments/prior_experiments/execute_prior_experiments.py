@@ -79,7 +79,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         acquisition_function=acquisition_function,
         max_steps=500,  # TODO wie viele local search steps sind reasonable?
     )
-    config_selector = ConfigSelector(scenario=smac_scenario, max_new_config_tries=100)
+    config_selector = ConfigSelector(scenario=smac_scenario, retries=100)
 
     intensifier = HyperparameterOptimizationFacade.get_intensifier(
         scenario=smac_scenario,
@@ -171,7 +171,7 @@ if __name__ == "__main__":
         use_codecarbon=False,
     )
     benchmarklib = "yahpogym"
-    fill = True
+    fill = False
 
     if fill:
         fill_table(
