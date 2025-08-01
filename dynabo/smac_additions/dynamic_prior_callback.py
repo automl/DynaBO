@@ -76,7 +76,6 @@ class AbstractPriorCallback(Callback, ABC):
         metric: str,
         base_path: str,
         initial_design_size: int,
-        prior_every_n_trials: int,
         validate_prior: bool,
         prior_validation_method: PriorValidationMethod,
         n_prior_validation_samples: int,
@@ -85,8 +84,6 @@ class AbstractPriorCallback(Callback, ABC):
         prior_std_denominator: float,
         prior_decay_enumerator: int,
         prior_decay_denominator: int,
-        exponential_prior: bool,
-        prior_sampling_weight: float,
         result_processor: ResultProcessor = None,
         evaluator: YAHPOGymEvaluator = None,
     ):
@@ -97,7 +94,6 @@ class AbstractPriorCallback(Callback, ABC):
         self.metric = metric
         self.base_path = base_path
         self.initial_design_size = initial_design_size
-        self.prior_every_n_trials = prior_every_n_trials
         self.validate_prior = validate_prior
         self.prior_validation_method = prior_validation_method
         self.prior_validation_manwhitney_p = prior_validation_manwhitney_p_value
@@ -106,9 +102,6 @@ class AbstractPriorCallback(Callback, ABC):
         self.prior_std_denominator = prior_std_denominator
         self.prior_decay_enumerator = prior_decay_enumerator
         self.prior_decay_denominator = prior_decay_denominator
-
-        self.exponential_prior = exponential_prior
-        self.prior_sampling_weight = prior_sampling_weight
 
         self.result_processor = result_processor
         self.evaluator = evaluator
@@ -274,20 +267,34 @@ class AbstractPriorCallback(Callback, ABC):
         if df.shape[0] == 0:
             return None
 
-        if self.exponential_prior:
-            weights = np.exp(-self.prior_sampling_weight * df.index).values
-            weights_normalized = weights / weights.sum()  # Normalize weights
-
-            sample = df.sample(weights=weights_normalized, random_state=rng)
-        else:
-            sample = df.sample(random_state=rng)
+        sample = df.sample(random_state=rng)
         return sample
 
 
 class DynaBOAbstractPriorCallback(AbstractPriorCallback):
+    def __init__(
+        self,
+        prior_chance_theta: float,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.n_trials_since_last_prior = 0
+        self.prior_chance_theta = prior_chance_theta
+
     def intervene(self, smbo: SMBO) -> bool:
-        # To use the surrogate, we need to sample one additional config here
-        return smbo.runhistory.finished >= self.initial_design_size + 1 and (smbo.runhistory.finished - self.initial_design_size - 1) % self.prior_every_n_trials == 0
+        if smbo.runhistory.finished < self.initial_design_size + 1:  # We do not intervene before the initial design is finished
+            self.n_trials_since_last_prior += 1
+            return False
+        else:
+            # To use the surrogate, we need to sample one additional config here
+            chance = 1 - np.exp(-self.prior_chance_theta * self.n_trials_since_last_prior)
+            if np.random.rand() < chance:
+                self.n_trials_since_last_prior = 0
+                return True
+            else:
+                self.n_trials_since_last_prior += 1
+                return False
 
 
 class PiBOAbstractPriorCallback(AbstractPriorCallback):

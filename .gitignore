@@ -110,6 +110,7 @@ smac3_output
 
 # PyExperimenter Database Credentials
 config/database_credentials.yml
+config/certificates
 
 # DataFrame
 benchmark_data/yahpo_data
