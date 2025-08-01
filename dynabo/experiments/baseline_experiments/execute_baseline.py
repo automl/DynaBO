@@ -112,7 +112,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
 if __name__ == "__main__":
     initialise_experiments()
-    benchmarklib = "yahpogym"
+    benchmarklib = "mfpbench"
     experimenter = PyExperimenter(
         experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
         database_credential_file_path=DB_CRED_FILE_PATH,
@@ -120,7 +120,7 @@ if __name__ == "__main__":
     )
     smac_baseline = True
     random_baseline = False
-    fill = False
+    fill = True
     if fill:
         fill_table(
             py_experimenter=experimenter,
@@ -140,6 +140,6 @@ if __name__ == "__main__":
             approach="baseline",
             approach_parameters=None,
         )
-    execute = True
+    execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=1, random_order=True)

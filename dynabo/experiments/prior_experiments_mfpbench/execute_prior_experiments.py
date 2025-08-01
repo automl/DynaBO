@@ -192,7 +192,7 @@ if __name__ == "__main__":
             approach="dynabo",
             approach_parameters={
                 # Prior configurationz
-                "prior_kind_choices": ["good"],
+                "prior_kind_choices": ["good", "medium", "misleading"],
                 "no_incumbent_percentile": 0.1,
                 "prior_std_denominator": 5,
                 "prior_chance_theta_choices": [0.01],
@@ -210,6 +210,6 @@ if __name__ == "__main__":
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = True
+    execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=4, random_order=True)

@@ -192,7 +192,7 @@ if __name__ == "__main__":
             approach="dynabo",
             approach_parameters={
                 # Prior configurationz
-                "prior_kind_choices": ["good"],
+                "prior_kind_choices": ["good", "medium", "misleading"],
                 "no_incumbent_percentile": 0.1,
                 "prior_std_denominator": 5,
                 "prior_chance_theta_choices": [0.001],
