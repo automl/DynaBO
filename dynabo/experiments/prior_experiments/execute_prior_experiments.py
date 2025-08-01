@@ -212,4 +212,4 @@ if __name__ == "__main__":
         experimenter.reset_experiments("running", "error")
     execute = True
     if execute:
-        experimenter.execute(run_experiment, max_experiments=20, random_order=True)
+        experimenter.execute(run_experiment, max_experiments=1, random_order=True)

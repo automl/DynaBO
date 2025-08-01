@@ -7,7 +7,7 @@ name             = "dynabo"
 version          = "0.1.0"
 description      = "Add your description here"
 readme           = "README.md"
-requires-python  = ">=3.10"
+requires-python  = ">=3.10,<3.11"
 dependencies = [
     "carps>=1.0.4",
     "coverage==4.5.4",
@@ -21,21 +21,14 @@ dependencies = [
     "typing-extensions>=4.14.1",
     "yahpo-gym",
     "dynabo",
+    "mf-prior-bench[pd1]>=1.10.0",
 ]
 
 [tool.hatch.metadata]
 allow-direct-references = true
 
 [tool.uv.sources]
-py-experimenter = { git      = "https://github.com/tornede/py_experimenter.git"
-                  , rev      = "develop"
-                  }
-yahpo-gym      = { path     = "lib/yahpo_gym/yahpo_gym"
-                  , editable = true
-                  }
-smac           = { path     = "lib/SMAC3"
-                  , editable = true
-                  }
-dynabo         = { path     = "."
-                  , editable = true
-                  }
+py-experimenter = { git      = "https://github.com/tornede/py_experimenter.git", rev      = "develop"}
+yahpo-gym      = { path     = "lib/yahpo_gym/yahpo_gym", editable = true}
+smac           = { path     = "lib/SMAC3", editable = true}
+dynabo         = { path     = ".", editable = true}

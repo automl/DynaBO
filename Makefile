@@ -74,11 +74,8 @@ install: clean ## install the package to the active Python's site-packages
 	git clone https://github.com/benjamc/yahpo_gym.git lib/yahpo_gym
 	python scripts/patch_yahpo_configspace.py
 	pip install -e .	
-
 	cd CARP-S 
 	make benchmark_mfpbench
-	pip install -e CARP-S
-
 check:
 	pre-commit run --all-files
 

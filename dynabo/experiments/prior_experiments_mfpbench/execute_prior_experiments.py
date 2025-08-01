@@ -31,7 +31,7 @@ from dynabo.utils.configuration_data_classes import (
 )
 from dynabo.utils.evaluator import MFPBenchEvaluator, YAHPOGymEvaluator, ask_tell_opt, fill_table
 
-EXP_CONFIG_FILE_PATH = "dynabo/experiments/prior_experiments/config.yml"
+EXP_CONFIG_FILE_PATH = "dynabo/experiments/prior_experiments_mfpbench/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
 
