@@ -298,9 +298,18 @@ class DynaBOAbstractPriorCallback(AbstractPriorCallback):
 
 
 class PiBOAbstractPriorCallback(AbstractPriorCallback):
+    def __init__(
+        self,
+        prior_chance_theta: float,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        pass
+
     def intervene(self, smbo):
         # To use the surrogate, we need to sample one additional config here
-        return smbo.runhistory.finished == self.initial_design_size + 1 and (smbo.runhistory.finished - self.initial_design_size - 1) % self.prior_every_n_trials == 0
+        return smbo.runhistory.finished == self.initial_design_size + 1
 
     def accept_prior(self, smbo, prior_configspace, origin_configspace):
         return True, None, None

@@ -21,13 +21,13 @@ from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPrio
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 from dynabo.utils.cluster_utils import initialise_experiments
 from dynabo.utils.configuration_data_classes import (
-    extract_benchmark_config,
-    extract_initial_design_config,
+    BenchmarkConfig,
+    InitialDesignConfig,
+    PriorConfig,
+    PriorDecayConfig,
+    PriorValidationConfig,
+    SMACConfig,
     extract_optimization_approach,
-    extract_prior_config,
-    extract_prior_decay_config,
-    extract_prior_validation_config,
-    extract_smac_config,
 )
 from dynabo.utils.evaluator import MFPBenchEvaluator, YAHPOGymEvaluator, ask_tell_opt, fill_table
 
@@ -37,13 +37,13 @@ DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
 def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: dict):
     # Extract all configurations
-    benchmark_cfg = extract_benchmark_config(config)
+    benchmark_cfg = BenchmarkConfig.from_config(config)
     dynabo, pibo = extract_optimization_approach(config)
-    smac_cfg = extract_smac_config(config)
-    initial_design_cfg = extract_initial_design_config(config)
-    prior_cfg = extract_prior_config(config)
-    prior_decay_cfg = extract_prior_decay_config(config)
-    prior_validation_cfg = extract_prior_validation_config(config)
+    smac_cfg = SMACConfig.from_config(config)
+    initial_design_cfg = InitialDesignConfig.from_config(config)
+    prior_cfg = PriorConfig.from_config(config)
+    prior_decay_cfg = PriorDecayConfig.from_config(config)
+    prior_validation_cfg = PriorValidationConfig.from_config(config)
 
     if benchmark_cfg.benchmarklib == "yahpogym":
         evaluator: YAHPOGymEvaluator = YAHPOGymEvaluator(
@@ -171,7 +171,7 @@ if __name__ == "__main__":
         use_codecarbon=False,
     )
     benchmarklib = "yahpogym"
-    fill = False
+    fill = True
 
     if fill:
         fill_table(
@@ -191,11 +191,11 @@ if __name__ == "__main__":
             },
             approach="dynabo",
             approach_parameters={
-                # Prior configuration
+                # Prior configurationz
                 "prior_kind_choices": ["good"],
                 "no_incumbent_percentile": 0.1,
                 "prior_std_denominator": 5,
-                "prior_chance_theta_choices": [0.01],
+                "prior_chance_theta_choices": [0.001],
                 # Decay parameters
                 "prior_decay_enumerator": 200,
                 "prior_decay_denominator": 10,

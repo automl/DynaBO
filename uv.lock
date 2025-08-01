@@ -989,7 +989,7 @@ wheels = [
 [[package]]
 name = "dynabo"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "carps" },
     { name = "coverage" },
@@ -1008,13 +1008,13 @@ dependencies = [
 requires-dist = [
     { name = "carps", specifier = ">=1.0.4" },
     { name = "coverage", specifier = "==4.5.4" },
-    { name = "dynabo" },
+    { name = "dynabo", editable = "." },
     { name = "matplotlib", specifier = ">=3.10.3" },
     { name = "mypy", specifier = ">=1.17.1" },
     { name = "py-experimenter", git = "https://github.com/tornede/py_experimenter.git?rev=develop" },
     { name = "pytest", specifier = "==6.2.4" },
     { name = "ruff", specifier = ">=0.12.7" },
-    { name = "smac", virtual = "lib/SMAC3" },
+    { name = "smac", editable = "lib/SMAC3" },
     { name = "tomli", specifier = ">=2.2.1" },
     { name = "typing-extensions", specifier = ">=4.14.1" },
     { name = "yahpo-gym", editable = "lib/yahpo_gym/yahpo_gym" },
@@ -3794,7 +3794,7 @@ wheels = [
 [[package]]
 name = "smac"
 version = "2.3.1"
-source = { virtual = "lib/SMAC3" }
+source = { editable = "lib/SMAC3" }
 dependencies = [
     { name = "configspace" },
     { name = "dask", extra = ["distributed"] },

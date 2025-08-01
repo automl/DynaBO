@@ -1,3 +1,7 @@
+[build-system]
+requires    = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name             = "dynabo"
 version          = "0.1.0"
@@ -23,6 +27,15 @@ dependencies = [
 allow-direct-references = true
 
 [tool.uv.sources]
-py-experimenter = { git  = "https://github.com/tornede/py_experimenter.git", rev      = "develop" }
-yahpo-gym      = { path = "lib/yahpo_gym/yahpo_gym",                        editable = true }
-smac = { path = "lib/SMAC3" }
+py-experimenter = { git      = "https://github.com/tornede/py_experimenter.git"
+                  , rev      = "develop"
+                  }
+yahpo-gym      = { path     = "lib/yahpo_gym/yahpo_gym"
+                  , editable = true
+                  }
+smac           = { path     = "lib/SMAC3"
+                  , editable = true
+                  }
+dynabo         = { path     = "."
+                  , editable = true
+                  }
