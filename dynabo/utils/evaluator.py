@@ -11,7 +11,7 @@ from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
 from smac.facade.hyperparameter_optimization_facade import HyperparameterOptimizationFacade
 from smac.runhistory import TrialInfo, TrialValue
-from yahpo_gym import benchmark_set
+from yahpo_gym import benchmark_set, local_config
 
 
 class AbstractEvaluator:
@@ -133,7 +133,8 @@ class YAHPOGymEvaluator(AbstractEvaluator):
         self.runtime_metric_name = runtime_metric_name
         self.inverted_cost = inverted_cost
 
-        self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario)
+        local_config._config = "benchmark_data/yahpo_data"
+        self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario, multithread=False)
         self.benchmark.set_instance(value=self.dataset)
         self.default_fidelity_config = self.benchmark.get_fidelity_space().get_default_configuration()
 

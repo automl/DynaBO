@@ -120,7 +120,7 @@ if __name__ == "__main__":
     )
     smac_baseline = True
     random_baseline = False
-    fill = True
+    fill = False
     if fill:
         fill_table(
             py_experimenter=experimenter,
@@ -140,6 +140,10 @@ if __name__ == "__main__":
             approach="baseline",
             approach_parameters=None,
         )
+    reset = True
+    if reset:
+        experimenter.reset_experiments("running", "error")
+
     execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=1, random_order=True)

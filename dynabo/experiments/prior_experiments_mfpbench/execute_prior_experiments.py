@@ -189,7 +189,7 @@ if __name__ == "__main__":
                 "with_all_datasets": False,
                 "medium_and_hard": True,
             },
-            approach="dynabo",
+            approach="pibo",
             approach_parameters={
                 # Prior configurationz
                 "prior_kind_choices": ["good", "medium", "misleading"],
