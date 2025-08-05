@@ -64,7 +64,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             acquisition_function=acquisition_function,
             max_steps=500,  # TODO wie viele local search steps sind reasonable?
         )
-        config_selector = ConfigSelector(scenario=smac_scenario, max_new_config_tries=100)
+        config_selector = ConfigSelector(scenario=smac_scenario, retries=100)
 
         intensifier = HyperparameterOptimizationFacade.get_intensifier(
             scenario=smac_scenario,
@@ -118,9 +118,7 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    smac_baseline = True
-    random_baseline = False
-    fill = True
+    fill = False
     if fill:
         fill_table(
             py_experimenter=experimenter,
@@ -140,7 +138,7 @@ if __name__ == "__main__":
             approach="baseline",
             approach_parameters=None,
         )
-    reset = True
+    reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
 

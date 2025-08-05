@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -t 01:00:00
-#SBATCH --array=1-1
+#SBATCH --array=1-720
 #SBATCH --cpus-per-task=2
-#SBATCH --mem-per-cpu 4G
+#SBATCH --mem-per-cpu 6G
 #SBATCH -J dynabo-prior
 #SBATCH -p normal
 #SBATCH -A hpc-prf-intexml
@@ -12,6 +12,8 @@
 
 cd /scratch/hpc-prf-intexml/fehring/DynaBO
 
+sleep $(( RANDOM % 200 ))
+
 conda init bash
 ml lang
 ml Miniforge3
@@ -19,4 +21,4 @@ ml Miniforge3
 source /pc2/users/i/intexml9/.bashrc
 conda activate DynaBO
 
-python dynabo/experiments/prior_experiments/execute_prior_experiments.py
+/scratch/hpc-prf-intexml/fehring/DynaBO/.venv/bin/python dynabo/experiments/prior_experiments/execute_prior_experiments.py
