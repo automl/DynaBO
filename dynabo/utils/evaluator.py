@@ -257,7 +257,7 @@ def fill_table(
             prior_kind_choices=approach_parameters["prior_kind_choices"],
             no_incumbent_percentile=approach_parameters["no_incumbent_percentile"],
             prior_std_denominator=approach_parameters["prior_std_denominator"],
-            prior_decay_enumerator=approach_parameters["prior_decay_enumerator"],
+            prior_decay_enumerator_choices=approach_parameters["prior_decay_enumerator_choices"],
             prior_decay_denominator=approach_parameters["prior_decay_denominator"],
         )
     elif approach == "dynabo":
@@ -266,10 +266,11 @@ def fill_table(
             prior_kind_choices=approach_parameters["prior_kind_choices"],
             no_incumbent_percentile=approach_parameters["no_incumbent_percentile"],
             prior_std_denominator=approach_parameters["prior_std_denominator"],
+            prior_at_start_choices=approach_parameters["prior_at_start_choices"],
             # Prior location
             prior_chance_theta_choices=approach_parameters["prior_chance_theta_choices"],
             # Decay parameters
-            prior_decay_enumerator=approach_parameters["prior_decay_enumerator"],
+            prior_decay_enumerator_choices=approach_parameters["prior_decay_enumerator_choices"],
             prior_decay_denominator=approach_parameters["prior_decay_denominator"],
             # Validation parameters
             validate_prior_choices=approach_parameters["validate_prior_choices"],
@@ -342,7 +343,7 @@ def get_pibo_dict(
     prior_kind_choices: List[str],
     no_incumbent_percentile: float,
     prior_std_denominator: int,
-    prior_decay_enumerator: int,
+    prior_decay_enumerator_choices: List[int],
     prior_decay_denominator: int,
 ):
     return [
@@ -357,6 +358,7 @@ def get_pibo_dict(
             "prior_kind": prior_kind,
             "no_incumbent_percentile": no_incumbent_percentile,
             "prior_std_denominator": prior_std_denominator,
+            "prior_at_start": None,
             "validate_prior": None,
             "prior_validation_method": None,
             "n_prior_validation_samples": None,
@@ -364,6 +366,7 @@ def get_pibo_dict(
             "prior_validation_difference_threshold": None,
         }
         for prior_kind in prior_kind_choices
+        for prior_decay_enumerator in prior_decay_enumerator_choices
     ]
 
 
@@ -372,8 +375,9 @@ def get_dynabo_dict(
     no_incumbent_percentile: float,
     prior_std_denominator: int,
     prior_chance_theta_choices: List[float],
-    prior_decay_enumerator: int,
+    prior_decay_enumerator_choices: List[int],
     prior_decay_denominator: int,
+    prior_at_start_choices: List[bool],
     validate_prior_choices: List[bool],
     prior_validation_method_choices: List[str],
     n_prior_validation_samples: List[int],
@@ -401,6 +405,7 @@ def get_dynabo_dict(
     def create_base_config(
         prior_decay_enumerator: int,
         prior_decay_denominator: int,
+        prior_at_start: bool,
         prior_chance_theta: float,
         prior_kind: str,
         no_incumbent_percentile: float,
@@ -414,6 +419,7 @@ def get_dynabo_dict(
             "pibo": False,
             "dynabo": True,
             "prior_std_denominator": prior_std_denominator,
+            "prior_at_start": prior_at_start,
             "prior_chance_theta": prior_chance_theta,
             "prior_decay_enumerator": prior_decay_enumerator,
             "prior_decay_denominator": prior_decay_denominator,
@@ -445,34 +451,37 @@ def get_dynabo_dict(
 
     # Generate configurations
     for prior_kind in prior_kind_choices:
-        for prior_chance_theta in prior_chance_theta_choices:
-            for validate_prior in validate_prior_choices:
-                base_config = create_base_config(
-                    prior_decay_enumerator=prior_decay_enumerator,
-                    prior_decay_denominator=prior_decay_denominator,
-                    prior_chance_theta=prior_chance_theta,
-                    prior_kind=prior_kind,
-                    no_incumbent_percentile=no_incumbent_percentile,
-                    prior_std_denominator=prior_std_denominator,
-                    validate_prior=validate_prior,
-                )
+        for prior_decay_enumerator in prior_decay_enumerator_choices:
+            for prior_chance_theta in prior_chance_theta_choices:
+                for validate_prior in validate_prior_choices:
+                    for prior_at_start in prior_at_start_choices:
+                        base_config = create_base_config(
+                            prior_decay_enumerator=prior_decay_enumerator,
+                            prior_decay_denominator=prior_decay_denominator,
+                            prior_at_start=prior_at_start,
+                            prior_chance_theta=prior_chance_theta,
+                            prior_kind=prior_kind,
+                            no_incumbent_percentile=no_incumbent_percentile,
+                            prior_std_denominator=prior_std_denominator,
+                            validate_prior=validate_prior,
+                        )
 
-                if not validate_prior:
-                    base_config["prior_validation_method"] = None
-                    base_config["n_prior_validation_samples"] = None
-                    base_config["prior_validation_manwhitney_p"] = None
-                    base_config["prior_validation_difference_threshold"] = None
-                    dynabo_configs.append(base_config)
-                    continue
+                        if not validate_prior:
+                            base_config["prior_validation_method"] = None
+                            base_config["n_prior_validation_samples"] = None
+                            base_config["prior_validation_manwhitney_p"] = None
+                            base_config["prior_validation_difference_threshold"] = None
+                            dynabo_configs.append(base_config)
+                            continue
 
-                # Add configurations for each validation method and sample size
-                for validation_method in prior_validation_method_choices:
-                    if validation_method == "mann_whitney_u":
-                        for config in add_mann_whitney_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples):
-                            dynabo_configs.append(config)
-                    elif validation_method == "difference":
-                        for config in add_difference_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples):
-                            dynabo_configs.append(config)
+                    # Add configurations for each validation method and sample size
+                    for validation_method in prior_validation_method_choices:
+                        if validation_method == "mann_whitney_u":
+                            for config in add_mann_whitney_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples):
+                                dynabo_configs.append(config)
+                        elif validation_method == "difference":
+                            for config in add_difference_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples):
+                                dynabo_configs.append(config)
 
     return dynabo_configs
 

@@ -198,14 +198,28 @@ def filter_prior_approach(
     prior_df: pd.DataFrame,
     select_dynabo: bool,
     select_pibo: bool,
+    prior_chance_theta_choices: float,
     with_validating: bool,
     prior_validation_method: str,
     prior_validation_manwhitney_p: Optional[float],
     prior_validation_difference_threshold: Optional[float] = None,
 ):
     assert select_dynabo ^ select_pibo
-    incumbent_df = incumbent_df[(incumbent_df["dynabo"] == select_dynabo) & (incumbent_df["pibo"] == select_pibo) & (incumbent_df["validate_prior"] == with_validating)]
-    prior_df = prior_df[(prior_df["dynabo"] == select_dynabo) & (prior_df["pibo"] == select_pibo) & (prior_df["validate_prior"] == with_validating)]
+    if select_dynabo:
+        incumbent_df = incumbent_df[
+            (incumbent_df["dynabo"] == select_dynabo)
+            & (incumbent_df["pibo"] == select_pibo)
+            & (incumbent_df["validate_prior"] == with_validating)
+            & (incumbent_df["prior_chance_theta"] == prior_chance_theta_choices)
+        ]
+    if select_pibo:
+        incumbent_df = incumbent_df[(incumbent_df["dynabo"] == select_dynabo) & (incumbent_df["pibo"] == select_pibo)]
+
+    prior_df = prior_df[(prior_df["dynabo"] == select_dynabo) & (prior_df["pibo"] == select_pibo)]
+    if select_dynabo:
+        prior_df = prior_df[(prior_df["validate_prior"] == with_validating)]
+    if select_pibo:
+        prior_df = prior_df[(prior_df["pibo"] == select_pibo)]
     if prior_validation_method == "mann_whitney_u":
         incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "mann_whitney_u"]
         prior_df = prior_df[prior_df["prior_validation_method"] == "mann_whitney_u"]
@@ -693,25 +707,50 @@ def plot_final_results_yahpo():
 
 
 def plot_final_results_mfpbench():
-    # TODO update this
     baseline_config_df, prior_config_df, prior_prior_df = load_performance_data_mfpbench()
 
-    dynabo_incumbent_df_with_validation_difference_1, dynabo_prior_df_with_validation_difference_1 = filter_prior_approach(
+    dynabo_incumbent_df_chance_01_threshold, dynabo_prior_df_chance_01_threshold = filter_prior_approach(
         incumbent_df=prior_config_df,
         prior_df=prior_prior_df,
         select_dynabo=True,
         select_pibo=False,
+        prior_chance_theta_choices=0.01,
         with_validating=True,
         prior_validation_method="difference",
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=-1,
     )
 
-    dynabo_incumbent_df_without_validation, dynabo_prior_df_without_validation = filter_prior_approach(
+    dynabo_incumbent_df_chance_015_threshold, dynabo_prior_df_chance_015_threshold = filter_prior_approach(
         incumbent_df=prior_config_df,
         prior_df=prior_prior_df,
         select_dynabo=True,
         select_pibo=False,
+        prior_chance_theta_choices=0.015,
+        with_validating=True,
+        prior_validation_method="difference",
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=-1,
+    )
+
+    dynabo_incumbent_df_without_validation_chance_01, dynabo_prior_df_without_validation_chance_01 = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_chance_theta_choices=0.01,
+        with_validating=False,
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+    )
+
+    dynabo_incumbent_df_without_validation_chance_015, dynabo_prior_df_without_validation_chance_015 = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_chance_theta_choices=0.015,
         with_validating=False,
         prior_validation_method=None,
         prior_validation_manwhitney_p=None,
@@ -722,6 +761,7 @@ def plot_final_results_mfpbench():
         prior_df=prior_prior_df,
         select_dynabo=False,
         select_pibo=True,
+        prior_chance_theta_choices=None,
         with_validating=False,
         prior_validation_method=None,
         prior_validation_manwhitney_p=None,
@@ -729,22 +769,28 @@ def plot_final_results_mfpbench():
     )
 
     config_dict = {
-        "DynaBO, accept all priors": dynabo_incumbent_df_without_validation,
-        r"DynaBO, accept helpful priors ($\tau$ = -1)": dynabo_incumbent_df_with_validation_difference_1,
+        "DynaBO, accept all priors  chance 0.1": dynabo_incumbent_df_without_validation_chance_01,
+        "DynaBO, accept all priors  chance 0.15": dynabo_incumbent_df_without_validation_chance_015,
+        "DynaBO, accept helpful priors chance 0.1": dynabo_incumbent_df_chance_01_threshold,
+        "DynaBO, accept helpful priors chance 0.15": dynabo_incumbent_df_chance_015_threshold,
         r"$\pi$BO": pibo_incumbent_df_without_validation,
         "Vanilla BO": baseline_config_df,
     }
 
     prior_dict = {
-        "DynaBO, accept all priors": dynabo_prior_df_without_validation,
-        r"DynaBO, accept helpful priors ($\tau$ = -1)": dynabo_prior_df_with_validation_difference_1,
+        "DynaBO, accept all priors chance 0.1": dynabo_prior_df_without_validation_chance_01,
+        "DynaBO, accept all priors chance 0.15": dynabo_prior_df_without_validation_chance_015,
+        "DynaBO, accept helpful priors chance 0.1": dynabo_prior_df_chance_01_threshold,
+        "DynaBO, accept helpful priors chance 0.15": dynabo_prior_df_chance_015_threshold,
         r"$\pi$BO": pibo_prior_df_without_validation,
     }
 
     style_dict = {
-        "DynaBO, accept all priors": {"color": "m", "marker": "s"},
-        r"DynaBO, accept helpful priors ($\tau$ = -1)": {"color": "tab:green", "marker": "v"},
-        r"$\pi$BO": {"color": "tab:cyan", "marker": "d"},
+        "DynaBO, accept all priors  chance 0.1": {"color": "darkviolet", "marker": "s"},
+        "DynaBO, accept all priors  chance 0.15": {"color": "magenta", "marker": "s"},
+        "DynaBO, accept helpful priors chance 0.1": {"color": "forestgreen", "marker": "v"},
+        "DynaBO, accept helpful priors chance 0.15": {"color": "limegreen", "marker": "v"},
+        r"$\pi$BO": {"color": "deepskyblue", "marker": "d"},
         "Vanilla BO": {"color": "black", "marker": "o"},
     }
 
@@ -762,6 +808,6 @@ def plot_final_results_mfpbench():
 
 
 if __name__ == "__main__":
-    plot_yahpo_ablation()
+    # plot_yahpo_ablation()
+    # plot_final_results_yahpo()
     plot_final_results_mfpbench()
-    plot_final_results_yahpo()

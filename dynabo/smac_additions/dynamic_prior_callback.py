@@ -275,32 +275,39 @@ class DynaBOAbstractPriorCallback(AbstractPriorCallback):
     def __init__(
         self,
         prior_chance_theta: float,
+        prior_at_start: bool,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.n_trials_since_last_prior = 0
         self.prior_chance_theta = prior_chance_theta
+        self.prior_at_start = prior_at_start
 
     def intervene(self, smbo: SMBO) -> bool:
         if smbo.runhistory.finished < self.initial_design_size + 1:  # We do not intervene before the initial design is finished
             self.n_trials_since_last_prior += 1
             return False
         else:
-            # To use the surrogate, we need to sample one additional config here
-            chance = 1 - np.exp(-self.prior_chance_theta * self.n_trials_since_last_prior)
-            if np.random.rand() < chance:
+            if self.prior_at_start:  # We use the prior at the start of the optimization
                 self.n_trials_since_last_prior = 0
                 return True
-            else:
-                self.n_trials_since_last_prior += 1
-                return False
+
+            else:  # We use the prior after the initial design is finished
+                chance = 1 - np.exp(-self.prior_chance_theta * self.n_trials_since_last_prior)
+                if np.random.rand() < chance:
+                    self.n_trials_since_last_prior = 0
+                    return True
+                else:
+                    self.n_trials_since_last_prior += 1
+                    return False
 
 
 class PiBOAbstractPriorCallback(AbstractPriorCallback):
     def __init__(
         self,
         prior_chance_theta: float,
+        prior_at_start: bool,
         *args,
         **kwargs,
     ):

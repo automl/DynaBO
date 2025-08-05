@@ -123,6 +123,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         prior_validation_manwhitney_p_value=prior_validation_cfg.manwhitney_p_value,
         prior_validation_difference_threshold=prior_validation_cfg.difference_threshold,
         prior_std_denominator=prior_cfg.std_denominator,
+        prior_at_start=prior_cfg.at_start,
         prior_decay_enumerator=prior_decay_cfg.enumerator,
         prior_decay_denominator=prior_decay_cfg.denominator,
         result_processor=result_processor,
@@ -170,8 +171,8 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    benchmarklib = "yahpogym"
-    fill = False
+    benchmarklib = "mfpbench"
+    fill = True
 
     if fill:
         fill_table(
@@ -179,7 +180,7 @@ if __name__ == "__main__":
             common_parameters={
                 "acquisition_function": ["expected_improvement"],
                 "timeout_total": [3600],
-                "n_trials": [200],
+                "n_trials": [50],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
                 "seed": list(range(10)),
@@ -189,15 +190,16 @@ if __name__ == "__main__":
                 "with_all_datasets": False,
                 "medium_and_hard": True,
             },
-            approach="dynabo",
+            approach="pibo",
             approach_parameters={
                 # Prior configurationz
                 "prior_kind_choices": ["good", "medium", "misleading"],
-                "no_incumbent_percentile": 0.1,
+                "no_incumbent_percentile": 0.01,
+                "prior_at_start_choices": [True, False],
                 "prior_std_denominator": 5,
-                "prior_chance_theta_choices": [0.001],
+                "prior_chance_theta_choices": [0.01, 0.015],
                 # Decay parameters
-                "prior_decay_enumerator": 200,
+                "prior_decay_enumerator_choices": [15, 25, 50],
                 "prior_decay_denominator": 10,
                 # Validation parameters
                 "validate_prior_choices": [True, False],
@@ -210,6 +212,6 @@ if __name__ == "__main__":
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = True
+    execute = False
     if execute:
-        experimenter.execute(run_experiment, max_experiments=1, random_order=True)
+        experimenter.execute(run_experiment, max_experiments=30, random_order=True)

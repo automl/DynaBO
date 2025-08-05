@@ -73,8 +73,9 @@ class InitialDesignConfig:
 class PriorConfig:
     kind: PriorKind
     chance_theta: float
-    std_denominator: float = field(default=5.0)
-    no_incumbent_percentile: float = field(default=50.0)
+    std_denominator: float
+    no_incumbent_percentile: float
+    at_start: bool
 
     def __post_init__(self):
         if isinstance(self.kind, str):
@@ -97,6 +98,7 @@ class PriorConfig:
             chance_theta=float(config["prior_chance_theta"]) if config["prior_chance_theta"] is not None else None,
             std_denominator=float(config["prior_std_denominator"]),
             no_incumbent_percentile=float(config["no_incumbent_percentile"]),
+            at_start=config["prior_at_start"] if config["prior_at_start"] is not None else False,
         )
 
 

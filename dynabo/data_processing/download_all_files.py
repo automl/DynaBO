@@ -77,8 +77,8 @@ def download_yahpo_data():
 
 
 def download_mfpbench_data():
-    baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH, table_name="baseline_pd1")
-    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, table_name="dynabo_pd1_3priors")
+    baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH, table_name="baseline")
+    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, table_name="dynabo_random_prior_location")
 
     try:
         baseline_experimenter.get_table().to_csv(PD1_BASELINE_TABLE_PATH, index=False)
@@ -95,5 +95,5 @@ def download_mfpbench_data():
 
 
 if __name__ == "__main__":
+    download_mfpbench_data()
     # download_yahpo_data()
-    download_yahpo_data()

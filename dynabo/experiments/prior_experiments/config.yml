@@ -47,6 +47,8 @@ PY_EXPERIMENTER:
           type: FLOAT
         prior_std_denominator: # approach
           type: INT
+        prior_at_start: # approach
+          type: BOOLEAN
         validate_prior: # approach
           type: BOOLEAN
         prior_validation_method: # approach

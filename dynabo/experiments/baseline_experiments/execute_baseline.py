@@ -120,14 +120,14 @@ if __name__ == "__main__":
     )
     smac_baseline = True
     random_baseline = False
-    fill = False
+    fill = True
     if fill:
         fill_table(
             py_experimenter=experimenter,
             common_parameters={
                 "acquisition_function": ["expected_improvement"],
                 "timeout_total": [3600],
-                "n_trials": [200],
+                "n_trials": [50],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
                 "seed": list(range(10)),
