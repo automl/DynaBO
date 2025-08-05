@@ -1,7 +1,7 @@
 import time
 from abc import abstractmethod
 from copy import deepcopy
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Generator, List, Optional
 
 import pandas as pd
 from carps.utils.running import make_task
@@ -266,8 +266,10 @@ def fill_table(
             prior_kind_choices=approach_parameters["prior_kind_choices"],
             no_incumbent_percentile=approach_parameters["no_incumbent_percentile"],
             prior_std_denominator=approach_parameters["prior_std_denominator"],
-            prior_at_start_choices=approach_parameters["prior_at_start_choices"],
             # Prior location
+            prior_static_position=approach_parameters["prior_static_position"],
+            prior_every_n_trials=approach_parameters["prior_every_n_trials"],
+            prior_at_start_choices=approach_parameters["prior_at_start_choices"],
             prior_chance_theta_choices=approach_parameters["prior_chance_theta_choices"],
             # Decay parameters
             prior_decay_enumerator_choices=approach_parameters["prior_decay_enumerator_choices"],
@@ -354,11 +356,14 @@ def get_pibo_dict(
             "random": False,
             "prior_decay_enumerator": prior_decay_enumerator,
             "prior_decay_denominator": prior_decay_denominator,
-            "prior_chance_theta": None,
             "prior_kind": prior_kind,
             "no_incumbent_percentile": no_incumbent_percentile,
             "prior_std_denominator": prior_std_denominator,
+            "prior_static_position": None,
+            "prior_every_n_trials": None,
             "prior_at_start": None,
+            "prior_chance_theta": None,
+            
             "validate_prior": None,
             "prior_validation_method": None,
             "n_prior_validation_samples": None,
@@ -374,6 +379,8 @@ def get_dynabo_dict(
     prior_kind_choices: List[str],
     no_incumbent_percentile: float,
     prior_std_denominator: int,
+    prior_static_position: bool,
+    prior_every_n_trials: int,
     prior_chance_theta_choices: List[float],
     prior_decay_enumerator_choices: List[int],
     prior_decay_denominator: int,
@@ -405,8 +412,6 @@ def get_dynabo_dict(
     def create_base_config(
         prior_decay_enumerator: int,
         prior_decay_denominator: int,
-        prior_at_start: bool,
-        prior_chance_theta: float,
         prior_kind: str,
         no_incumbent_percentile: float,
         prior_std_denominator: int,
@@ -419,8 +424,6 @@ def get_dynabo_dict(
             "pibo": False,
             "dynabo": True,
             "prior_std_denominator": prior_std_denominator,
-            "prior_at_start": prior_at_start,
-            "prior_chance_theta": prior_chance_theta,
             "prior_decay_enumerator": prior_decay_enumerator,
             "prior_decay_denominator": prior_decay_denominator,
             "prior_kind": prior_kind,
@@ -428,23 +431,104 @@ def get_dynabo_dict(
             "validate_prior": validate_prior,
         }
 
-    def add_mann_whitney_configs(base_config: Dict[str, Any], n_prior_validation_samples: int) -> None:
+    def add_position_configs(
+        base_config: Dict[str, Any],
+        prior_static_position: bool,
+        prior_every_n_trials: int,
+        prior_at_start_choices: List[bool],
+        prior_chance_theta_choices: List[float],
+    ) -> List[Dict[str, Any]]:
+        """
+        Add position-related configurations to a base config.
+        
+        Args:
+            base_config: Base configuration dictionary
+            prior_static_position: Whether to use static position
+            prior_every_n_trials: Number of trials between prior updates for static position
+            prior_at_start_choices: List of choices for prior_at_start when not using static position
+            prior_chance_theta_choices: List of choices for prior_chance_theta when not using static position
+            
+        Returns:
+            List of configurations with different position settings
+        """
+        configs = []
+        
+        if prior_static_position:  # If the start and end position are static, we only need to add one config
+            base_copy = deepcopy(base_config)
+            base_copy["prior_static_position"] = True
+            base_copy["prior_every_n_trials"] = prior_every_n_trials
+            base_copy["prior_at_start"] = None
+            base_copy["prior_chance_theta"] = None
+            configs.append(base_copy)
+        else:  # If the start and end position are not static, we need to add all combinations of prior_at_start and prior_chance_theta
+            for prior_at_start in prior_at_start_choices:
+                for prior_chance_theta in prior_chance_theta_choices:
+                    base_copy = deepcopy(base_config)
+                    base_copy["prior_static_position"] = False
+                    base_copy["prior_every_n_trials"] = None
+                    base_copy["prior_at_start"] = prior_at_start
+                    base_copy["prior_chance_theta"] = prior_chance_theta
+                    configs.append(base_copy)
+        
+        return configs
+
+    def add_validation_method(
+        preliminary_configs: List[Dict[str, Any]],
+        validate_prior: bool,
+        prior_validation_method_choices: List[str],
+        n_prior_validation_samples: int,
+    ) -> List[Dict[str, Any]]:
+        """
+        Add validation method configurations to a list of preliminary configs.
+        
+        Args:
+            preliminary_configs: List of preliminary configuration dictionaries
+            validate_prior: Whether to validate the prior
+            prior_validation_method_choices: List of validation methods to consider
+            n_prior_validation_samples: Number of samples for validation
+            
+        Returns:
+            List of configurations with different validation methods
+        """
+        final_configs = []
+        
+        for base_config in preliminary_configs:  # For all considered configurations, we need to add all combinations of validation methods and sample sizes
+            if not validate_prior:
+                config = deepcopy(base_config)
+                config["prior_validation_method"] = None
+                config["n_prior_validation_samples"] = None
+                config["prior_validation_manwhitney_p"] = None
+                config["prior_validation_difference_threshold"] = None
+                final_configs.append(config)
+                continue
+                
+            for validation_method in prior_validation_method_choices:
+                if validation_method == "mann_whitney_u":
+                    for config in add_mann_whitney_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples):
+                        final_configs.append(config)
+                elif validation_method == "difference":
+                    for config in add_difference_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples):
+                        final_configs.append(config)
+        
+        return final_configs
+
+    def add_mann_whitney_configs(base_config: Dict[str, Any], n_prior_validation_samples: int) -> Generator[Dict[str, Any], None, None]:
         """Add configurations for Mann-Whitney validation method."""
         base_config["prior_validation_method"] = "mann_whitney_u"
         base_config["n_prior_validation_samples"] = n_prior_validation_samples
 
         for p_value in prior_validation_manwhitney_p_choices:
-            config = base_config.copy()
+            config = deepcopy(base_config)
             config["prior_validation_manwhitney_p"] = p_value
             config["prior_validation_difference_threshold"] = None
             yield config
 
-    def add_difference_configs(base_config: Dict[str, Any], n_prior_validation_samples: int) -> None:
+    def add_difference_configs(base_config: Dict[str, Any], n_prior_validation_samples: int) -> Generator[Dict[str, Any], None, None]:
         """Add configurations for difference validation method."""
         base_config["prior_validation_method"] = "difference"
         base_config["n_prior_validation_samples"] = n_prior_validation_samples
         for threshold in prior_validation_difference_threshold_choices:
-            config = base_config.copy()
+            config = deepcopy(base_config)
             config["prior_validation_manwhitney_p"] = None
             config["prior_validation_difference_threshold"] = threshold
             yield config
@@ -452,36 +536,32 @@ def get_dynabo_dict(
     # Generate configurations
     for prior_kind in prior_kind_choices:
         for prior_decay_enumerator in prior_decay_enumerator_choices:
-            for prior_chance_theta in prior_chance_theta_choices:
-                for validate_prior in validate_prior_choices:
-                    for prior_at_start in prior_at_start_choices:
-                        base_config = create_base_config(
-                            prior_decay_enumerator=prior_decay_enumerator,
-                            prior_decay_denominator=prior_decay_denominator,
-                            prior_at_start=prior_at_start,
-                            prior_chance_theta=prior_chance_theta,
-                            prior_kind=prior_kind,
-                            no_incumbent_percentile=no_incumbent_percentile,
-                            prior_std_denominator=prior_std_denominator,
-                            validate_prior=validate_prior,
-                        )
+            for validate_prior in validate_prior_choices:
+                    base_config = create_base_config(
+                        prior_decay_enumerator=prior_decay_enumerator,
+                        prior_decay_denominator=prior_decay_denominator,
+                        prior_kind=prior_kind,
+                        no_incumbent_percentile=no_incumbent_percentile,
+                        prior_std_denominator=prior_std_denominator,
+                        validate_prior=validate_prior,
+                    )
 
-                        if not validate_prior:
-                            base_config["prior_validation_method"] = None
-                            base_config["n_prior_validation_samples"] = None
-                            base_config["prior_validation_manwhitney_p"] = None
-                            base_config["prior_validation_difference_threshold"] = None
-                            dynabo_configs.append(base_config)
-                            continue
+                    preliminary_configs = add_position_configs(
+                        base_config,
+                        prior_static_position,
+                        prior_every_n_trials,
+                        prior_at_start_choices,
+                        prior_chance_theta_choices
+                    )
 
-                    # Add configurations for each validation method and sample size
-                    for validation_method in prior_validation_method_choices:
-                        if validation_method == "mann_whitney_u":
-                            for config in add_mann_whitney_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples):
-                                dynabo_configs.append(config)
-                        elif validation_method == "difference":
-                            for config in add_difference_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples):
-                                dynabo_configs.append(config)
+                    validation_configs = add_validation_method(
+                        preliminary_configs,
+                        validate_prior,
+                        prior_validation_method_choices,
+                        n_prior_validation_samples
+                    )
+                    dynabo_configs.extend(validation_configs)
+
 
     return dynabo_configs
 

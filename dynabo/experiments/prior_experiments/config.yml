@@ -39,16 +39,20 @@ PY_EXPERIMENTER:
           type: INT
         prior_decay_denominator: # approach
           type: INT
-        prior_chance_theta: # approach
-          type: FLOAT
         prior_kind: # approach
           type: VARCHAR(255)
         no_incumbent_percentile: # approach
           type: FLOAT
         prior_std_denominator: # approach
           type: INT
+        prior_static_position: # approach
+          type: BOOLEAN
+        prior_every_n_trials: # approach
+          type: INT
         prior_at_start: # approach
           type: BOOLEAN
+        prior_chance_theta: # approach
+          type: FLOAT
         validate_prior: # approach
           type: BOOLEAN
         prior_validation_method: # approach

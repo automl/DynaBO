@@ -71,10 +71,10 @@ docs: ## generate Sphinx HTML documentation, including API docs
 	$(MAKE) -C docs html
 	$(BROWSER) docs/_build/html/index.html
 install: clean ## install the package to the active Python's site-packages
-	git clone https://github.com/benjamc/yahpo_gym.git lib/yahpo_gym
 	uv sync
-	uv python run scripts/patch_yahpo_configspace.py
+	uv run python scripts/patch_yahpo_configspace.py
 	cd CARP-S/
+	uv sync
 	make benchmark_mfpbench
 	cd ..
 check:

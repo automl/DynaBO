@@ -195,8 +195,11 @@ if __name__ == "__main__":
                 # Prior configurationz
                 "prior_kind_choices": ["good", "medium", "misleading"],
                 "no_incumbent_percentile": 0.01,
-                "prior_at_start_choices": [True, False],
                 "prior_std_denominator": 5,
+                # Dynabo when prior
+                "prior_static_position": True,
+                "prior_every_n_trials": 15,
+                "prior_at_start_choices": [True, False],
                 "prior_chance_theta_choices": [0.01, 0.015],
                 # Decay parameters
                 "prior_decay_enumerator_choices": [15, 25, 50],
