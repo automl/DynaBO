@@ -125,11 +125,11 @@ class PriorDecayConfig:
 
 @dataclass
 class PriorValidationConfig:
-    validate: bool = field(default=True)
-    method: ValidationMethod = field(default=ValidationMethod.MANN_WHITNEY_U)
-    n_samples: Optional[int] = field(default=500)
-    manwhitney_p_value: Optional[float] = field(default=0.05)
-    difference_threshold: Optional[float] = field(default=-1.0)
+    validate: bool
+    method: ValidationMethod
+    n_samples: Optional[int]
+    manwhitney_p_value: Optional[float]
+    difference_threshold: Optional[float]
 
     def __post_init__(self):
         if isinstance(self.method, str):

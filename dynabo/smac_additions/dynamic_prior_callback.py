@@ -23,6 +23,7 @@ PERFORMANCE_INDICATOR_COLUMN = "performance"
 class PriorValidationMethod(Enum):
     MANN_WHITNEY_U = "mann_whitney_u"
     DIFFERENCE = "difference"
+    BASELINE_PERFECT = "baseline_perfect"
 
 
 class LogIncumbentCallback(Callback):
@@ -186,10 +187,16 @@ class AbstractPriorCallback(Callback, ABC):
                     return True, lcb_prior_values.mean(), lcb_incumbent_values.mean()
                 else:
                     return False, lcb_prior_values.mean(), lcb_incumbent_values.mean()
+            elif self.prior_validation_method == PriorValidationMethod.BASELINE_PERFECT.value:
+                return self._accept_prior_baseline_perfect()
             else:
                 raise ValueError(f"Prior validation method {self.prior_validation_method} not supported.")
 
         return True, None, None
+
+    @abstractmethod
+    def _accept_prior_baseline_perfect(self, smbo: SMBO, prior_configspace: ConfigurationSpace, origin_configspace: ConfigurationSpace) -> bool:
+        pass
 
     @abstractmethod
     def intervene(self, smbo: SMBO) -> bool:
@@ -361,6 +368,9 @@ class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback):
 
         return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
+    def _accept_prior_baseline_perfect(self) -> bool:
+        return True
+
 
 class PiBOWellPerformingPriorCallback(PiBOAbstractPriorCallback):
     def __init__(
@@ -395,10 +405,12 @@ class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback):
     ):
         super().__init__(*args, **kwargs)
         self.no_incumbent_percentile = no_incumbent_percentile
+        self.helpful_prior = None
 
     def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
         # 50 percent likelihood sample better, with 50% likelihood sample worse
         if smbo.intensifier._rng.random() < 0.5:
+            self.helpful_prior = True
             if (self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance).any():
                 relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance]
                 relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN)
@@ -407,10 +419,14 @@ class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback):
                 # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
                 relevant_configs = relevant_configs.head(int(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0])))
         else:
+            self.helpful_prior = False
             relevant_configs = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] < incumbent_performance]
             relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN, ascending=False)
 
         return self.draw_sample(relevant_configs, smbo.intensifier._rng)
+
+    def _accept_prior_baseline_perfect(self) -> bool:
+        return self.helpful_prior
 
 
 class PiBOMediumPriorCallback(PiBOAbstractPriorCallback):
@@ -449,6 +465,9 @@ class DynaBOMisleadingPriorCallback(DynaBOAbstractPriorCallback):
 
         # Sample from the considered configurations
         return self.draw_sample(worse_performing_configs, smbo.intensifier._rng)
+
+    def _accept_prior_baseline_perfect(self) -> bool:
+        return False
 
 
 class PiBOMisleadingPriorCallback(PiBOAbstractPriorCallback):

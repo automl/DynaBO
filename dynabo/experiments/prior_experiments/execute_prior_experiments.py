@@ -208,7 +208,7 @@ if __name__ == "__main__":
                 "prior_decay_denominator": 10,
                 # Validation parameters
                 "validate_prior_choices": [True, False],
-                "prior_validation_method_choices": ["mann_whitney_u", "difference"],
+                "prior_validation_method_choices": ["baseline_perfect"],
                 "n_prior_validation_samples": 500,
                 "prior_validation_manwhitney_p_choices": [0.05],
                 "prior_validation_difference_threshold_choices": [-1],
