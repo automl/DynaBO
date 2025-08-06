@@ -116,6 +116,8 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         metric=benchmark_cfg.metric,
         base_path="benchmark_data/prior_data",
         initial_design_size=initial_design._n_configs,
+        prior_static_position=prior_cfg.prior_static_position,
+        prior_every_n_trials=prior_cfg.prior_every_n_trials,
         prior_chance_theta=prior_cfg.chance_theta,
         validate_prior=prior_validation_cfg.validate,
         prior_validation_method=prior_validation_cfg.method,
@@ -190,7 +192,7 @@ if __name__ == "__main__":
                 "with_all_datasets": False,
                 "medium_and_hard": True,
             },
-            approach="pibo",
+            approach="dynabo",
             approach_parameters={
                 # Prior configurationz
                 "prior_kind_choices": ["good", "medium", "misleading"],
@@ -198,7 +200,7 @@ if __name__ == "__main__":
                 "prior_std_denominator": 5,
                 # Dynabo when prior
                 "prior_static_position": True,
-                "prior_every_n_trials": 15,
+                "prior_every_n_trials_choices": [15, 20],
                 "prior_at_start_choices": [True, False],
                 "prior_chance_theta_choices": [0.01, 0.015],
                 # Decay parameters
@@ -215,6 +217,6 @@ if __name__ == "__main__":
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = False
+    execute = True
     if execute:
-        experimenter.execute(run_experiment, max_experiments=30, random_order=True)
+        experimenter.execute(run_experiment, max_experiments=1, random_order=True)

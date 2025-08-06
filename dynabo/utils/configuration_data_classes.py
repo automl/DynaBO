@@ -72,6 +72,8 @@ class InitialDesignConfig:
 @dataclass
 class PriorConfig:
     kind: PriorKind
+    prior_static_position: bool
+    prior_every_n_trials: int
     chance_theta: float
     std_denominator: float
     no_incumbent_percentile: float
@@ -95,10 +97,12 @@ class PriorConfig:
         """Extract basic prior configuration."""
         return cls(
             kind=config["prior_kind"],
+            prior_static_position=config["prior_static_position"],
+            prior_every_n_trials=int(config["prior_every_n_trials"]),
+            at_start=config["prior_at_start"] if config["prior_at_start"] is not None else None,
             chance_theta=float(config["prior_chance_theta"]) if config["prior_chance_theta"] is not None else None,
             std_denominator=float(config["prior_std_denominator"]),
             no_incumbent_percentile=float(config["no_incumbent_percentile"]),
-            at_start=config["prior_at_start"] if config["prior_at_start"] is not None else False,
         )
 
 

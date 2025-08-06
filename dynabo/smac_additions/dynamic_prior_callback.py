@@ -274,6 +274,8 @@ class AbstractPriorCallback(Callback, ABC):
 class DynaBOAbstractPriorCallback(AbstractPriorCallback):
     def __init__(
         self,
+        prior_static_position: bool,
+        prior_every_n_trials: int,
         prior_chance_theta: float,
         prior_at_start: bool,
         *args,
@@ -281,26 +283,40 @@ class DynaBOAbstractPriorCallback(AbstractPriorCallback):
     ):
         super().__init__(*args, **kwargs)
         self.n_trials_since_last_prior = 0
+        self.prior_static_position = prior_static_position
+        self.prior_every_n_trials = prior_every_n_trials
         self.prior_chance_theta = prior_chance_theta
         self.prior_at_start = prior_at_start
 
     def intervene(self, smbo: SMBO) -> bool:
-        if smbo.runhistory.finished < self.initial_design_size + 1:  # We do not intervene before the initial design is finished
-            self.n_trials_since_last_prior += 1
-            return False
-        else:
-            if self.prior_at_start:  # We use the prior at the start of the optimization
-                self.n_trials_since_last_prior = 0
-                return True
+        def _intervene_static_position():
+            return smbo.runhistory.finished >= self.initial_design_size + 1 and (smbo.runhistory.finished - self.initial_design_size - 1) % self.prior_every_n_trials == 0
 
-            else:  # We use the prior after the initial design is finished
-                chance = 1 - np.exp(-self.prior_chance_theta * self.n_trials_since_last_prior)
-                if np.random.rand() < chance:
-                    self.n_trials_since_last_prior = 0
-                    return True
+        def _intervene_dynamic_position():
+            if smbo.runhistory.finished < self.initial_design_size + 1:  # We do not intervene before the initial design is finished
+                self.n_trials_since_last_prior += 1
+                return False
+            else:
+                if smbo.runhistory.finished >= self.initial_design_size + 1:  # We use the prior at the start of the optimization
+                    if self.prior_at_start:
+                        self.n_trials_since_last_prior = 0
+                        return True
+                    else:
+                        chance = 1 - np.exp(-self.prior_chance_theta * self.n_trials_since_last_prior)
+                        if smbo.intensifier._rng.random() < chance:
+                            self.n_trials_since_last_prior = 0
+                            return True
+                        else:
+                            self.n_trials_since_last_prior += 1
+                            return False
                 else:
                     self.n_trials_since_last_prior += 1
                     return False
+
+        if self.prior_static_position:
+            return _intervene_static_position()
+        else:
+            return _intervene_dynamic_position()
 
 
 class PiBOAbstractPriorCallback(AbstractPriorCallback):
