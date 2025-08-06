@@ -160,6 +160,9 @@ class AbstractPriorCallback(Callback, ABC):
 
     def accept_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace, origin_configspace: ConfigurationSpace) -> bool:
         if self.validate_prior:
+            if self.prior_validation_method == PriorValidationMethod.BASELINE_PERFECT.value:
+                return self._accept_prior_baseline_perfect(), None, None
+
             current_incumbent = smbo.intensifier.get_incumbent()
             incumbent_configuration_dict = dict(current_incumbent)
             incumbent_configuration_space = build_prior_configuration_space(origin_configspace, incumbent_configuration_dict, prior_std_denominator=self.prior_std_denominator * self.prior_number)
@@ -187,8 +190,7 @@ class AbstractPriorCallback(Callback, ABC):
                     return True, lcb_prior_values.mean(), lcb_incumbent_values.mean()
                 else:
                     return False, lcb_prior_values.mean(), lcb_incumbent_values.mean()
-            elif self.prior_validation_method == PriorValidationMethod.BASELINE_PERFECT.value:
-                return self._accept_prior_baseline_perfect()
+
             else:
                 raise ValueError(f"Prior validation method {self.prior_validation_method} not supported.")
 

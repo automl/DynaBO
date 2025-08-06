@@ -200,15 +200,15 @@ if __name__ == "__main__":
                 "prior_std_denominator": 5,
                 # Dynabo when prior
                 "prior_static_position": True,
-                "prior_every_n_trials_choices": [15, 20],
+                "prior_every_n_trials_choices": [10],
                 "prior_at_start_choices": [True, False],
                 "prior_chance_theta_choices": [0.01, 0.015],
                 # Decay parameters
-                "prior_decay_enumerator_choices": [15, 25, 50],
+                "prior_decay_enumerator_choices": [25, 50],
                 "prior_decay_denominator": 10,
                 # Validation parameters
-                "validate_prior_choices": [True, False],
-                "prior_validation_method_choices": ["baseline_perfect"],
+                "validate_prior_choices": [True],
+                "prior_validation_method_choices": ["baseline_perfect", "difference"],
                 "n_prior_validation_samples": 500,
                 "prior_validation_manwhitney_p_choices": [0.05],
                 "prior_validation_difference_threshold_choices": [-1],
@@ -217,6 +217,6 @@ if __name__ == "__main__":
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = True
+    execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=1, random_order=True)

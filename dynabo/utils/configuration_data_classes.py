@@ -15,6 +15,7 @@ class PriorKind(str, Enum):
 class ValidationMethod(str, Enum):
     MANN_WHITNEY_U = "mann_whitney_u"
     DIFFERENCE = "difference"
+    BASELINE_PERFECT = "baseline_perfect"
 
 
 @dataclass

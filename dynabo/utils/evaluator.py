@@ -538,10 +538,13 @@ def get_dynabo_dict(
 
     def _add_baseline_perfect_configs(base_config: Dict[str, Any]) -> Generator[Dict[str, Any], None, None]:
         """Add configurations for baseline perfect validation method."""
-        base_config["prior_validation_method"] = "baseline_perfect"
-        base_config["n_prior_validation_samples"] = None
+        config = deepcopy(base_config)
+        config["prior_validation_method"] = "baseline_perfect"
+        config["n_prior_validation_samples"] = None
+        config["prior_validation_manwhitney_p"] = None
+        config["prior_validation_difference_threshold"] = None
 
-        yield base_config
+        yield config
 
     # Generate configurations
     for prior_kind in prior_kind_choices:
