@@ -493,3 +493,23 @@ class PiBODeceivingPriorCallback(DynaBOAbstractPriorCallback):
     # TODO engative
     def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
         raise NotImplementedError("Please implement the sample_prior method.")
+
+
+class PriorOutOfRangeError(Exception):
+    pass
+
+
+class PiBOTestAllPriors(PiBOAbstractPriorCallback):
+    def __init__(self, prior_number: int, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.prior_number = prior_number
+        self.prior_data = self.prior_data.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+
+    def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
+        try:
+            return pd.DataFrame(self.prior_data.iloc[self.prior_number].to_dict(), index=[0])
+        except IndexError:
+            raise PriorOutOfRangeError(f"Prior number {self.prior_number} is out of range. There are {self.prior_data.shape[0]} priors.")
+
+    def _accept_prior_baseline_perfect(self) -> bool:
+        return True

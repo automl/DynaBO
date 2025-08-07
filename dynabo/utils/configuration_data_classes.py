@@ -10,6 +10,7 @@ class PriorKind(str, Enum):
     MEDIUM = "medium"
     MISLEADING = "misleading"
     DECEIVING = "deceiving"
+    DUMMY_VALUE = "dummy_value"
 
 
 class ValidationMethod(str, Enum):
@@ -90,7 +91,7 @@ class PriorConfig:
             raise ValueError(f"Chance theta must be between 0 and 1, got {self.chance_theta}")
         if self.std_denominator is not None and self.std_denominator <= 0:
             raise ValueError(f"Std denominator must be positive, got {self.std_denominator}")
-        if not 0 <= self.no_incumbent_percentile <= 100:
+        if self.no_incumbent_percentile is not None and not 0 <= self.no_incumbent_percentile <= 100:
             raise ValueError(f"No incumbent percentile must be between 0 and 100, got {self.no_incumbent_percentile}")
 
     @classmethod
@@ -98,12 +99,12 @@ class PriorConfig:
         """Extract basic prior configuration."""
         return cls(
             kind=config["prior_kind"],
-            prior_static_position=config["prior_static_position"],
+            prior_static_position=config["prior_static_position"] if config["prior_static_position"] is not None else None,
             prior_every_n_trials=int(config["prior_every_n_trials"]) if config["prior_every_n_trials"] is not None else None,
             at_start=config["prior_at_start"] if config["prior_at_start"] is not None else None,
             chance_theta=float(config["prior_chance_theta"]) if config["prior_chance_theta"] is not None else None,
             std_denominator=float(config["prior_std_denominator"]),
-            no_incumbent_percentile=float(config["no_incumbent_percentile"]),
+            no_incumbent_percentile=float(config["no_incumbent_percentile"]) if config["no_incumbent_percentile"] is not None else None,
         )
 
 

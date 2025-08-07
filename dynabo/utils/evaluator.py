@@ -291,6 +291,75 @@ def fill_table(
     py_experimenter.fill_table_from_combination(parameters=common_dict, fixed_parameter_combinations=fixed_parameter_combinations)
 
 
+def fill_table_ablate_priors(
+    py_experimenter: PyExperimenter,
+    common_parameters: Dict[str, List[Any]],
+    benchmarklib: str,
+    benchmark_parameters: Dict[str, Any],
+    approach: str,
+    approach_parameters: Optional[Dict[str, Any]],
+    prior_number: int,
+):
+    common_dict = extract_common_config(
+        acquisition_function=common_parameters["acquisition_function"],
+        timeout_total=common_parameters["timeout_total"],
+        n_trials=common_parameters["n_trials"],
+        initial_design__n_configs_per_hyperparameter=common_parameters["initial_design__n_configs_per_hyperparameter"],
+        initial_design__max_ratio=common_parameters["initial_design__max_ratio"],
+        seeds=common_parameters["seed"],
+    )
+
+    benchmark_dict = extract_benchmark_config(
+        benchmarklib=benchmarklib,
+        with_all_datasets=benchmark_parameters["with_all_datasets"],
+        medium_and_hard=benchmark_parameters["medium_and_hard"],
+    )
+
+    if approach == "baseline":
+        approach_dict = get_baseline_dict()
+    elif approach == "random":
+        approach_dict = get_random_dict()
+    elif approach == "pibo":
+        approach_dict = get_pibo_dict(
+            prior_kind_choices=approach_parameters["prior_kind_choices"],
+            no_incumbent_percentile=approach_parameters["no_incumbent_percentile"],
+            prior_std_denominator=approach_parameters["prior_std_denominator"],
+            prior_decay_enumerator_choices=approach_parameters["prior_decay_enumerator_choices"],
+            prior_decay_denominator=approach_parameters["prior_decay_denominator"],
+        )
+        for entry in approach_dict:
+            entry["prior_number"] = prior_number
+    elif approach == "dynabo":
+        approach_dict = get_dynabo_dict(
+            # Prior configuration
+            prior_kind_choices=approach_parameters["prior_kind_choices"],
+            no_incumbent_percentile=approach_parameters["no_incumbent_percentile"],
+            prior_std_denominator=approach_parameters["prior_std_denominator"],
+            # Prior location
+            prior_static_position=approach_parameters["prior_static_position"],
+            prior_every_n_trials_choices=approach_parameters["prior_every_n_trials_choices"],
+            prior_at_start_choices=approach_parameters["prior_at_start_choices"],
+            prior_chance_theta_choices=approach_parameters["prior_chance_theta_choices"],
+            # Decay parameters
+            prior_decay_enumerator_choices=approach_parameters["prior_decay_enumerator_choices"],
+            prior_decay_denominator=approach_parameters["prior_decay_denominator"],
+            # Validation parameters
+            validate_prior_choices=approach_parameters["validate_prior_choices"],
+            n_prior_validation_samples=approach_parameters["n_prior_validation_samples"],
+            prior_validation_method_choices=approach_parameters["prior_validation_method_choices"],
+            prior_validation_manwhitney_p_choices=approach_parameters["prior_validation_manwhitney_p_choices"],
+            prior_validation_difference_threshold_choices=approach_parameters["prior_validation_difference_threshold_choices"],
+        )
+
+    # Join all combinations of benchmark_dict and approach_dict
+    fixed_parameter_combinations = []
+    for benchmark_combination in benchmark_dict:
+        for approach_combination in approach_dict:
+            fixed_parameter_combinations.append({**benchmark_combination, **approach_combination})
+
+    py_experimenter.fill_table_from_combination(parameters=common_dict, fixed_parameter_combinations=fixed_parameter_combinations)
+
+
 def extract_common_config(
     acquisition_function: List[str],
     timeout_total: List[int],

@@ -82,40 +82,49 @@ def filter_prior_approach(
     prior_df: pd.DataFrame,
     select_dynabo: bool,
     select_pibo: bool,
-    prior_chance_theta_choices: float,
-    with_validating: bool,
-    prior_validation_method: str,
+    prior_decay_enumerator: int,
+    prior_static_position: Optional[bool],
+    prior_every_n_trials: Optional[int],
+    validate_prior: Optional[bool],
+    prior_validation_method: Optional[str],
     prior_validation_manwhitney_p: Optional[float],
     prior_validation_difference_threshold: Optional[float] = None,
 ):
     assert select_dynabo ^ select_pibo
+
+    incumbent_df = incumbent_df[incumbent_df["prior_decay_enumerator"] == prior_decay_enumerator]
+
     if select_dynabo:
-        incumbent_df = incumbent_df[
-            (incumbent_df["dynabo"] == select_dynabo)
-            & (incumbent_df["pibo"] == select_pibo)
-            & (incumbent_df["validate_prior"] == with_validating)
-            & (incumbent_df["prior_chance_theta"] == prior_chance_theta_choices)
-        ]
-    if select_pibo:
-        incumbent_df = incumbent_df[(incumbent_df["dynabo"] == select_dynabo) & (incumbent_df["pibo"] == select_pibo)]
+        incumbent_df = incumbent_df[incumbent_df["dynabo"] == True]
+        prior_df = prior_df[prior_df["dynabo"] == True]
 
-    prior_df = prior_df[(prior_df["dynabo"] == select_dynabo) & (prior_df["pibo"] == select_pibo)]
-    if select_dynabo:
-        prior_df = prior_df[(prior_df["validate_prior"] == with_validating)]
-    if select_pibo:
-        prior_df = prior_df[(prior_df["pibo"] == select_pibo)]
-    if prior_validation_method == "mann_whitney_u":
-        incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "mann_whitney_u"]
-        prior_df = prior_df[prior_df["prior_validation_method"] == "mann_whitney_u"]
+        if prior_static_position:
+            incumbent_df = incumbent_df[(incumbent_df["prior_static_position"] == True) & (incumbent_df["prior_every_n_trials"] == prior_every_n_trials)]
+            prior_df = prior_df[(prior_df["prior_static_position"] == True) & (prior_df["prior_every_n_trials"] == prior_every_n_trials)]
+        else:
+            raise NotImplementedError("No plotting implemented for non-static position")
 
-        incumbent_df = incumbent_df[incumbent_df["prior_validation_manwhitney_p"] == prior_validation_manwhitney_p]
-        prior_df = prior_df[prior_df["prior_validation_manwhitney_p"] == prior_validation_manwhitney_p]
+    else:  # select pibo
+        incumbent_df = incumbent_df[incumbent_df["pibo"] == True]
+        prior_df = prior_df[prior_df["pibo"] == True]
 
-    elif prior_validation_method == "difference":
-        incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "difference"]
-        prior_df = prior_df[prior_df["prior_validation_method"] == "difference"]
-        incumbent_df = incumbent_df[incumbent_df["prior_validation_difference_threshold"] == prior_validation_difference_threshold]
-        prior_df = prior_df[prior_df["prior_validation_difference_threshold"] == prior_validation_difference_threshold]
+    if validate_prior:
+        if prior_validation_method == "mann_whitney_u":
+            incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "mann_whitney_u"]
+            prior_df = prior_df[prior_df["prior_validation_method"] == "mann_whitney_u"]
+
+            incumbent_df = incumbent_df[incumbent_df["prior_validation_manwhitney_p"] == prior_validation_manwhitney_p]
+            prior_df = prior_df[prior_df["prior_validation_manwhitney_p"] == prior_validation_manwhitney_p]
+
+        elif prior_validation_method == "difference":
+            incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "difference"]
+            prior_df = prior_df[prior_df["prior_validation_method"] == "difference"]
+            incumbent_df = incumbent_df[incumbent_df["prior_validation_difference_threshold"] == prior_validation_difference_threshold]
+            prior_df = prior_df[prior_df["prior_validation_difference_threshold"] == prior_validation_difference_threshold]
+
+        elif prior_validation_method == "baseline_perfect":
+            incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "baseline_perfect"]
+            prior_df = prior_df[prior_df["prior_validation_method"] == "baseline_perfect"]
 
     return incumbent_df, prior_df
 
