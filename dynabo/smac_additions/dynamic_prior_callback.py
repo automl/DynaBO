@@ -331,8 +331,6 @@ class DynaBOAbstractPriorCallback(AbstractPriorCallback):
 class PiBOAbstractPriorCallback(AbstractPriorCallback):
     def __init__(
         self,
-        prior_chance_theta: float,
-        prior_at_start: bool,
         *args,
         **kwargs,
     ):
@@ -345,6 +343,9 @@ class PiBOAbstractPriorCallback(AbstractPriorCallback):
 
     def accept_prior(self, smbo, prior_configspace, origin_configspace):
         return True, None, None
+
+    def _accept_prior_baseline_perfect(self) -> bool:
+        return True
 
 
 class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback):

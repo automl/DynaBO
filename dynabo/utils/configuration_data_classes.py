@@ -99,7 +99,7 @@ class PriorConfig:
         return cls(
             kind=config["prior_kind"],
             prior_static_position=config["prior_static_position"],
-            prior_every_n_trials=int(config["prior_every_n_trials"]),
+            prior_every_n_trials=int(config["prior_every_n_trials"]) if config["prior_every_n_trials"] is not None else None,
             at_start=config["prior_at_start"] if config["prior_at_start"] is not None else None,
             chance_theta=float(config["prior_chance_theta"]) if config["prior_chance_theta"] is not None else None,
             std_denominator=float(config["prior_std_denominator"]),

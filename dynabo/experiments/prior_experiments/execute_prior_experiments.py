@@ -99,13 +99,13 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             raise ValueError(f"Prior kind {prior_cfg.kind} not supported")
     elif dynabo:
         if prior_cfg.kind == "good":
-            PriorCallbackClass = partial(DynaBOWellPerformingPriorCallback, no_incumbent_percentile=prior_cfg.no_incumbent_percentile)
+            PriorCallbackClass = partial(DynaBOWellPerformingPriorCallback, no_incumbent_percentile=prior_cfg.no_incumbent_percentile, prior_static_position=prior_cfg.prior_static_position, prior_every_n_trials=prior_cfg.prior_every_n_trials, prior_chance_theta=prior_cfg.chance_theta, prior_at_start=prior_cfg.at_start)
         elif prior_cfg.kind == "medium":
-            PriorCallbackClass = partial(DynaBOMediumPriorCallback, no_incumbent_percentile=prior_cfg.no_incumbent_percentile)
+            PriorCallbackClass = partial(DynaBOMediumPriorCallback, no_incumbent_percentile=prior_cfg.no_incumbent_percentile, prior_static_position=prior_cfg.prior_static_position, prior_every_n_trials=prior_cfg.prior_every_n_trials, prior_chance_theta=prior_cfg.chance_theta, prior_at_start=prior_cfg.at_start)
         elif prior_cfg.kind == "misleading":
-            PriorCallbackClass = DynaBOMisleadingPriorCallback
+            PriorCallbackClass = partial(DynaBOMisleadingPriorCallback, prior_static_position=prior_cfg.prior_static_position, prior_every_n_trials=prior_cfg.prior_every_n_trials, prior_chance_theta=prior_cfg.chance_theta, prior_at_start=prior_cfg.at_start)
         elif prior_cfg.kind == "deceiving":
-            PriorCallbackClass = DynaBODeceivingPriorCallback
+            PriorCallbackClass = partial(DynaBODeceivingPriorCallback, prior_static_position=prior_cfg.prior_static_position, prior_every_n_trials=prior_cfg.prior_every_n_trials, prior_chance_theta=prior_cfg.chance_theta, prior_at_start=prior_cfg.at_start)
         else:
             raise ValueError(f"Prior kind {prior_cfg.kind} not supported")
 
@@ -116,16 +116,12 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         metric=benchmark_cfg.metric,
         base_path="benchmark_data/prior_data",
         initial_design_size=initial_design._n_configs,
-        prior_static_position=prior_cfg.prior_static_position,
-        prior_every_n_trials=prior_cfg.prior_every_n_trials,
-        prior_chance_theta=prior_cfg.chance_theta,
         validate_prior=prior_validation_cfg.validate,
         prior_validation_method=prior_validation_cfg.method,
         n_prior_validation_samples=prior_validation_cfg.n_samples,
         prior_validation_manwhitney_p_value=prior_validation_cfg.manwhitney_p_value,
         prior_validation_difference_threshold=prior_validation_cfg.difference_threshold,
         prior_std_denominator=prior_cfg.std_denominator,
-        prior_at_start=prior_cfg.at_start,
         prior_decay_enumerator=prior_decay_cfg.enumerator,
         prior_decay_denominator=prior_decay_cfg.denominator,
         result_processor=result_processor,
@@ -174,7 +170,7 @@ if __name__ == "__main__":
         use_codecarbon=False,
     )
     benchmarklib = "mfpbench"
-    fill = True
+    fill = False
 
     if fill:
         fill_table(
@@ -217,6 +213,6 @@ if __name__ == "__main__":
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = False
+    execute = True
     if execute:
-        experimenter.execute(run_experiment, max_experiments=1, random_order=True)
+        experimenter.execute(run_experiment, max_experiments=3, random_order=True)
