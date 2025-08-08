@@ -35,12 +35,7 @@ class ConfigSpacePdfWrapper:
         # iterate over the hyperparmeters (alphabetically sorted) and the columns, which come
         # in the same order
         for parameter, X_col in zip(self.configspace.values(), X.T):
-            if self._discretize and isinstance(parameter, FloatHyperparameter):
-                assert self._discrete_bins_factor is not None
-                number_of_bins = int(np.ceil(self._discrete_bins_factor * self.decay_beta / self.iteration_number(n)))
-                prior_values *= self._compute_discretized_pdf(parameter, X_col, number_of_bins) + self.prior_floor
-            else:
-                prior_values *= parameter._pdf(X_col[:, np.newaxis]) + self.prior_floor
+            prior_values *= parameter._pdf(X_col[:, np.newaxis]) + self.prior_floor
 
         return np.power(prior_values, self.decay_beta / self.iteration_number(n))
 
