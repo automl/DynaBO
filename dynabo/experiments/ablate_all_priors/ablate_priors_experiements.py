@@ -142,7 +142,7 @@ if __name__ == "__main__":
         use_codecarbon=False,
     )
     benchmarklib = "mfpbench"
-    fill = True
+    fill = False
 
     if fill:
         for prior_number in range(55):
@@ -166,7 +166,7 @@ if __name__ == "__main__":
                     # Prior configurationz
                     "prior_kind_choices": ["dummy_value"],
                     "no_incumbent_percentile": None,
-                    "prior_std_denominator": 5,
+                    "prior_std_denominator": 5000,
                     # Dynabo when prior
                     "prior_static_position": None,
                     "prior_every_n_trials_choices": [None],

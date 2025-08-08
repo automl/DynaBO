@@ -27,6 +27,10 @@ PD1_PRIOR_TABLE_PATH = "plotting_data/pd1/prior.csv"
 PD1_PRIOR_INCUMBENT_PATH = "plotting_data/pd1/prior_incumbent.csv"
 PD1_PRIOR_PRIORS_PATH = "plotting_data/pd1/prior_priors.csv"
 
+PD1_ABLATION_TABLE_PATH = "plotting_data/pd1/ablate_priors.csv"
+PD1_ABLATION_INCUMBENT_PATH = "plotting_data/pd1/ablate_priors_incumbent.csv"
+PD1_ABLATION_PRIOR_PATH = "plotting_data/pd1/ablate_priors_priors.csv"
+
 
 def download_yahpo_data():
     data_generation_one_seed_experimenter = PyExperimenter(DATA_GENERATION_CONFIG_PATH, CREDENTIALS_PATH, table_name="data_generation_new")
@@ -94,6 +98,14 @@ def download_mfpbench_data():
         print("No Prior")
 
 
+def download_ablate_priors_data():
+    ablate_priors_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, table_name="ablate_priors")
+    ablate_priors_experimenter.get_table().to_csv(PD1_ABLATION_TABLE_PATH, index=False)
+    ablate_priors_experimenter.get_logtable("configs", condition="incumbent = 1").to_csv(PD1_ABLATION_INCUMBENT_PATH, index=False)
+    ablate_priors_experimenter.get_logtable("priors").to_csv(PD1_ABLATION_PRIOR_PATH, index=False)
+
+
 if __name__ == "__main__":
-    download_mfpbench_data()
+    # download_mfpbench_data()
+    download_ablate_priors_data()
     # download_yahpo_data()
