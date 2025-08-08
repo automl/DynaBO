@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table: 
-      name: ablate_priors_test
+      name: ablate_priors_test_no_discretize
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)
