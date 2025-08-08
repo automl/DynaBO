@@ -456,7 +456,8 @@ def set_ax_style(ax, prior_kind: str, x_label, y_label):
         prior_name = "Semi-Informative"
     elif prior_kind == "misleading":
         prior_name = "Misleading"
-
+    elif prior_kind == "dummy_value":
+        prior_name = "Prior Accept"
     # Improve title aesthetics
     ax.set_title(
         f"{prior_name}",

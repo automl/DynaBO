@@ -99,13 +99,39 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             raise ValueError(f"Prior kind {prior_cfg.kind} not supported")
     elif dynabo:
         if prior_cfg.kind == "good":
-            PriorCallbackClass = partial(DynaBOWellPerformingPriorCallback, no_incumbent_percentile=prior_cfg.no_incumbent_percentile, prior_static_position=prior_cfg.prior_static_position, prior_every_n_trials=prior_cfg.prior_every_n_trials, prior_chance_theta=prior_cfg.chance_theta, prior_at_start=prior_cfg.at_start)
+            PriorCallbackClass = partial(
+                DynaBOWellPerformingPriorCallback,
+                no_incumbent_percentile=prior_cfg.no_incumbent_percentile,
+                prior_static_position=prior_cfg.prior_static_position,
+                prior_every_n_trials=prior_cfg.prior_every_n_trials,
+                prior_chance_theta=prior_cfg.chance_theta,
+                prior_at_start=prior_cfg.at_start,
+            )
         elif prior_cfg.kind == "medium":
-            PriorCallbackClass = partial(DynaBOMediumPriorCallback, no_incumbent_percentile=prior_cfg.no_incumbent_percentile, prior_static_position=prior_cfg.prior_static_position, prior_every_n_trials=prior_cfg.prior_every_n_trials, prior_chance_theta=prior_cfg.chance_theta, prior_at_start=prior_cfg.at_start)
+            PriorCallbackClass = partial(
+                DynaBOMediumPriorCallback,
+                no_incumbent_percentile=prior_cfg.no_incumbent_percentile,
+                prior_static_position=prior_cfg.prior_static_position,
+                prior_every_n_trials=prior_cfg.prior_every_n_trials,
+                prior_chance_theta=prior_cfg.chance_theta,
+                prior_at_start=prior_cfg.at_start,
+            )
         elif prior_cfg.kind == "misleading":
-            PriorCallbackClass = partial(DynaBOMisleadingPriorCallback, prior_static_position=prior_cfg.prior_static_position, prior_every_n_trials=prior_cfg.prior_every_n_trials, prior_chance_theta=prior_cfg.chance_theta, prior_at_start=prior_cfg.at_start)
+            PriorCallbackClass = partial(
+                DynaBOMisleadingPriorCallback,
+                prior_static_position=prior_cfg.prior_static_position,
+                prior_every_n_trials=prior_cfg.prior_every_n_trials,
+                prior_chance_theta=prior_cfg.chance_theta,
+                prior_at_start=prior_cfg.at_start,
+            )
         elif prior_cfg.kind == "deceiving":
-            PriorCallbackClass = partial(DynaBODeceivingPriorCallback, prior_static_position=prior_cfg.prior_static_position, prior_every_n_trials=prior_cfg.prior_every_n_trials, prior_chance_theta=prior_cfg.chance_theta, prior_at_start=prior_cfg.at_start)
+            PriorCallbackClass = partial(
+                DynaBODeceivingPriorCallback,
+                prior_static_position=prior_cfg.prior_static_position,
+                prior_every_n_trials=prior_cfg.prior_every_n_trials,
+                prior_chance_theta=prior_cfg.chance_theta,
+                prior_at_start=prior_cfg.at_start,
+            )
         else:
             raise ValueError(f"Prior kind {prior_cfg.kind} not supported")
 
@@ -170,7 +196,7 @@ if __name__ == "__main__":
         use_codecarbon=False,
     )
     benchmarklib = "mfpbench"
-    fill = False
+    fill = True
 
     if fill:
         fill_table(
@@ -188,7 +214,7 @@ if __name__ == "__main__":
                 "with_all_datasets": False,
                 "medium_and_hard": True,
             },
-            approach="dynabo",
+            approach="pibo",
             approach_parameters={
                 # Prior configurationz
                 "prior_kind_choices": ["good", "medium", "misleading"],
@@ -200,7 +226,7 @@ if __name__ == "__main__":
                 "prior_at_start_choices": [True, False],
                 "prior_chance_theta_choices": [0.01, 0.015],
                 # Decay parameters
-                "prior_decay_enumerator_choices": [25, 50],
+                "prior_decay_enumerator_choices": [50],
                 "prior_decay_denominator": 10,
                 # Validation parameters
                 "validate_prior_choices": [True],
@@ -213,6 +239,6 @@ if __name__ == "__main__":
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = True
+    execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=3, random_order=True)
