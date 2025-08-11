@@ -27,11 +27,12 @@ class PriorValidationMethod(Enum):
 
 
 class LogIncumbentCallback(Callback):
-    def __init__(self, result_processor: ResultProcessor, evaluator: YAHPOGymEvaluator):
+    def __init__(self, result_processor: ResultProcessor, evaluator: YAHPOGymEvaluator, invert_cost: bool = False):
         super().__init__()
         self.result_processor = result_processor
         self.evaluator = evaluator
         self.incumbent_performance = float(np.infty)
+        self.invert_cost = invert_cost
 
     def on_tell_end(self, smbo: SMBO, info: TrialInfo, value: TrialValue):
         if (
@@ -54,7 +55,7 @@ class LogIncumbentCallback(Callback):
             self.result_processor.process_logs(
                 {
                     "configs": {
-                        "performance": (-1) * value.cost,
+                        "performance": (-1) * value.cost if self.invert_cost else value.cost,
                         "incumbent": incumbent,
                         "configuration": str(dict(info.config)),
                         "after_n_evaluations": smbo._runhistory.finished,
