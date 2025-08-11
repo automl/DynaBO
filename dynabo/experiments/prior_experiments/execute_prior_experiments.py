@@ -154,7 +154,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         evaluator=evaluator,
     )
 
-    incumbent_callback = LogIncumbentCallback(result_processor=result_processor, evaluator=evaluator)
+    incumbent_callback = LogIncumbentCallback(result_processor=result_processor, evaluator=evaluator, invert_cost=evaluator.inverted_cost)
 
     smac = HyperparameterOptimizationFacade(
         scenario=smac_scenario,

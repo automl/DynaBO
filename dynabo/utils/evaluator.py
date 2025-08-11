@@ -50,7 +50,7 @@ class AbstractEvaluator:
 
     def get_metadata(self):
         return {
-            "final_performance": -1 * self.incumbent_cost,
+            "final_performance": -1 * self.incumbent_cost if self.inverted_cost else self.incumbent_cost,
             "virtual_runtime": round(self.accumulated_runtime + self.reasoning_runtime, 3),
             "reasoning_runtime": round(self.reasoning_runtime, 3),
             "n_evaluations_computed": self.eval_counter,
@@ -127,16 +127,17 @@ YAHPOGYM_SCENARIO_OPTIONS = [
 
 
 class YAHPOGymEvaluator(AbstractEvaluator):
-    def __init__(self, scenario: str, dataset: int, metric="acc", runtime_metric_name="timetrain", inverted_cost: bool = False):
+    def __init__(self, scenario: str, dataset: int, metric="acc", runtime_metric_name="timetrain"):
         super().__init__(scenario=scenario, dataset=dataset)
         self.metric = metric
         self.runtime_metric_name = runtime_metric_name
-        self.inverted_cost = inverted_cost
 
         local_config._config = "benchmark_data/yahpo_data"
         self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario, multithread=False)
         self.benchmark.set_instance(value=self.dataset)
         self.default_fidelity_config = self.benchmark.get_fidelity_space().get_default_configuration()
+
+        self.inverted_cost = True
 
     def _train(self, config: Configuration, seed: int = 0):
         final_config = dict(config)
@@ -147,10 +148,6 @@ class YAHPOGymEvaluator(AbstractEvaluator):
 
         res = self.benchmark.objective_function(configuration=final_config)
         performance = round((-1) * res[0][self.metric], 6)
-
-        # If we utilize inverted cost, invert the performance values
-        if self.inverted_cost:
-            performance = -1 * performance
 
         runtime = round(res[0][self.runtime_metric_name], 3)
         return performance, runtime
@@ -206,6 +203,8 @@ class MFPBenchEvaluator(AbstractEvaluator):
         self.task = make_task(exp_config)
 
         self.config_space = self.get_configuration_space()
+
+        self.inverted_cost = False
 
     def _train(self, config: Configuration, seed: int = 0):
         # We use the full fidelity space

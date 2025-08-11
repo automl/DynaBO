@@ -47,6 +47,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     incumbent_callback = LogIncumbentCallback(
         result_processor=result_processor,
         evaluator=evaluator,
+        invert_cost=evaluator.inverted_cost,
     )
 
     if baseline:
@@ -123,9 +124,9 @@ if __name__ == "__main__":
         fill_table(
             py_experimenter=experimenter,
             common_parameters={
-                "acquisition_function": ["expected_improvement"],
+                "acquisition_function": ["confidence_bound"],
                 "timeout_total": [3600],
-                "n_trials": [50],
+                "n_trials": [5000],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
                 "seed": list(range(10)),
