@@ -176,7 +176,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
     result = {
         "initial_design_size": initial_design_size,
-        "final_performance": optimization_data["final_performance"],
+        "final_cost": optimization_data["final_cost"],
         "runtime": round(end_time - start_time, 3),
         "virtual_runtime": optimization_data["virtual_runtime"],
         "reasoning_runtime": round(evaluator.reasoning_runtime, 3),

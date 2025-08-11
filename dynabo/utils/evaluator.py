@@ -50,7 +50,7 @@ class AbstractEvaluator:
 
     def get_metadata(self):
         return {
-            "final_performance": -1 * self.incumbent_cost,
+            "final_cost": self.incumbent_cost,
             "virtual_runtime": round(self.accumulated_runtime + self.reasoning_runtime, 3),
             "reasoning_runtime": round(self.reasoning_runtime, 3),
             "n_evaluations_computed": self.eval_counter,
