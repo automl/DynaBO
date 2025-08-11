@@ -47,7 +47,6 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     incumbent_callback = LogIncumbentCallback(
         result_processor=result_processor,
         evaluator=evaluator,
-        invert_cost=evaluator.inverted_cost,
     )
 
     if baseline:
@@ -119,12 +118,12 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = True
+    fill = False
     if fill:
         fill_table(
             py_experimenter=experimenter,
             common_parameters={
-                "acquisition_function": ["confidence_bound"],
+                "acquisition_function": ["expected_improvement"],
                 "timeout_total": [3600],
                 "n_trials": [5000],
                 "initial_design__n_configs_per_hyperparameter": [10],
@@ -139,9 +138,9 @@ if __name__ == "__main__":
             approach="baseline",
             approach_parameters=None,
         )
-    reset = False
+    reset = True
     if reset:
-        experimenter.reset_experiments("running", "error")
+        experimenter.reset_experiments("error")
 
     execute = False
     if execute:

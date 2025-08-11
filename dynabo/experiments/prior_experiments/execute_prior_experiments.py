@@ -154,7 +154,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         evaluator=evaluator,
     )
 
-    incumbent_callback = LogIncumbentCallback(result_processor=result_processor, evaluator=evaluator, invert_cost=evaluator.inverted_cost)
+    incumbent_callback = LogIncumbentCallback(result_processor=result_processor, evaluator=evaluator)
 
     smac = HyperparameterOptimizationFacade(
         scenario=smac_scenario,
@@ -196,7 +196,7 @@ if __name__ == "__main__":
         use_codecarbon=False,
     )
     benchmarklib = "mfpbench"
-    fill = True
+    fill = False
 
     if fill:
         fill_table(
@@ -239,6 +239,6 @@ if __name__ == "__main__":
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = False
+    execute = True
     if execute:
         experimenter.execute(run_experiment, max_experiments=3, random_order=True)

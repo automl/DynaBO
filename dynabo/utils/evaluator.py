@@ -50,7 +50,7 @@ class AbstractEvaluator:
 
     def get_metadata(self):
         return {
-            "final_performance": -1 * self.incumbent_cost if self.inverted_cost else self.incumbent_cost,
+            "final_performance": -1 * self.incumbent_cost,
             "virtual_runtime": round(self.accumulated_runtime + self.reasoning_runtime, 3),
             "reasoning_runtime": round(self.reasoning_runtime, 3),
             "n_evaluations_computed": self.eval_counter,
@@ -137,8 +137,6 @@ class YAHPOGymEvaluator(AbstractEvaluator):
         self.benchmark.set_instance(value=self.dataset)
         self.default_fidelity_config = self.benchmark.get_fidelity_space().get_default_configuration()
 
-        self.inverted_cost = True
-
     def _train(self, config: Configuration, seed: int = 0):
         final_config = dict(config)
 
@@ -203,8 +201,6 @@ class MFPBenchEvaluator(AbstractEvaluator):
         self.task = make_task(exp_config)
 
         self.config_space = self.get_configuration_space()
-
-        self.inverted_cost = False
 
     def _train(self, config: Configuration, seed: int = 0):
         # We use the full fidelity space
