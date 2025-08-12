@@ -36,5 +36,5 @@ def extract_gt_priors_yahpo():
 
 
 if __name__ == "__main__":
-    # extract_gt_priors_pd1()
-    extract_gt_priors_yahpo()
+    extract_gt_priors_pd1()
+    # extract_gt_priors_yahpo()
