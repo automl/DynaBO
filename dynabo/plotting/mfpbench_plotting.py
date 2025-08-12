@@ -7,19 +7,13 @@ from dynabo.data_processing.download_all_files import (
     PD1_PRIOR_PRIORS_PATH,
     PD1_PRIOR_TABLE_PATH,
 )
-from dynabo.plotting.plotting_utils import add_regret, create_overall_plot, create_scenario_plots, filter_prior_approach, get_best_performances, merge_df
+from dynabo.plotting.plotting_utils import add_regret, create_overall_plot, create_scenario_plots, filter_prior_approach, get_min_costs, merge_df
 
 
-def load_performance_data_mfpbench():
+def load_cost_data_mfpbench():
     """
-    Load the performance data for pd1, saved in the filesystem. Do some data cleaning for lcbench and add regret.
+    Load the cost data for pd1, saved in the filesystem. Do some data cleaning for lcbench and add regret.
     """
-
-    def invert_performance(df: pd.DataFrame):
-        df["performance"] = df["performance"] * -1
-        df["final_performance"] = df["final_performance"] * -1
-        return df
-
     baseline_table = pd.read_csv(PD1_BASELINE_TABLE_PATH)
     baseline_config_df = pd.read_csv(PD1_BASELINE_INCUMBENT_PATH)
     baseline_config_df, _ = merge_df(baseline_table, baseline_config_df, None)
@@ -29,18 +23,14 @@ def load_performance_data_mfpbench():
     prior_priors = pd.read_csv(PD1_PRIOR_PRIORS_PATH)
     prior_config_df, prior_priors_df = merge_df(prior_table, prior_configs, prior_priors)
 
-    baseline_config_df = invert_performance(baseline_config_df)
-    prior_config_df = invert_performance(prior_config_df)
-    prior_priors_df = invert_performance(prior_priors_df)
-
-    best_performances = get_best_performances([baseline_config_df, prior_config_df], benchmarklib="mfpbench")
-    baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], best_performances, benchmarklib="mfpbench")
+    min_costs = get_min_costs([baseline_config_df, prior_config_df], benchmarklib="mfpbench")
+    baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], min_costs, benchmarklib="mfpbench")
 
     return baseline_config_df, prior_config_df, prior_priors_df
 
 
 def plot_final_results_mfpbench():
-    baseline_config_df, prior_config_df, prior_prior_df = load_performance_data_mfpbench()
+    baseline_config_df, prior_config_df, prior_prior_df = load_cost_data_mfpbench()
     # TODO extract the stuff that is scurrently in the table and plot the different appraochse agaisnt one another
     baseline_perfect_incumbent_df_decay_25, baseline_perfect_prior_df_decay_25 = filter_prior_approach(
         incumbent_df=prior_config_df,

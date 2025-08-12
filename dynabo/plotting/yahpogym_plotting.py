@@ -12,7 +12,7 @@ from dynabo.data_processing.download_all_files import (
     YAHPO_PRIOR_PRIORS_PATH,
     YAHPO_PRIOR_TABLE_PATH,
 )
-from dynabo.plotting.plotting_utils import add_regret, create_overall_plot, create_scenario_plots, filter_prior_approach, get_best_performances, merge_df
+from dynabo.plotting.plotting_utils import add_regret, create_overall_plot, create_scenario_plots, filter_prior_approach, get_min_costs, merge_df
 
 
 def load_performance_data_yahpo():
@@ -40,7 +40,7 @@ def load_performance_data_yahpo():
     prior_config_df = _clean_lcbench_performance(prior_config_df)
     prior_priors_df = _clean_lcbench_performance(prior_priors_df)
 
-    best_performances = get_best_performances([baseline_config_df, prior_config_df], benchmarklib="yahpogym")
+    best_performances = get_min_costs([baseline_config_df, prior_config_df], benchmarklib="yahpogym")
     baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], best_performances, benchmarklib="yahpogym")
     return baseline_config_df, prior_config_df, prior_priors_df
 
@@ -80,7 +80,7 @@ def load_performance_data_yahpo_ablation():
     prior_config_df = _clean_lcbench_performance(prior_config_df)
     prior_priors_df = _clean_lcbench_performance(prior_priors_df)
 
-    best_performances = get_best_performances([baseline_config_df, prior_config_df], benchmarklib="yahpogym")
+    best_performances = get_min_costs([baseline_config_df, prior_config_df], benchmarklib="yahpogym")
     baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], best_performances, benchmarklib="yahpogym")
     return baseline_config_df, prior_config_df, prior_priors_df
 

@@ -15,7 +15,7 @@ from dynabo.data_processing.download_all_files import (
     PD1_BASELINE_INCUMBENT_PATH,
     PD1_BASELINE_TABLE_PATH,
 )
-from dynabo.plotting.plotting_utils import add_regret, get_best_performances, merge_df, preprocess_configs, save_fig, set_ax_style
+from dynabo.plotting.plotting_utils import add_regret, get_min_costs, merge_df, preprocess_configs, save_fig, set_ax_style
 
 
 def sample_colors(n):
@@ -38,16 +38,10 @@ def sample_colors(n):
     return random.sample(color_names, n)
 
 
-def load_performance_data_mfpbench_ablate_priors(prior_std_denominator: int):
+def load_cost_data_mfpbench_ablate_priors(prior_std_denominator: int):
     """
-    Load the performance data for pd1, saved in the filesystem. Do some data cleaning for lcbench and add regret.
+    Load the cost data for pd1, saved in the filesystem. Do some data cleaning for lcbench and add regret.
     """
-
-    def invert_performance(df: pd.DataFrame):
-        df["performance"] = df["performance"] * -1
-        df["final_performance"] = df["final_performance"] * -1
-        return df
-
     baseline_table = pd.read_csv(PD1_BASELINE_TABLE_PATH)
     baseline_config_df = pd.read_csv(PD1_BASELINE_INCUMBENT_PATH)
     baseline_config_df, _ = merge_df(baseline_table, baseline_config_df, None)
@@ -58,12 +52,8 @@ def load_performance_data_mfpbench_ablate_priors(prior_std_denominator: int):
     prior_priors = pd.read_csv(PD1_ABLATION_PRIOR_PATH)
     prior_config_df, prior_priors_df = merge_df(prior_table, prior_configs, prior_priors)
 
-    baseline_config_df = invert_performance(baseline_config_df)
-    prior_config_df = invert_performance(prior_config_df)
-    prior_priors_df = invert_performance(prior_priors_df)
-
-    best_performances = get_best_performances([baseline_config_df, prior_config_df], benchmarklib="mfpbench")
-    baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], best_performances, benchmarklib="mfpbench")
+    min_costs = get_min_costs([baseline_config_df, prior_config_df], benchmarklib="mfpbench")
+    baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], min_costs, benchmarklib="mfpbench")
 
     return baseline_config_df, prior_config_df, prior_priors_df
 
@@ -169,7 +159,7 @@ def create_scenario_plots_prior_ablation(
             benchmarklib=benchmarklib,
             min_ntrials=min_ntrials,
             max_ntrials=max_n_trials,
-            error_bar_type=None,
+            error_bar_type=error_bar_type,
         )
         set_ax_style(ax, prior_kind="dummy_value", x_label="Number of Evaluations", y_label="Regret")
         # Ax set log scale
@@ -179,7 +169,7 @@ def create_scenario_plots_prior_ablation(
 
 
 def plot_prior_ablation(prior_std_denominator: int):
-    baseline_config_df, prior_config_df, prior_prior_df = load_performance_data_mfpbench_ablate_priors(prior_std_denominator)
+    baseline_config_df, prior_config_df, prior_prior_df = load_cost_data_mfpbench_ablate_priors(prior_std_denominator)
 
     for scneario in baseline_config_df["scenario"].unique():
         scenario_config_dict = {}
@@ -218,8 +208,8 @@ def plot_prior_ablation(prior_std_denominator: int):
 
 
 if __name__ == "__main__":
-    plot_prior_ablation(5)
-    plot_prior_ablation(15)
-    plot_prior_ablation(100)
-    plot_prior_ablation(1000)
+    # plot_prior_ablation(5)
+    # plot_prior_ablation(15)
+    # plot_prior_ablation(100)
+    # plot_prior_ablation(1000)
     plot_prior_ablation(5000)

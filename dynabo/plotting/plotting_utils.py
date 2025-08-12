@@ -13,8 +13,8 @@ def load_datageneration_data():
 
     main_table, _ = merge_df(main_table, configs, None)
 
-    best_performances = get_best_performances([main_table])
-    main_table = add_regret([main_table], best_performances)[0]
+    min_costs = get_min_costs([main_table])
+    main_table = add_regret([main_table], min_costs)[0]
     return main_table
 
 
@@ -33,37 +33,34 @@ def merge_df(df: pd.DataFrame, incumbents: pd.DataFrame, priors: Optional[pd.Dat
     return incumbent_df, prior_df
 
 
-def get_best_performances(dfs: Tuple[pd.DataFrame], benchmarklib: str) -> Dict[Tuple[str, int], float]:
+def get_min_costs(dfs: Tuple[pd.DataFrame], benchmarklib: str) -> Dict[Tuple[str, int], float]:
     """
-    Compute the maximum performance.
+    Compute the minimum cost.
     """
     concat_df = pd.concat(dfs)
     if benchmarklib == "yahpogym":
         index = ["scenario", "dataset"]
-        best_performances = concat_df.groupby(index)["performance"].max()
     elif benchmarklib == "mfpbench":
         index = ["scenario"]
-        best_performances = concat_df.groupby(index)["performance"].min()
-    return best_performances.to_dict()
+    min_costs = concat_df.groupby(index)["cost"].min()
+    return min_costs.to_dict()
 
 
-def add_regret(dfs: List[pd.DataFrame], max_performances: Dict[Tuple[str, int], float], benchmarklib: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def add_regret(dfs: List[pd.DataFrame], min_costs: Dict[Tuple[str, int], float], benchmarklib: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Add the regret to the dataframes.
     """
     for df in dfs:
-        max_perf_series = pd.Series(max_performances)
+        min_cost_series = pd.Series(min_costs)
         # Use the scenario and dataset columns to index the Series—
         if benchmarklib == "yahpogym":
             keys = pd.MultiIndex.from_arrays([df["scenario"], df["dataset"]])
-            best_values = max_perf_series.loc[keys].values
-            df["regret"] = best_values - df["performance"].values
-            df["final_regret"] = best_values - df["final_performance"].values
         elif benchmarklib == "mfpbench":
             keys = df["scenario"]
-            best_values = max_perf_series.loc[keys].values
-            df["regret"] = df["performance"].values - best_values
-            df["final_regret"] = df["final_performance"].values - best_values
+
+        min_cost_values = min_cost_series.loc[keys].values
+        df["regret"] = df["cost"].values - min_cost_values
+        df["final_regret"] = df["final_cost"].values - min_cost_values
 
     return dfs
 
@@ -161,7 +158,7 @@ def plot_final_run(
         sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df, label=key, ax=ax, errorbar=error_bar_type, color=color)
 
     if benchmarklib == "yahpogym":
-        # Check highest performacne after 10 trials
+        # check smallest regret after 50 trials
         highest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == (50)]["regret"].mean()
         smallest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == max_ntrials]["regret"].mean()
         ax.set_ylim(smallest_regret * 0.1, highest_regret * 1.1)
