@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table: 
-      name: ablate_priors_test
+      name: ablate_priors
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)
@@ -69,7 +69,7 @@ PY_EXPERIMENTER:
       result_timestamps: False
       resultfields:
         initial_design_size: INT
-        final_performance: FLOAT
+        final_cost: FLOAT
         runtime: FLOAT
         virtual_runtime: FLOAT 
         reasoning_runtime: FLOAT
@@ -77,7 +77,7 @@ PY_EXPERIMENTER:
         experiment_finished: BOOLEAN
     logtables:
       configs:
-        performance: FLOAT
+        cost: FLOAT
         incumbent: BOOLEAN
         configuration: TEXT
         after_n_evaluations: INT
@@ -89,7 +89,7 @@ PY_EXPERIMENTER:
       priors:
         prior_accepted: BOOLEAN
         superior_configuration: BOOLEAN
-        performance: FLOAT
+        cost: FLOAT
         prior_mean_acq_value: FLOAT
         origin_mean_acq_value: FLOAT
         configuration: TEXT

@@ -3,11 +3,11 @@ import os
 from dynabo.utils.data_utils import build_prior_dataframe, create_prior_data_path_pd1, create_prior_data_path_yahpo, load_df, save_base_table, save_table
 
 
-def extract_gt_priors_pd1():
+def extract_gt_priors_pd1(only_incumbent: bool = False):
     """
     This function creates the prior data for the pd1 benchmark.
     """
-    save_base_table("mfpbench", "data_generation_pd1")
+    save_base_table("mfpbench", "data_generation_pd1", only_incumbent=only_incumbent)
     base_df = load_df(benchmark_name="mfpbench")
     for scenario in base_df.scenario.unique():
         scenario_df = base_df[base_df.scenario == scenario]
@@ -36,5 +36,5 @@ def extract_gt_priors_yahpo():
 
 
 if __name__ == "__main__":
-    # extract_gt_priors_pd1()
-    extract_gt_priors_yahpo()
+    extract_gt_priors_pd1(only_incumbent=True)
+    # extract_gt_priors_yahpo()

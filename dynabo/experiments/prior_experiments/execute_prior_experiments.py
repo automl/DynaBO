@@ -176,7 +176,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
     result = {
         "initial_design_size": initial_design_size,
-        "final_performance": optimization_data["final_performance"],
+        "final_cost": optimization_data["final_cost"],
         "runtime": round(end_time - start_time, 3),
         "virtual_runtime": optimization_data["virtual_runtime"],
         "reasoning_runtime": round(evaluator.reasoning_runtime, 3),
@@ -196,7 +196,7 @@ if __name__ == "__main__":
         use_codecarbon=False,
     )
     benchmarklib = "mfpbench"
-    fill = True
+    fill = False
 
     if fill:
         fill_table(
@@ -239,6 +239,6 @@ if __name__ == "__main__":
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = False
+    execute = True
     if execute:
         experimenter.execute(run_experiment, max_experiments=3, random_order=True)

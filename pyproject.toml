@@ -22,6 +22,7 @@ dependencies = [
     "yahpo-gym",
     "dynabo",
     "mf-prior-bench[pd1]>=1.10.0",
+    "gower>=0.1.2",
 ]
 
 [tool.hatch.metadata]

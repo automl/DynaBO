@@ -17,7 +17,7 @@ from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPrio
 from dynabo.utils.configspace_utils import build_prior_configuration_space
 from dynabo.utils.evaluator import YAHPOGymEvaluator
 
-PERFORMANCE_INDICATOR_COLUMN = "performance"
+COST_INDICATOR_COLUMN = "cost"
 
 
 class PriorValidationMethod(Enum):
@@ -27,7 +27,7 @@ class PriorValidationMethod(Enum):
 
 
 class LogIncumbentCallback(Callback):
-    def __init__(self, result_processor: ResultProcessor, evaluator: YAHPOGymEvaluator):
+    def __init__(self, result_processor: ResultProcessor, evaluator: YAHPOGymEvaluator, invert_cost: bool = False):
         super().__init__()
         self.result_processor = result_processor
         self.evaluator = evaluator
@@ -54,7 +54,7 @@ class LogIncumbentCallback(Callback):
             self.result_processor.process_logs(
                 {
                     "configs": {
-                        "performance": (-1) * value.cost,
+                        "cost": value.cost,
                         "incumbent": incumbent,
                         "configuration": str(dict(info.config)),
                         "after_n_evaluations": smbo._runhistory.finished,
@@ -107,7 +107,7 @@ class AbstractPriorCallback(Callback, ABC):
         self.result_processor = result_processor
         self.evaluator = evaluator
 
-        self.incumbent_performance = float(np.infty)
+        self.incumbent_cost = float(np.infty)
 
         if self.validate_prior:
             self.lcb = LCB()
@@ -140,7 +140,7 @@ class AbstractPriorCallback(Callback, ABC):
         smbo.intensifier.config_selector._acquisition_function.current_config_nuber = smbo.runhistory.finished
 
         if self.intervene(smbo):
-            prior_configspace, origin_configpsace, performance, logging_config, superior_configuraiton = self.construct_prior(smbo)
+            prior_configspace, origin_configpsace, cost, logging_config, superior_configuraiton = self.construct_prior(smbo)
 
             prior_accepted, prior_mean_acq_value, origin_mean_acq_value = self.accept_prior(smbo, prior_configspace, origin_configpsace)
 
@@ -148,7 +148,7 @@ class AbstractPriorCallback(Callback, ABC):
                 self.set_prior(smbo, prior_configspace)
             self.log_prior(
                 smbo=smbo,
-                performance=performance,
+                cost=cost,
                 config=logging_config,
                 prior_accepted=prior_accepted,
                 prior_mean_acq_value=prior_mean_acq_value,
@@ -211,18 +211,18 @@ class AbstractPriorCallback(Callback, ABC):
         self.prior_number += 1
 
         current_incumbent = smbo.intensifier.get_incumbent()
-        incumbent_performance = (-1) * smbo.runhistory.get_cost(current_incumbent)
+        incumbent_cost = smbo.runhistory.get_cost(current_incumbent)
 
-        sampled_config = self.sample_prior(smbo, incumbent_performance)
-        prior_performance = sampled_config[PERFORMANCE_INDICATOR_COLUMN].values[0]
+        sampled_config = self.sample_prior(smbo, incumbent_cost)
+        prior_cost = sampled_config[COST_INDICATOR_COLUMN].values[0]
 
         # Check if the sampled configuration is better than the incumbent
-        superior_configuration = bool(prior_performance > incumbent_performance)
+        superior_configuration = bool(prior_cost < incumbent_cost)
 
         if sampled_config is None:
             raise ValueError("No prior configuration could be sampled.")
 
-        performance = sampled_config[PERFORMANCE_INDICATOR_COLUMN].values[0]
+        cost = sampled_config[COST_INDICATOR_COLUMN].values[0]
         hyperparameter_config = sampled_config[[col for col in sampled_config.columns if col.startswith("config_")]]
         hyperparameter_config.columns = [col.replace("config_", "") for col in hyperparameter_config.columns]
         hyperparameter_config = hyperparameter_config.iloc[0].to_dict()
@@ -230,7 +230,7 @@ class AbstractPriorCallback(Callback, ABC):
         origin_configspace = smbo._configspace
         prior_configspace = build_prior_configuration_space(origin_configspace, hyperparameter_config, prior_std_denominator=self.prior_std_denominator * self.prior_number)
 
-        return prior_configspace, origin_configspace, performance, hyperparameter_config, superior_configuration
+        return prior_configspace, origin_configspace, cost, hyperparameter_config, superior_configuration
 
     def set_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace):
         smbo.intensifier.config_selector._acquisition_maximizer.dynamic_init(prior_configspace)
@@ -242,12 +242,12 @@ class AbstractPriorCallback(Callback, ABC):
         )
 
     @abstractmethod
-    def sample_prior(self, smbo: SMBO, incumbent_performance: float) -> pd.DataFrame:
+    def sample_prior(self, smbo: SMBO, incumbent_cost: float) -> pd.DataFrame:
         """
         Samples a prior from the prior data.
         """
 
-    def log_prior(self, smbo: SMBO, performance: float, config: Dict, prior_accepted: bool, prior_mean_acq_value: float, origin_mean_acq_value: float, superior_configuration: bool):
+    def log_prior(self, smbo: SMBO, cost: float, config: Dict, prior_accepted: bool, prior_mean_acq_value: float, origin_mean_acq_value: float, superior_configuration: bool):
         """
         Logs the prior data.
         """
@@ -257,7 +257,7 @@ class AbstractPriorCallback(Callback, ABC):
                     "priors": {
                         "prior_accepted": prior_accepted,
                         "superior_configuration": superior_configuration,
-                        "performance": performance,
+                        "cost": cost,
                         "prior_mean_acq_value": prior_mean_acq_value,
                         "origin_mean_acq_value": origin_mean_acq_value,
                         "configuration": str(config),
@@ -358,14 +358,14 @@ class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback):
         super().__init__(*args, **kwargs)
         self.no_incumbent_percentile = no_incumbent_percentile
 
-    def sample_prior(self, smbo, incumbent_performance) -> Optional[pd.DataFrame]:
-        # Select all configurations that have a better performance than the incumbent
+    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
+        # Select all configurations that have lower cost than the incumbent
         # Chekc whether the valeus are sorted
-        if (self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance).any():
-            relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance]
-            relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+        if (self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost).any():
+            relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost]
+            relevant_configs = relevant_configs.sort_values(COST_INDICATOR_COLUMN)
         else:
-            relevant_configs = self.prior_data.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+            relevant_configs = self.prior_data.sort_values(COST_INDICATOR_COLUMN)
             # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
             relevant_configs = relevant_configs.head(int(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0])))
 
@@ -385,14 +385,14 @@ class PiBOWellPerformingPriorCallback(PiBOAbstractPriorCallback):
         super().__init__(*args, **kwargs)
         self.no_incumbent_percentile = no_incumbent_percentile
 
-    def sample_prior(self, smbo, incumbent_performance) -> Optional[pd.DataFrame]:
-        # Select all configurations that have a better performance than the incumbent
+    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
+        # Select all configurations that have a lower cost than the incumbent
         # Chekc whether the valeus are sorted
-        if (self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance).any():
-            relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance]
-            relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+        if (self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost).any():
+            relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost]
+            relevant_configs = relevant_configs.sort_values(COST_INDICATOR_COLUMN)
         else:
-            relevant_configs = self.prior_data.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+            relevant_configs = self.prior_data.sort_values(COST_INDICATOR_COLUMN)
             # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
             relevant_configs = relevant_configs.head(int(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0])))
 
@@ -410,21 +410,21 @@ class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback):
         self.no_incumbent_percentile = no_incumbent_percentile
         self.helpful_prior = None
 
-    def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
+    def sample_prior(self, smbo, incumbent_cost) -> pd.DataFrame:
         # 50 percent likelihood sample better, with 50% likelihood sample worse
         if smbo.intensifier._rng.random() < 0.5:
             self.helpful_prior = True
-            if (self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance).any():
-                relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance]
-                relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+            if (self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost).any():
+                relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost]
+                relevant_configs = relevant_configs.sort_values(COST_INDICATOR_COLUMN)
             else:
-                relevant_configs = self.prior_data.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+                relevant_configs = self.prior_data.sort_values(COST_INDICATOR_COLUMN)
                 # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
                 relevant_configs = relevant_configs.head(int(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0])))
         else:
             self.helpful_prior = False
-            relevant_configs = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] < incumbent_performance]
-            relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN, ascending=False)
+            relevant_configs = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] > incumbent_cost]
+            relevant_configs = relevant_configs.sort_values(COST_INDICATOR_COLUMN, ascending=False)
 
         return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
@@ -442,29 +442,30 @@ class PiBOMediumPriorCallback(PiBOAbstractPriorCallback):
         super().__init__(*args, **kwargs)
         self.no_incumbent_percentile = no_incumbent_percentile
 
-    def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
-        # Select all configurations that have a better performance than the incumbent
+    def sample_prior(self, smbo, incumbent_cost) -> pd.DataFrame:
         # TODO with 50 percent likelihood sample better, with 50% likelihood sample worse. We use the same distribution
         if smbo.intensifier._rng.random() < 0.5:
-            if (self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance).any():
-                relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] >= incumbent_performance]
-                relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+            self.helpful_prior = True
+            if (self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost).any():
+                relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost]
+                relevant_configs = relevant_configs.sort_values(COST_INDICATOR_COLUMN)
             else:
-                relevant_configs = self.prior_data.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+                relevant_configs = self.prior_data.sort_values(COST_INDICATOR_COLUMN)
                 # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
                 relevant_configs = relevant_configs.head(int(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0])))
         else:
-            relevant_configs = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] < incumbent_performance]
-            relevant_configs = relevant_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN, ascending=False)
+            self.helpful_prior = False
+            relevant_configs = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] > incumbent_cost]
+            relevant_configs = relevant_configs.sort_values(COST_INDICATOR_COLUMN, ascending=False)
 
         return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
 
 class DynaBOMisleadingPriorCallback(DynaBOAbstractPriorCallback):
-    def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
-        # Select all configurations that have a worse performance than the incumbent
-        worse_performing_configs = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] < incumbent_performance]
-        worse_performing_configs = worse_performing_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN, ascending=False)
+    def sample_prior(self, smbo, incumbent_cost) -> pd.DataFrame:
+        # Select all configurations that have a higher cost than the incumbent
+        worse_performing_configs = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] > incumbent_cost]
+        worse_performing_configs = worse_performing_configs.sort_values(COST_INDICATOR_COLUMN, ascending=False)
 
         # Sample from the considered configurations
         return self.draw_sample(worse_performing_configs, smbo.intensifier._rng)
@@ -474,10 +475,10 @@ class DynaBOMisleadingPriorCallback(DynaBOAbstractPriorCallback):
 
 
 class PiBOMisleadingPriorCallback(PiBOAbstractPriorCallback):
-    def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
-        # Select all configurations that have a better performance than the incumbent
-        worse_performing_configs = self.prior_data[self.prior_data[PERFORMANCE_INDICATOR_COLUMN] < incumbent_performance]
-        worse_performing_configs = worse_performing_configs.sort_values(PERFORMANCE_INDICATOR_COLUMN, ascending=False)
+    def sample_prior(self, smbo, incumbent_cost) -> pd.DataFrame:
+        # Select all configurations that have a higher cost than the incumbent
+        worse_performing_configs = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] > incumbent_cost]
+        worse_performing_configs = worse_performing_configs.sort_values(COST_INDICATOR_COLUMN, ascending=False)
 
         # Sample from the considered configurations
         return self.draw_sample(worse_performing_configs, smbo.intensifier._rng)
@@ -485,13 +486,13 @@ class PiBOMisleadingPriorCallback(PiBOAbstractPriorCallback):
 
 class DynaBODeceivingPriorCallback(DynaBOAbstractPriorCallback):
     # Negative optimization
-    def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
+    def sample_prior(self, smbo, incumbent_cost) -> pd.DataFrame:
         raise NotImplementedError("Please implement the sample_prior method.")
 
 
 class PiBODeceivingPriorCallback(DynaBOAbstractPriorCallback):
     # TODO engative
-    def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
+    def sample_prior(self, smbo, incumbent_cost) -> pd.DataFrame:
         raise NotImplementedError("Please implement the sample_prior method.")
 
 
@@ -503,9 +504,9 @@ class PiBOTestAllPriors(PiBOAbstractPriorCallback):
     def __init__(self, prior_number: int, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.prior_number = prior_number
-        self.prior_data = self.prior_data.sort_values(PERFORMANCE_INDICATOR_COLUMN)
+        self.prior_data = self.prior_data.sort_values(COST_INDICATOR_COLUMN)
 
-    def sample_prior(self, smbo, incumbent_performance) -> pd.DataFrame:
+    def sample_prior(self, smbo, incumbent_cost) -> pd.DataFrame:
         try:
             return pd.DataFrame(self.prior_data.iloc[self.prior_number].to_dict(), index=[0])
         except IndexError:

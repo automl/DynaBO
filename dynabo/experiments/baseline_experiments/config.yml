@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table:
-      name: baseline
+      name: data_generation_pd1
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)
@@ -38,7 +38,7 @@ PY_EXPERIMENTER:
       result_timestamps: False
       resultfields:
         initial_design_size: INT
-        final_performance: FLOAT
+        final_cost: FLOAT
         runtime: FLOAT
         virtual_runtime: FLOAT 
         reasoning_runtime: FLOAT
@@ -46,7 +46,7 @@ PY_EXPERIMENTER:
         experiment_finished: BOOLEAN
     logtables:
       configs:
-        performance: FLOAT
+        cost: FLOAT
         incumbent: BOOLEAN
         configuration: TEXT
         after_n_evaluations: INT

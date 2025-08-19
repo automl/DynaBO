@@ -99,7 +99,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
     result = {
         "initial_design_size": initial_design_size,
-        "final_performance": optimization_data["final_performance"],
+        "final_cost": optimization_data["final_cost"],
         "runtime": round(end_time - start_time, 3),
         "virtual_runtime": optimization_data["virtual_runtime"],
         "reasoning_runtime": round(evaluator.reasoning_runtime, 3),
@@ -118,14 +118,14 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = True
+    fill = False
     if fill:
         fill_table(
             py_experimenter=experimenter,
             common_parameters={
                 "acquisition_function": ["expected_improvement"],
                 "timeout_total": [3600],
-                "n_trials": [50],
+                "n_trials": [5000],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
                 "seed": list(range(10)),
@@ -138,9 +138,9 @@ if __name__ == "__main__":
             approach="baseline",
             approach_parameters=None,
         )
-    reset = False
+    reset = True
     if reset:
-        experimenter.reset_experiments("running", "error")
+        experimenter.reset_experiments("error")
 
     execute = False
     if execute:
