@@ -28,10 +28,13 @@ def connect_to_database(table_name: str) -> PyExperimenter:
     return experimenter
 
 
-def save_base_table(benchmark_name: str, table_name: str):
+def save_base_table(benchmark_name: str, table_name: str, only_incumbent: bool = False):
     experimenter = connect_to_database(table_name)
     base_table = experimenter.get_table()
-    configs = experimenter.get_logtable("configs", condition="incumbent = 1")
+    if only_incumbent:
+        configs = experimenter.get_logtable("configs", condition="incumbent = 1")
+    else:
+        configs = experimenter.get_logtable("configs")
     configs = configs.drop(columns=["ID"])
     table = base_table.merge(configs, how="left", left_on=["ID"], right_on=["experiment_id"])
     path = f"benchmark_data/gt_prior_data/{benchmark_name}/origin_table.csv"
@@ -107,3 +110,10 @@ def extract_dataframe_from_column(df: pd.DataFrame) -> pd.DataFrame:
     dict_df.reset_index(drop=True)
 
     return dict_df
+
+
+def extract_dataframe_from_column_and_after_n_evaluations(df: pd.DataFrame) -> pd.DataFrame:
+    configuration_df = df["configuration"].apply(ast.literal_eval)  # safer than eval
+    configuration_df = pd.json_normalize(configuration_df)
+    configuration_df.columns = [f"config_{column}" for column in configuration_df.columns]
+    return configuration_df
