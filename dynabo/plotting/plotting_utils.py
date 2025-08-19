@@ -79,6 +79,7 @@ def filter_prior_approach(
     prior_df: pd.DataFrame,
     select_dynabo: bool,
     select_pibo: bool,
+    prior_std_denominator: int,
     prior_decay_enumerator: int,
     prior_static_position: Optional[bool],
     prior_every_n_trials: Optional[int],
@@ -90,6 +91,7 @@ def filter_prior_approach(
     assert select_dynabo ^ select_pibo
 
     incumbent_df = incumbent_df[incumbent_df["prior_decay_enumerator"] == prior_decay_enumerator]
+    incumbent_df = incumbent_df[incumbent_df["prior_std_denominator"] == prior_std_denominator]
 
     if select_dynabo:
         incumbent_df = incumbent_df[incumbent_df["dynabo"] == True]
@@ -101,27 +103,30 @@ def filter_prior_approach(
         else:
             raise NotImplementedError("No plotting implemented for non-static position")
 
+        if validate_prior:
+            if prior_validation_method == "mann_whitney_u":
+                incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "mann_whitney_u"]
+                prior_df = prior_df[prior_df["prior_validation_method"] == "mann_whitney_u"]
+
+                incumbent_df = incumbent_df[incumbent_df["prior_validation_manwhitney_p"] == prior_validation_manwhitney_p]
+                prior_df = prior_df[prior_df["prior_validation_manwhitney_p"] == prior_validation_manwhitney_p]
+
+            elif prior_validation_method == "difference":
+                incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "difference"]
+                prior_df = prior_df[prior_df["prior_validation_method"] == "difference"]
+                incumbent_df = incumbent_df[incumbent_df["prior_validation_difference_threshold"] == prior_validation_difference_threshold]
+                prior_df = prior_df[prior_df["prior_validation_difference_threshold"] == prior_validation_difference_threshold]
+
+            elif prior_validation_method == "baseline_perfect":
+                incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "baseline_perfect"]
+                prior_df = prior_df[prior_df["prior_validation_method"] == "baseline_perfect"]
+
+        else:
+            incumbent_df = incumbent_df[incumbent_df["validate_prior"] == False]
+            prior_df = prior_df[prior_df["validate_prior"] == False]
     else:  # select pibo
         incumbent_df = incumbent_df[incumbent_df["pibo"] == True]
         prior_df = prior_df[prior_df["pibo"] == True]
-
-    if validate_prior:
-        if prior_validation_method == "mann_whitney_u":
-            incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "mann_whitney_u"]
-            prior_df = prior_df[prior_df["prior_validation_method"] == "mann_whitney_u"]
-
-            incumbent_df = incumbent_df[incumbent_df["prior_validation_manwhitney_p"] == prior_validation_manwhitney_p]
-            prior_df = prior_df[prior_df["prior_validation_manwhitney_p"] == prior_validation_manwhitney_p]
-
-        elif prior_validation_method == "difference":
-            incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "difference"]
-            prior_df = prior_df[prior_df["prior_validation_method"] == "difference"]
-            incumbent_df = incumbent_df[incumbent_df["prior_validation_difference_threshold"] == prior_validation_difference_threshold]
-            prior_df = prior_df[prior_df["prior_validation_difference_threshold"] == prior_validation_difference_threshold]
-
-        elif prior_validation_method == "baseline_perfect":
-            incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "baseline_perfect"]
-            prior_df = prior_df[prior_df["prior_validation_method"] == "baseline_perfect"]
 
     return incumbent_df, prior_df
 
@@ -154,8 +159,20 @@ def plot_final_run(
     )
 
     for key, df in config_dict.items():
-        color = style_dict[key]["color"]
-        sns.lineplot(x="after_n_evaluations", y="regret", drawstyle="steps-pre", data=df, label=key, ax=ax, errorbar=error_bar_type, color=color)
+        sns.lineplot(
+            x="after_n_evaluations",
+            y="regret",
+            drawstyle="steps-pre",
+            data=df,
+            label=key,
+            ax=ax,
+            errorbar=error_bar_type,
+            color=style_dict[key]["color"],
+            linestyle=style_dict[key]["linestyle"],
+            marker=style_dict[key]["marker"],
+            markersize=8,
+            markevery=5,
+        )
 
     if benchmarklib == "yahpogym":
         # check smallest regret after 50 trials
