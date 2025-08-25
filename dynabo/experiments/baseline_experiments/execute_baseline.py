@@ -6,6 +6,8 @@ from smac import HyperparameterOptimizationFacade, RandomFacade, Scenario
 from smac.acquisition.maximizer import LocalAndSortedRandomSearch
 from smac.main.config_selector import ConfigSelector
 
+from ConfigSpace import Constant, ConfigurationSpace
+
 from dynabo.smac_additions.dynamic_prior_callback import LogIncumbentCallback
 from dynabo.utils.cluster_utils import initialise_experiments
 from dynabo.utils.configuration_data_classes import (
@@ -18,6 +20,7 @@ from dynabo.utils.evaluator import MFPBenchEvaluator, YAHPOGymEvaluator, ask_tel
 EXP_CONFIG_FILE_PATH = "dynabo/experiments/baseline_experiments/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
+only_two_hyperparameters = True
 
 def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: dict):
     # Extract all configurations
@@ -41,6 +44,32 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         )
 
     configuration_space = evaluator.get_configuration_space()
+    
+    if only_two_hyperparameters:
+        # Remove opt_momentum and lr_power from configuration space
+        learning_rate = configuration_space.get("lr_initial")
+        lr_decay_factor = configuration_space.get("lr_decay_factor")
+        # Add opt_momentum and lr_power as static hyperparameters
+        if benchmark_cfg.scenario == "cifar100_wideresnet_2048":
+            lr_power = 0.1520241567779
+            opt_momentum = 0.9516762484947
+        elif benchmark_cfg.scenario == "imagenet_resnet_512":
+            lr_power = 1.696464843003
+            opt_momentum = 0.9106070776233
+        elif benchmark_cfg.scenario == "lm1b_transformer_2048":
+            lr_power = 0.8995646537353
+            opt_momentum = 0.9980083177484
+        elif benchmark_cfg.scenario == "translatewmt_xformer_64":
+            lr_power = 0.1249360373907
+            opt_momentum = 0.9943414718914
+        else:
+            raise ValueError(f"Scenario {benchmark_cfg.scenario} not found")
+
+        new_configuration_space = ConfigurationSpace()
+        new_configuration_space.add(learning_rate)
+        new_configuration_space.add(lr_decay_factor)
+        new_configuration_space.add(Constant("opt_momentum", opt_momentum))
+        new_configuration_space.add(Constant("lr_power", lr_power))
 
     smac_scenario = Scenario(configspace=configuration_space, deterministic=True, seed=smac_cfg.seed, n_trials=smac_cfg.n_trials)
 
@@ -118,7 +147,7 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = True
+    fill = False
     if fill:
         fill_table(
             py_experimenter=experimenter,
@@ -140,8 +169,8 @@ if __name__ == "__main__":
         )
     reset = False
     if reset:
-        experimenter.reset_experiments("error")
+        experimenter.reset_experiments("error", "running")
 
-    execute = False
+    execute = True
     if execute:
         experimenter.execute(run_experiment, max_experiments=1, random_order=True)
