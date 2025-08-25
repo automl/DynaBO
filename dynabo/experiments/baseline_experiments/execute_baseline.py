@@ -57,7 +57,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
         initial_design = HyperparameterOptimizationFacade.get_initial_design(scenario=smac_scenario, n_configs=initial_design_size)
 
-        acquisition_function = HyperparameterOptimizationFacade.get_acquisition_function(scenario=smac_scenario)
+        acquisition_function = smac_cfg.get_acquisition_function()
 
         local_and_prior_search = LocalAndSortedRandomSearch(
             configspace=configuration_space,
@@ -118,12 +118,12 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = False
+    fill = True
     if fill:
         fill_table(
             py_experimenter=experimenter,
             common_parameters={
-                "acquisition_function": ["expected_improvement"],
+                "acquisition_function": ["confidence_bound"],
                 "timeout_total": [3600],
                 "n_trials": [5000],
                 "initial_design__n_configs_per_hyperparameter": [10],
@@ -138,7 +138,7 @@ if __name__ == "__main__":
             approach="baseline",
             approach_parameters=None,
         )
-    reset = True
+    reset = False
     if reset:
         experimenter.reset_experiments("error")
 

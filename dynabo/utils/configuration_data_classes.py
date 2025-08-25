@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Literal, Optional
 
+from smac.acquisition.function import EI, LCB, AbstractAcquisitionFunction
+
 
 class PriorKind(str, Enum):
     GOOD = "good"
@@ -41,6 +43,7 @@ class SMACConfig:
     timeout: int
     seed: int
     n_trials: int
+    acquisition_function: str
 
     def __post_init__(self):
         if self.timeout <= 0:
@@ -51,7 +54,15 @@ class SMACConfig:
     @classmethod
     def from_config(cls, config: dict) -> "SMACConfig":
         """Extract SMAC base configuration."""
-        return cls(timeout=int(config["timeout_total"]), seed=int(config["seed"]), n_trials=int(config["n_trials"]))
+        return cls(timeout=int(config["timeout_total"]), seed=int(config["seed"]), n_trials=int(config["n_trials"]), acquisition_function=config["acquisition_function"])
+
+    def get_acquisition_function(self) -> AbstractAcquisitionFunction:
+        if self.acquisition_function == "expected_improvement":
+            return EI()
+        elif self.acquisition_function == "confidence_bound":
+            return LCB()
+        else:
+            raise ValueError(f"Unsupported acquisition function: {self.acquisition_function}")
 
 
 @dataclass
