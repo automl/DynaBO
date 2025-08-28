@@ -32,13 +32,28 @@ def load_cost_data_mfpbench():
 def plot_final_results_mfpbench():
     baseline_config_df, prior_config_df, prior_prior_df = load_cost_data_mfpbench()
 
+    accept_all_priors_configs_10, accept_all_priors_priors_10 = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=25,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=False,
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+    )
+
     accept_all_priors_configs_25, accept_all_priors_priors_25 = filter_prior_approach(
         incumbent_df=prior_config_df,
         prior_df=prior_prior_df,
         select_dynabo=True,
         select_pibo=False,
         prior_decay_enumerator=25,
-        prior_std_denominator=1000,
+        prior_std_denominator=5,
         prior_static_position=True,
         prior_every_n_trials=10,
         validate_prior=False,
@@ -53,11 +68,26 @@ def plot_final_results_mfpbench():
         select_dynabo=True,
         select_pibo=False,
         prior_decay_enumerator=50,
-        prior_std_denominator=1000,
+        prior_std_denominator=5,
         prior_static_position=True,
         prior_every_n_trials=10,
         validate_prior=False,
         prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+    )
+
+    baseline_perfect_incumbent_df_decay_10, baseline_perfect_prior_df_decay_10 = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=10,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=True,
+        prior_validation_method="baseline_perfect",
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=None,
     )
@@ -68,7 +98,7 @@ def plot_final_results_mfpbench():
         select_dynabo=True,
         select_pibo=False,
         prior_decay_enumerator=25,
-        prior_std_denominator=1000,
+        prior_std_denominator=5,
         prior_static_position=True,
         prior_every_n_trials=10,
         validate_prior=True,
@@ -83,7 +113,7 @@ def plot_final_results_mfpbench():
         select_dynabo=True,
         select_pibo=False,
         prior_decay_enumerator=50,
-        prior_std_denominator=1000,
+        prior_std_denominator=5,
         prior_static_position=True,
         prior_every_n_trials=10,
         validate_prior=True,
@@ -92,13 +122,27 @@ def plot_final_results_mfpbench():
         prior_validation_difference_threshold=None,
     )
 
+    threshold_incumbent_df_decay_10, threshold_prior_df_decay_10 = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=10,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=True,
+        prior_validation_method="difference",
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=-1,
+    )
     threshold_incumbent_df_decay_25, threshold_prior_df_decay_25 = filter_prior_approach(
         incumbent_df=prior_config_df,
         prior_df=prior_prior_df,
         select_dynabo=True,
         select_pibo=False,
         prior_decay_enumerator=25,
-        prior_std_denominator=1000,
+        prior_std_denominator=5,
         prior_static_position=True,
         prior_every_n_trials=10,
         validate_prior=True,
@@ -113,7 +157,7 @@ def plot_final_results_mfpbench():
         select_dynabo=True,
         select_pibo=False,
         prior_decay_enumerator=50,
-        prior_std_denominator=1000,
+        prior_std_denominator=5,
         prior_static_position=True,
         prior_every_n_trials=10,
         validate_prior=True,
@@ -128,7 +172,7 @@ def plot_final_results_mfpbench():
         select_dynabo=False,
         select_pibo=True,
         prior_decay_enumerator=50,
-        prior_std_denominator=1000,
+        prior_std_denominator=5,
         prior_static_position=None,
         prior_every_n_trials=None,
         validate_prior=None,
@@ -139,33 +183,24 @@ def plot_final_results_mfpbench():
 
     config_dict = {
         "Vanilla BO": baseline_config_df,
-        "DynaBO, accept all priors, decay 25": accept_all_priors_configs_25,
         "DynaBO, accept all priors, decay 50": accept_all_priors_configs_50,
         r"$\pi$BO": pibo_incumbent_df,
-        "DynaBO, perfect validation, decay 25": baseline_perfect_incumbent_df_decay_25,
         "DynaBO, perfect validation, decay 50": baseline_perfect_incumbent_df_decay_50,
-        "DynaBO, threshold validation, decay 25": threshold_incumbent_df_decay_25,
         "DynaBO, threshold validation, decay 50": threshold_incumbent_df_decay_50,
     }
     prior_dict = {
-        "DynaBO, accept all priors, decay 25": accept_all_priors_priors_25,
         "DynaBO, accept all priors, decay 50": accept_all_priors_priors_50,
         r"$\pi$BO": pibo_prior_df,
-        "DynaBO, perfect validation, decay 25": baseline_perfect_prior_df_decay_25,
         "DynaBO, perfect validation, decay 50": baseline_perfect_prior_df_decay_50,
-        "DynaBO, threshold validation, decay 25": threshold_prior_df_decay_25,
         "DynaBO, threshold validation, decay 50": threshold_prior_df_decay_50,
     }
 
     style_dict = {
         "Vanilla BO": {"color": "#000000", "marker": "o", "linestyle": (0, ())},  # Black, solid
-        "DynaBO, accept all priors, decay 25": {"color": "#E69F00", "marker": "s", "linestyle": (0, (5, 1))},  # Orange, densely dashed
-        "DynaBO, accept all priors, decay 50": {"color": "#56B4E9", "marker": "s", "linestyle": (0, (1, 1))},  # Sky Blue, densely dotted
+        "DynaBO, accept all priors, decay 50": {"color": "#E69F00", "marker": "s", "linestyle": (0, (1, 1))},  # Sky Blue, densely dotted
         r"$\pi$BO": {"color": "#009E73", "marker": "d", "linestyle": (0, (3, 5, 1, 5))},  # Green, dash-dot
-        "DynaBO, perfect validation, decay 25": {"color": "#F0E442", "marker": "s", "linestyle": (0, (3, 1, 1, 1))},  # Yellow, densely dash-dot
-        "DynaBO, perfect validation, decay 50": {"color": "#0072B2", "marker": "s", "linestyle": (0, (3, 1, 1, 1, 1, 1))},  # Blue, dash-dot-dot
-        "DynaBO, threshold validation, decay 25": {"color": "#D55E00", "marker": "v", "linestyle": (0, (5, 5))},  # Red-Orange, medium dashed
-        "DynaBO, threshold validation, decay 50": {"color": "#CC79A7", "marker": "v", "linestyle": (0, (5, 1, 1, 1))},  # Pink, dash-dot dense
+        "DynaBO, perfect validation, decay 50": {"color": "#F0E442", "marker": "s", "linestyle": (0, (1, 1))},  # Blue, dash-dot-dot
+        "DynaBO, threshold validation, decay 50": {"color": "#D55E00", "marker": "v", "linestyle": (0, (1, 1))},  # Pink, dash-dot dense
     }
 
     # style_dict = {
@@ -192,7 +227,7 @@ def plot_final_results_mfpbench():
         scenarios=baseline_config_df["scenario"].unique(),
         benchmarklib="mfpbench",
         base_path="plots/prior_rejection_ablation",
-        ncol=len(style_dict),
+        ncol=4,
     )
     create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchnmarklib="mfpbench", base_path="plots/prior_rejection_ablation", ncol=len(style_dict))
 

@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table: 
-      name: prior_experiments
+      name: clustered_priors_experiments
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)

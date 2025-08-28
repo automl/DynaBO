@@ -140,7 +140,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         scenario=evaluator.scenario,
         dataset=evaluator.dataset,
         metric=benchmark_cfg.metric,
-        base_path="benchmark_data/prior_data",
+        base_path="benchmark_data/prior_data/",
         initial_design_size=initial_design._n_configs,
         validate_prior=prior_validation_cfg.validate,
         prior_validation_method=prior_validation_cfg.method,
@@ -217,7 +217,7 @@ if __name__ == "__main__":
             approach="pibo",
             approach_parameters={
                 # Prior configurationz
-                "prior_kind_choices": ["good", "medium", "misleading"],
+                "prior_kind_choices": ["good", "medium", "misleading", "deceiving"],
                 "no_incumbent_percentile": 0.01,
                 "prior_std_denominator": 5,
                 # Dynabo when prior
@@ -226,10 +226,10 @@ if __name__ == "__main__":
                 "prior_at_start_choices": [True, False],
                 "prior_chance_theta_choices": [0.01, 0.015],
                 # Decay parameters
-                "prior_decay_enumerator_choices": [50],
+                "prior_decay_enumerator_choices": [50,],
                 "prior_decay_denominator": 10,
                 # Validation parameters
-                "validate_prior_choices": [True],
+                "validate_prior_choices": [True, False],
                 "prior_validation_method_choices": ["baseline_perfect", "difference"],
                 "n_prior_validation_samples": 500,
                 "prior_validation_manwhitney_p_choices": [0.05],
@@ -241,4 +241,4 @@ if __name__ == "__main__":
         experimenter.reset_experiments("running", "error")
     execute = True
     if execute:
-        experimenter.execute(run_experiment, max_experiments=3, random_order=True)
+        experimenter.execute(run_experiment, max_experiments=1, random_order=True)

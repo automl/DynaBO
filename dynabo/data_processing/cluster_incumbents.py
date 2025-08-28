@@ -7,17 +7,43 @@ from gower import gower_matrix
 from dynabo.utils.data_utils import extract_dataframe_from_column_and_after_n_evaluations, load_df, save_base_table
 
 
-def execute_clustering(benchmark_name: str, table_name: str, only_incumbent: bool, use_pca: bool ):
-    scenario_dfs = prepare_data(benchmark_name, table_name, only_incumbent)
+def execute_clustering_mfpbench(benchmark_name: str, table_name: str ):
+    scenario_dfs = prepare_data(benchmark_name, table_name, only_incumbent = False)
     for scenario, df in scenario_dfs.items():
-        print(scenario)
-        cluster_incumbents(df, scenario, use_pca=use_pca)
+        # Use DBSCAN to cluster the data
+        labels_agg = create_clusters(df, scenario)
+
+        save_clusters(labels_agg, scenario, df)
+
+        # Make first axis bigger
+        fig, axes = plt.subplots(1, 3, figsize=(18, 9), gridspec_kw={'width_ratios': [2, 1, 1], 'wspace': 0.4})
+        
+        create_cluster_plot(df, fig, axes[0], labels_agg, 10, 300)
+
+        size_ax    = axes[1]
+        create_cluster_size_plot(labels_agg, size_ax)
+
+        cost_ax    = axes[2]
+        create_cost_plot(df, cost_ax, labels_agg)
+
+        fig.suptitle(f"{scenario}")
+
+        plt.savefig(f"plots/prior_clustering/hierachical_clustering_{scenario}.png", bbox_inches="tight")
+        plt.close()
+
 
 
 def prepare_data(benchmark_name: str, table_name: str, only_incumbent: bool = False):
     def extract_relevant_data(base_df: pd.DataFrame, scenario: str):
         scenario_df = base_df[base_df.scenario == scenario]
+        
+        incumbents = scenario_df[scenario_df["incumbent"] == True]
+        # Sample from the initial design
+        non_incumbents = scenario_df[(scenario_df["incumbent"] == False) & (scenario_df["after_n_evaluations"] <= 100)].sample(len(incumbents))
+        scenario_df = pd.concat([incumbents, non_incumbents])
+        
         costs = scenario_df[["cost"]].reset_index(drop=True)
+        
         config_df = extract_dataframe_from_column_and_after_n_evaluations(scenario_df[["configuration"]])
         scenario_df = config_df.join(costs, how="left")
         return scenario_df
@@ -27,43 +53,55 @@ def prepare_data(benchmark_name: str, table_name: str, only_incumbent: bool = Fa
 
     scenario_dfs = {}
     for scenario in base_df.scenario.unique():
-        scenario_dfs[scenario] = extract_relevant_data(base_df, scenario)
+        local_df = extract_relevant_data(base_df, scenario)
+        scenario_dfs[scenario] = local_df
 
     return scenario_dfs
 
 
-def cluster_incumbents(df: pd.DataFrame, scenario: str, use_pca: bool):
-    # Use DBSCAN to cluster the data
+def create_clusters(df: pd.DataFrame, scenario: str):
     cluster_df = df.copy()
     cluster_df = cluster_df.drop(columns=["cost"])
 
     distance_matrix = gower_matrix(cluster_df) 
     
     agg = AgglomerativeClustering(
-        n_clusters=20,
-        linkage="average"
+        n_clusters=100,
     )
-    labels_agg = agg.fit_predict(distance_matrix)
+    initial_labels = agg.fit_predict(distance_matrix)
+    
+    # Calculate average cost for each cluster
+    avg_costs = df.groupby(initial_labels)["cost"].mean()
+    
+    # Create mapping from old to new labels based on sorted costs
+    label_mapping = dict(zip(avg_costs.sort_values().index, range(len(avg_costs))))
+    
+    # Apply the mapping to get new labels
+    labels_agg = pd.Series(initial_labels).map(label_mapping).values
+    
+    return labels_agg
 
-    if use_pca:
-        pca = PCA(n_components=2)
-        reduced_data = pca.fit_transform(df)
-    else:
-        df = df.drop(columns=["config_lr_power" , "config_opt_momentum"])
-        reduced_data = df.to_numpy()
+def save_clusters(labels_agg, scenario: str, df: pd.DataFrame):
+    df["cluster"] = labels_agg
 
-    min_size = 10
-    max_size = 300
+    # Sort by cluster
+    df = df.sort_values(by="cluster")
 
+    # Save to csv
+    df.to_csv(f"benchmark_data/prior_data/mfpbench/cluster/{scenario}.csv", index=False)
+
+def create_cluster_plot(df: pd.DataFrame, fig, cluster_ax, labels_agg, min_size, max_size):
     normalized_cost = (df["cost"] - df["cost"].min()) / (df["cost"].max() - df["cost"].min())
     sizes = (1 - normalized_cost) * (max_size - min_size) + min_size
-
-    # --- Plotting Results ---
-    fig = plt.figure(figsize=(12, 9))
-    ax = fig.add_subplot(111, projection="3d")
-
-    # 1. Capture the scatter plot object
-    scatter = ax.scatter(
+    
+    df = df.drop(columns=["config_lr_power" , "config_opt_momentum"])
+    reduced_data = df.to_numpy()
+    
+    cluster_ax.remove()
+    cluster_ax = fig.add_subplot(1, 3, 1, projection="3d")
+        
+    # Capture the scatter plot object
+    scatter = cluster_ax.scatter(
         reduced_data[:, 0],
         reduced_data[:, 1],
         df["cost"] * -1,  # Using positive cost for a more intuitive Z-axis
@@ -72,24 +110,59 @@ def cluster_incumbents(df: pd.DataFrame, scenario: str, use_pca: bool):
         s=sizes,
     )
 
-    # 2. Create the legend from the scatter object
-    legend1 = ax.legend(*scatter.legend_elements(), title="Clusters")
-    ax.add_artist(legend1)
+    # Set labels
+    cluster_ax.set_xlabel(df.columns[0])
+    cluster_ax.set_ylabel(df.columns[1])
+    cluster_ax.set_zlabel("Cost")
+
+    # Rotate learning rate axis
+    cluster_ax.view_init(elev=10, azim=135)
 
     # Set titles and labels
-    ax.set_title("DBSCAN Clustering")
-    if use_pca:
-        ax.set_xlabel("Dimension 1")
-        ax.set_ylabel("Dimension 2")
-    else:
-        ax.set_xlabel(df.columns[0])
-        ax.set_ylabel(df.columns[1])
-    ax.set_zlabel("Cost")
+    cluster_ax.set_title("Hierachical Clustering")
 
-    plt.savefig(f"dbscan_clustering_{scenario}.png")
-    plt.close()
-    print(f"Plot saved to dbscan_clustering_{scenario}.png")
+def create_cluster_size_plot(labels_agg, size_ax):
+    cluster_sizes = pd.Series(labels_agg).value_counts()
+    unique_labels = sorted(set(labels_agg))
+    colors = [plt.cm.viridis(i / len(unique_labels)) for i in unique_labels]
+    
+    # Create color mapping
+    color_dict = dict(zip(unique_labels, colors))
+    
+    # Plot bars in order of cluster number
+    for cluster in sorted(cluster_sizes.index):
+        size_ax.barh(cluster, cluster_sizes[cluster], color=color_dict[cluster])
+
+    size_ax.set_title("Cluster Size")
+    size_ax.set_xlabel("Size")
+    size_ax.set_ylabel("Cluster")
+
+def create_cost_plot(df, cost_ax, labels_agg):
+    # Prepare data for boxplot
+    costs_by_cluster = [df[labels_agg == i]["cost"].values for i in range(len(set(labels_agg)))]
+    unique_labels = sorted(set(labels_agg))
+    colors = [plt.cm.viridis(i / len(unique_labels)) for i in unique_labels]
+    
+    # Create horizontal boxplot
+    bp = cost_ax.boxplot(costs_by_cluster, 
+                        vert=False,  # Make boxes horizontal
+                        patch_artist=True,  # Fill boxes with color
+                        medianprops=dict(color="white"),  # Make median lines white
+                        flierprops=dict(marker='o', markerfacecolor='white', markersize=4),  # Outlier style
+                        positions=range(len(unique_labels)))  # Position boxes at cluster numbers
+    
+    # Color the boxes according to the cluster colors
+    for box, color in zip(bp['boxes'], colors):
+        box.set_facecolor(color)
+        box.set_alpha(0.7)
+
+    cost_ax.set_title("Cost Distribution per Cluster")
+    cost_ax.set_xlabel("Cost")
+    cost_ax.set_ylabel("Cluster")
+    
+    # Set y-axis limits to show all clusters
+    cost_ax.set_ylim(-1, len(unique_labels))
 
 
 if __name__ == "__main__":
-    execute_clustering(benchmark_name="mfpbench", table_name="data_generation_pd1", only_incumbent=True, use_pca=False)
+    execute_clustering_mfpbench(benchmark_name="mfpbench", table_name="data_generation_pd1")
