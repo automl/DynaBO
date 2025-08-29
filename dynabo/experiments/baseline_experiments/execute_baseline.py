@@ -20,7 +20,7 @@ from dynabo.utils.evaluator import MFPBenchEvaluator, YAHPOGymEvaluator, ask_tel
 EXP_CONFIG_FILE_PATH = "dynabo/experiments/baseline_experiments/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
-only_two_hyperparameters = True
+only_two_hyperparameters = False
 
 def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: dict):
     # Extract all configurations
@@ -152,12 +152,12 @@ if __name__ == "__main__":
         fill_table(
             py_experimenter=experimenter,
             common_parameters={
-                "acquisition_function": ["confidence_bound"],
+                "acquisition_function": ["expected_improvement"],
                 "timeout_total": [3600],
-                "n_trials": [5000],
+                "n_trials": [50],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
-                "seed": list(range(10)),
+                "seed": list(range(30)),
             },
             benchmarklib=benchmarklib,
             benchmark_parameters={

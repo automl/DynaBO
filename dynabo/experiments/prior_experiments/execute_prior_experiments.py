@@ -1,6 +1,7 @@
 import time
 from functools import partial
 
+from numpy import True_
 from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
 from smac import HyperparameterOptimizationFacade, Scenario
@@ -207,14 +208,14 @@ if __name__ == "__main__":
                 "n_trials": [50],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
-                "seed": list(range(10)),
+                "seed": list(range(30)),
             },
             benchmarklib=benchmarklib,
             benchmark_parameters={
                 "with_all_datasets": False,
                 "medium_and_hard": True,
             },
-            approach="pibo",
+            approach="dynabo",
             approach_parameters={
                 # Prior configurationz
                 "prior_kind_choices": ["good", "medium", "misleading", "deceiving"],

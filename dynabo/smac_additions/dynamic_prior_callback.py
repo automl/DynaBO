@@ -248,6 +248,12 @@ class AbstractPriorCallback(Callback, ABC):
         Samples a prior from the prior data.
         """
 
+    def _sample_cluster(self, min_cluster, max_cluster, decay):
+        vals = np.arange(min_cluster, max_cluster)
+        probs = np.exp(-decay * (vals - min_cluster))
+        probs /= probs.sum()
+        return np.random.choice(vals, p=probs[::-1])
+
     def log_prior(self, smbo: SMBO, cost: float, config: Dict, prior_accepted: bool, prior_mean_acq_value: float, origin_mean_acq_value: float, superior_configuration: bool):
         """
         Logs the prior data.
@@ -349,16 +355,22 @@ class PiBOAbstractPriorCallback(AbstractPriorCallback):
         return True
 
 class WellPerformingPriorCallback(AbstractPriorCallback):
-    relevant_cluster_lower_bound = 0
-    relevant_cluster_upper_bound = 0.1
-
     def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
-        # Select only the prior data in clusters between relevant_cluster_lower_bound and relevant_cluster_upper_bound
-        relevant_clusters = self.prior_data[self.prior_data["cluster"].between(self.relevant_cluster_lower_bound * self.prior_data["cluster"].max(), self.relevant_cluster_upper_bound * self.prior_data["cluster"].max())]["cluster"].unique()
-        cluster = smbo.intensifier._rng.choice(relevant_clusters)
+        # Locate current cost in the prior data column median_cost
+        relevant_configs = self.prior_data[self.prior_data["median_cost"] <= incumbent_cost]
+
+        min_cluster = relevant_configs["cluster"].min()
+        max_cluster = relevant_configs["cluster"].max()
+
+        if min_cluster == max_cluster:
+            cluster = min_cluster
+        else:
+            cluster = self._sample_cluster(min_cluster, max_cluster, 0.1)
+
         # Select lowest cost configuration in the cluster
-        relevant_configs = self.prior_data[self.prior_data["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)[:1]
+        relevant_configs = relevant_configs[relevant_configs["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)[:1]
         return relevant_configs
+
 
 class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback, WellPerformingPriorCallback):
 
@@ -387,15 +399,20 @@ class PiBOWellPerformingPriorCallback(PiBOAbstractPriorCallback, WellPerformingP
         self.no_incumbent_percentile = no_incumbent_percentile
 
 class MediumPerformingPriorCallback(AbstractPriorCallback):
-    relevant_cluster_lower_bound = 0.1
-    relevant_cluster_upper_bound = 0.5
-
     def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
-        # Select only the prior data in clusters between relevant_cluster_lower_bound and relevant_cluster_upper_bound
-        relevant_clusters = self.prior_data[self.prior_data["cluster"].between(self.relevant_cluster_lower_bound * self.prior_data["cluster"].max(), self.relevant_cluster_upper_bound * self.prior_data["cluster"].max())]["cluster"].unique()
-        cluster = smbo.intensifier._rng.choice(relevant_clusters)
+        # Locate current cost in the prior data column median_cost
+        relevant_configs = self.prior_data[self.prior_data["median_cost"] <= incumbent_cost]
+
+        min_cluster = relevant_configs["cluster"].min()
+        max_cluster = relevant_configs["cluster"].max()
+
+        if min_cluster == max_cluster:
+            cluster = min_cluster
+        else:
+            cluster = self._sample_cluster(min_cluster, max_cluster, 0.15)
+
         # Select lowest cost configuration in the cluster
-        relevant_configs = self.prior_data[self.prior_data["cluster"] == cluster]
+        relevant_configs = relevant_configs[relevant_configs["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)
         return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
 class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback, MediumPerformingPriorCallback):
@@ -413,6 +430,17 @@ class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback, MediumPerformingPri
     def _accept_prior_baseline_perfect(self) -> bool:
         return self.helpful_prior
 
+    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
+        prior = super().sample_prior(smbo, incumbent_cost)
+        prior_cost = prior[COST_INDICATOR_COLUMN].values[0]
+
+        if prior_cost < incumbent_cost:
+            self.helpful_prior = True
+        else:
+            self.helpful_prior = False
+
+        return prior
+
 
 class PiBOMediumPriorCallback(PiBOAbstractPriorCallback, MediumPerformingPriorCallback):
     def __init__(
@@ -425,20 +453,47 @@ class PiBOMediumPriorCallback(PiBOAbstractPriorCallback, MediumPerformingPriorCa
         self.no_incumbent_percentile = no_incumbent_percentile
 
 class MisleadingPriorCallback(AbstractPriorCallback):
-    relevant_cluster_lower_bound = 0.5
-    relevant_cluster_upper_bound = 0.9
-
     def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
-        # Select only the prior data in clusters between relevant_cluster_lower_bound and relevant_cluster_upper_bound
-        relevant_clusters = self.prior_data[self.prior_data["cluster"].between(self.relevant_cluster_lower_bound * self.prior_data["cluster"].max(), self.relevant_cluster_upper_bound * self.prior_data["cluster"].max())]["cluster"].unique()
-        cluster = smbo.intensifier._rng.choice(relevant_clusters)
-        # Select lowest cost configuration in the cluster
-        relevant_configs = self.prior_data[self.prior_data["cluster"] == cluster]
+        better_configs = self.prior_data[self.prior_data["median_cost"] < incumbent_cost].sort_values(COST_INDICATOR_COLUMN)
+        worse_configs = self.prior_data[self.prior_data["median_cost"] >= incumbent_cost].sort_values(COST_INDICATOR_COLUMN)
+
+        better_cluster = better_configs["cluster"].max()
+        worse_cluster = worse_configs["cluster"].min()
+        
+        min_cluster = max(0, better_cluster-10)
+        max_cluster = min(100, worse_cluster+10)
+
+
+        if smbo.intensifier._rng.random() < 0.5:
+            cluster = self._sample_cluster(min_cluster, better_cluster, 0.1)
+        else:
+            cluster = self._sample_cluster(worse_cluster, max_cluster, 0.1)
+
+        relevant_configs = self.prior_data[self.prior_data["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)
         return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
 class DynaBOMisleadingPriorCallback(DynaBOAbstractPriorCallback, MisleadingPriorCallback):
+    def __init__(
+            self,
+            *args,
+            **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.helpful_prior = None
+
     def _accept_prior_baseline_perfect(self) -> bool:
-        return False
+        return self.helpful_prior
+
+    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
+        prior = super().sample_prior(smbo, incumbent_cost)
+        prior_cost = prior[COST_INDICATOR_COLUMN].values[0]
+
+        if prior_cost < incumbent_cost:
+            self.helpful_prior = True
+        else:
+            self.helpful_prior = False
+
+        return prior
 
 
 class PiBOMisleadingPriorCallback(PiBOAbstractPriorCallback, MisleadingPriorCallback):
@@ -446,7 +501,7 @@ class PiBOMisleadingPriorCallback(PiBOAbstractPriorCallback, MisleadingPriorCall
 
 
 class DeceivingPriorCallback(AbstractPriorCallback):
-    relevant_cluster_lower_bound = 0.9
+    relevant_cluster_lower_bound = 0.95
     relevant_cluster_upper_bound = 1
 
     def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:

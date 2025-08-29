@@ -11,7 +11,7 @@ def execute_clustering_mfpbench(benchmark_name: str, table_name: str ):
     scenario_dfs = prepare_data(benchmark_name, table_name, only_incumbent = False)
     for scenario, df in scenario_dfs.items():
         # Use DBSCAN to cluster the data
-        labels_agg = create_clusters(df, scenario)
+        labels_agg, df = create_clusters(df, scenario)
 
         save_clusters(labels_agg, scenario, df)
 
@@ -71,15 +71,18 @@ def create_clusters(df: pd.DataFrame, scenario: str):
     initial_labels = agg.fit_predict(distance_matrix)
     
     # Calculate average cost for each cluster
-    avg_costs = df.groupby(initial_labels)["cost"].mean()
+    avg_costs = df.groupby(initial_labels)["cost"].median()
     
     # Create mapping from old to new labels based on sorted costs
     label_mapping = dict(zip(avg_costs.sort_values().index, range(len(avg_costs))))
     
     # Apply the mapping to get new labels
     labels_agg = pd.Series(initial_labels).map(label_mapping).values
+
+    # Add the median cost to df
+    df["median_cost"] = df["cost"].groupby(initial_labels).transform("median")
     
-    return labels_agg
+    return labels_agg, df
 
 def save_clusters(labels_agg, scenario: str, df: pd.DataFrame):
     df["cluster"] = labels_agg
