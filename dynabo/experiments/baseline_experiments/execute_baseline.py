@@ -22,6 +22,7 @@ DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
 only_two_hyperparameters = False
 
+
 def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: dict):
     # Extract all configurations
     benchmark_cfg = BenchmarkConfig.from_config(config)
@@ -44,7 +45,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         )
 
     configuration_space = evaluator.get_configuration_space()
-    
+
     if only_two_hyperparameters:
         # Remove opt_momentum and lr_power from configuration space
         learning_rate = configuration_space.get("lr_initial")
@@ -93,7 +94,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             acquisition_function=acquisition_function,
             max_steps=500,  # TODO wie viele local search steps sind reasonable?
         )
-        config_selector = ConfigSelector(scenario=smac_scenario, retries=100)
+        config_selector = ConfigSelector(scenario=smac_scenario, retries=100, retrain_after=1)
 
         intensifier = HyperparameterOptimizationFacade.get_intensifier(
             scenario=smac_scenario,

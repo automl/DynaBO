@@ -1,7 +1,6 @@
 import time
 from functools import partial
 
-from numpy import True_
 from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
 from smac import HyperparameterOptimizationFacade, Scenario
@@ -80,7 +79,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         acquisition_function=acquisition_function,
         max_steps=500,  # TODO wie viele local search steps sind reasonable?
     )
-    config_selector = ConfigSelector(scenario=smac_scenario, retries=100)
+    config_selector = ConfigSelector(scenario=smac_scenario, retries=100, retrain_after=1)
 
     intensifier = HyperparameterOptimizationFacade.get_intensifier(
         scenario=smac_scenario,
@@ -227,7 +226,9 @@ if __name__ == "__main__":
                 "prior_at_start_choices": [True, False],
                 "prior_chance_theta_choices": [0.01, 0.015],
                 # Decay parameters
-                "prior_decay_enumerator_choices": [50,],
+                "prior_decay_enumerator_choices": [
+                    50,
+                ],
                 "prior_decay_denominator": 10,
                 # Validation parameters
                 "validate_prior_choices": [True, False],

@@ -23,6 +23,7 @@ dependencies = [
     "dynabo",
     "mf-prior-bench[pd1]>=1.10.0",
     "gower>=0.1.2",
+    "ipykernel>=6.29.5",
 ]
 
 [tool.hatch.metadata]
