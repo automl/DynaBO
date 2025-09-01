@@ -272,6 +272,7 @@ def fill_table(
             # Validation parameters
             validate_prior_choices=approach_parameters["validate_prior_choices"],
             n_prior_validation_samples=approach_parameters["n_prior_validation_samples"],
+            n_prior_based_samples=approach_parameters["n_prior_based_samples"],
             prior_validation_method_choices=approach_parameters["prior_validation_method_choices"],
             prior_validation_manwhitney_p_choices=approach_parameters["prior_validation_manwhitney_p_choices"],
             prior_validation_difference_threshold_choices=approach_parameters["prior_validation_difference_threshold_choices"],
@@ -430,6 +431,7 @@ def get_pibo_dict(
             "validate_prior": None,
             "prior_validation_method": None,
             "n_prior_validation_samples": None,
+            "n_prior_based_samples": None,
             "prior_validation_manwhitney_p": None,
             "prior_validation_difference_threshold": None,
         }
@@ -451,6 +453,7 @@ def get_dynabo_dict(
     validate_prior_choices: List[bool],
     prior_validation_method_choices: List[str],
     n_prior_validation_samples: List[int],
+    n_prior_based_samples: List[int],
     prior_validation_manwhitney_p_choices: List[float],
     prior_validation_difference_threshold_choices: List[float],
 ) -> List[Dict[str, Any]]:
@@ -464,6 +467,7 @@ def get_dynabo_dict(
         validate_prior_choices: Whether to validate priors
         prior_validation_method_choices: Validation methods to use
         n_prior_validation_samples: Number of samples for validation
+        n_prior_based_samples: Number of trials samples for prior validation
         prior_validation_manwhitney_p_choices: P-values for Mann-Whitney test
         prior_validation_difference_threshold_choices: Thresholds for difference test
 
@@ -561,6 +565,7 @@ def get_dynabo_dict(
                 config = deepcopy(base_config)
                 config["prior_validation_method"] = None
                 config["n_prior_validation_samples"] = None
+                config["n_prior_based_samples"] = None
                 config["prior_validation_manwhitney_p"] = None
                 config["prior_validation_difference_threshold"] = None
                 final_configs.append(config)
@@ -568,43 +573,45 @@ def get_dynabo_dict(
 
             for validation_method in prior_validation_method_choices:
                 if validation_method == "mann_whitney_u":
-                    for config in _add_mann_whitney_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples):
+                    for config in _add_mann_whitney_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples, n_prior_based_samples=n_prior_based_samples):
                         final_configs.append(config)
                 elif validation_method == "difference":
-                    for config in _add_difference_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples):
+                    for config in _add_difference_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples, n_prior_based_samples=n_prior_based_samples):
                         final_configs.append(config)
                 elif validation_method == "baseline_perfect":
-                    for config in _add_baseline_perfect_configs(deepcopy(base_config)):
+                    for config in _add_baseline_perfect_configs(deepcopy(base_config), n_prior_based_samples=n_prior_based_samples):
                         final_configs.append(config)
 
         return final_configs
 
-    def _add_mann_whitney_configs(base_config: Dict[str, Any], n_prior_validation_samples: int) -> Generator[Dict[str, Any], None, None]:
+    def _add_mann_whitney_configs(base_config: Dict[str, Any], n_prior_validation_samples: int, n_prior_based_samples: int) -> Generator[Dict[str, Any], None, None]:
         """Add configurations for Mann-Whitney validation method."""
         base_config["prior_validation_method"] = "mann_whitney_u"
         base_config["n_prior_validation_samples"] = n_prior_validation_samples
-
+        base_config["n_prior_based_samples"] = n_prior_based_samples
         for p_value in prior_validation_manwhitney_p_choices:
             config = deepcopy(base_config)
             config["prior_validation_manwhitney_p"] = p_value
             config["prior_validation_difference_threshold"] = None
             yield config
 
-    def _add_difference_configs(base_config: Dict[str, Any], n_prior_validation_samples: int) -> Generator[Dict[str, Any], None, None]:
+    def _add_difference_configs(base_config: Dict[str, Any], n_prior_validation_samples: int, n_prior_based_samples: int) -> Generator[Dict[str, Any], None, None]:
         """Add configurations for difference validation method."""
         base_config["prior_validation_method"] = "difference"
         base_config["n_prior_validation_samples"] = n_prior_validation_samples
+        base_config["n_prior_based_samples"] = n_prior_based_samples
         for threshold in prior_validation_difference_threshold_choices:
             config = deepcopy(base_config)
             config["prior_validation_manwhitney_p"] = None
             config["prior_validation_difference_threshold"] = threshold
             yield config
 
-    def _add_baseline_perfect_configs(base_config: Dict[str, Any]) -> Generator[Dict[str, Any], None, None]:
+    def _add_baseline_perfect_configs(base_config: Dict[str, Any], n_prior_based_samples: int) -> Generator[Dict[str, Any], None, None]:
         """Add configurations for baseline perfect validation method."""
         config = deepcopy(base_config)
         config["prior_validation_method"] = "baseline_perfect"
         config["n_prior_validation_samples"] = None
+        config["n_prior_based_samples"] = n_prior_based_samples
         config["prior_validation_manwhitney_p"] = None
         config["prior_validation_difference_threshold"] = None
 

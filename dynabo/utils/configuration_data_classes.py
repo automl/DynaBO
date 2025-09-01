@@ -141,6 +141,7 @@ class PriorValidationConfig:
     validate: bool
     method: ValidationMethod
     n_samples: Optional[int]
+    n_prior_based_samples: Optional[int]
     manwhitney_p_value: Optional[float]
     difference_threshold: Optional[float]
 
@@ -162,6 +163,7 @@ class PriorValidationConfig:
             validate=config["validate_prior"],
             method=config["prior_validation_method"],
             n_samples=(int(config["n_prior_validation_samples"]) if config["n_prior_validation_samples"] is not None else None),
+            n_prior_based_samples=(int(config["n_prior_based_samples"]) if config["n_prior_based_samples"] is not None else None),
             manwhitney_p_value=(float(config["prior_validation_manwhitney_p"]) if config["prior_validation_manwhitney_p"] is not None else None),
             difference_threshold=(float(config["prior_validation_difference_threshold"]) if config["prior_validation_difference_threshold"] is not None else None),
         )

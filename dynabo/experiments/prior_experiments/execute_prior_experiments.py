@@ -145,6 +145,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         validate_prior=prior_validation_cfg.validate,
         prior_validation_method=prior_validation_cfg.method,
         n_prior_validation_samples=prior_validation_cfg.n_samples,
+        n_prior_based_samples=prior_validation_cfg.n_prior_based_samples,
         prior_validation_manwhitney_p_value=prior_validation_cfg.manwhitney_p_value,
         prior_validation_difference_threshold=prior_validation_cfg.difference_threshold,
         prior_std_denominator=prior_cfg.std_denominator,
@@ -234,8 +235,9 @@ if __name__ == "__main__":
                 "validate_prior_choices": [True, False],
                 "prior_validation_method_choices": ["baseline_perfect", "difference"],
                 "n_prior_validation_samples": 500,
+                "n_prior_based_samples": 3,
                 "prior_validation_manwhitney_p_choices": [0.05],
-                "prior_validation_difference_threshold_choices": [-1],
+                "prior_validation_difference_threshold_choices": [-1, -0.5, -0.25, 0, 0.25, 0.5, 1],
             },
         )
     reset = False

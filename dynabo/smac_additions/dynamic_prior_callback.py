@@ -80,6 +80,7 @@ class AbstractPriorCallback(Callback, ABC):
         validate_prior: bool,
         prior_validation_method: PriorValidationMethod,
         n_prior_validation_samples: int,
+        n_prior_based_samples: int,
         prior_validation_manwhitney_p_value: float,
         prior_validation_difference_threshold: float,
         prior_std_denominator: float,
@@ -100,6 +101,7 @@ class AbstractPriorCallback(Callback, ABC):
         self.prior_validation_manwhitney_p = prior_validation_manwhitney_p_value
         self.prior_validation_difference_threshold = prior_validation_difference_threshold
         self.n_prior_validation_samples = n_prior_validation_samples
+        self.n_prior_based_samples = n_prior_based_samples
         self.prior_std_denominator = prior_std_denominator
         self.prior_decay_enumerator = prior_decay_enumerator
         self.prior_decay_denominator = prior_decay_denominator

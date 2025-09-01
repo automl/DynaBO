@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -t 24:00:00
-#SBATCH --array=1-80
+#SBATCH --array=1-120
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu 6G
 #SBATCH -J baseline-alloc
