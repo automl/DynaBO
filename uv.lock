@@ -605,6 +605,21 @@ wheels = [
 ]
 
 [[package]]
+name = "deap"
+version = "1.4.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c9/37/3a3d82ca07e9eb2d8cdc1979ff82add35f1b41988c984db53ae582959c13/deap-1.4.3.tar.gz", hash = "sha256:7c97088fb05835bdc255bec475cb0e778de2b43e44cbefbf2bcd655aeec865fd", size = 1072325, upload-time = "2025-05-04T12:26:15.237Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d3/5f/3c7910097a5727f788f47c84d25d7782c7bafb595340ba586fd7d61fee52/deap-1.4.3-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:05be2be3a3f2922b83143c755b58e64d1795be7e35f962ad925e61f1eb498f15", size = 104484, upload-time = "2025-05-04T12:26:13.41Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/40/fdbdfe1142779dfc46e96e62b94f31f0fc78b54327da13c9d2ce373e77ef/deap-1.4.3-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3b8435f8e4400da6a69fecf4ffc93ac38d5a0439982cf7132168a052ab93800e", size = 135394, upload-time = "2025-05-04T12:28:53.81Z" },
+    { url = "https://files.pythonhosted.org/packages/c0/3f/f7eb41c95eab49d4c6bbd347df3f19a91f64e6b684623fc40baa9fa1c55e/deap-1.4.3-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:433ff172be4eb41c45592c6705e8fdb2413b709ced874407b7a52d56ed55ae5f", size = 135566, upload-time = "2025-05-04T12:30:04.959Z" },
+    { url = "https://files.pythonhosted.org/packages/b4/27/9eca548d25e412f3198396ed0d0d26d3d78cbc429f8e2672227b6c913604/deap-1.4.3-cp310-cp310-win_amd64.whl", hash = "sha256:ba65ca9c84b79c48a34cc8411f6de03bde6852b484a36ec9c7561675a514861a", size = 109719, upload-time = "2025-05-04T12:28:37.296Z" },
+]
+
+[[package]]
 name = "debugpy"
 version = "1.8.15"
 source = { registry = "https://pypi.org/simple" }
@@ -702,6 +717,7 @@ source = { editable = "." }
 dependencies = [
     { name = "carps" },
     { name = "coverage" },
+    { name = "deap" },
     { name = "gower" },
     { name = "ipykernel" },
     { name = "matplotlib" },
@@ -720,6 +736,7 @@ dependencies = [
 requires-dist = [
     { name = "carps", specifier = ">=1.0.4" },
     { name = "coverage", specifier = "==4.5.4" },
+    { name = "deap", specifier = ">=1.4.3" },
     { name = "dynabo", editable = "." },
     { name = "gower", specifier = ">=0.1.2" },
     { name = "ipykernel", specifier = ">=6.29.5" },
