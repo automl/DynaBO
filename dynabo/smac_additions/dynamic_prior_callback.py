@@ -80,6 +80,7 @@ class AbstractPriorCallback(Callback, ABC):
         validate_prior: bool,
         prior_validation_method: PriorValidationMethod,
         n_prior_validation_samples: int,
+        n_prior_based_samples: int,
         prior_validation_manwhitney_p_value: float,
         prior_validation_difference_threshold: float,
         prior_std_denominator: float,
@@ -100,6 +101,7 @@ class AbstractPriorCallback(Callback, ABC):
         self.prior_validation_manwhitney_p = prior_validation_manwhitney_p_value
         self.prior_validation_difference_threshold = prior_validation_difference_threshold
         self.n_prior_validation_samples = n_prior_validation_samples
+        self.n_prior_based_samples = n_prior_based_samples
         self.prior_std_denominator = prior_std_denominator
         self.prior_decay_enumerator = prior_decay_enumerator
         self.prior_decay_denominator = prior_decay_denominator
@@ -124,10 +126,11 @@ class AbstractPriorCallback(Callback, ABC):
         Returns the path to the prior data.
         """
         # TODO adapt
-        path = os.path.join(base_path, benchmarklib, scenario)
+        path = os.path.join(base_path, benchmarklib)
         if benchmarklib == "yahpogym":
-            path = os.path.join(path, dataset, metric)
-        path = os.path.join(path, "prior_table.csv")
+            path = os.path.join(path, scenario, dataset, metric, "prior_table.csv")
+        elif benchmarklib == "mfpbench":
+            path = os.path.join(path, "cluster", f"{scenario}.csv")
         return path
 
     def get_prior_data(
@@ -160,6 +163,16 @@ class AbstractPriorCallback(Callback, ABC):
 
     def accept_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace, origin_configspace: ConfigurationSpace) -> bool:
         if self.validate_prior:
+            # Sample 3 configurations according to the prior search space
+            prior_samples = prior_configspace.sample_configuration(size=self.n_prior_based_samples)
+            runner = smbo._runner
+            target_function = runner._target_function
+            for config in prior_samples:
+                performance, runtime = target_function(config)
+                trial_info = TrialInfo(config=config, instance=None, seed=0)
+                trial_value = TrialValue(cost=performance, time=runtime)
+                smbo.tell(trial_info, trial_value)
+
             if self.prior_validation_method == PriorValidationMethod.BASELINE_PERFECT.value:
                 return self._accept_prior_baseline_perfect(), None, None
 
@@ -246,6 +259,12 @@ class AbstractPriorCallback(Callback, ABC):
         """
         Samples a prior from the prior data.
         """
+
+    def _sample_cluster(self, smbo, min_cluster, max_cluster, decay):
+        vals = np.arange(min_cluster, max_cluster)
+        probs = np.exp(-decay * (vals - min_cluster))
+        probs /= probs.sum()
+        return smbo.intensifier._rng.choice(vals, p=probs[::-1])
 
     def log_prior(self, smbo: SMBO, cost: float, config: Dict, prior_accepted: bool, prior_mean_acq_value: float, origin_mean_acq_value: float, superior_configuration: bool):
         """
@@ -348,7 +367,25 @@ class PiBOAbstractPriorCallback(AbstractPriorCallback):
         return True
 
 
-class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback):
+class WellPerformingPriorCallback(AbstractPriorCallback):
+    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
+        # Locate current cost in the prior data column median_cost
+        relevant_configs = self.prior_data[self.prior_data["median_cost"] <= incumbent_cost]
+
+        min_cluster = relevant_configs["cluster"].min()
+        max_cluster = relevant_configs["cluster"].max()
+
+        if min_cluster == max_cluster:
+            cluster = min_cluster
+        else:
+            cluster = self._sample_cluster(smbo, min_cluster, max_cluster, 0.1)
+
+        # Select lowest cost configuration in the cluster
+        relevant_configs = relevant_configs[relevant_configs["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)[:1]
+        return relevant_configs
+
+
+class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback, WellPerformingPriorCallback):
     def __init__(
         self,
         no_incumbent_percentile: float,
@@ -357,25 +394,12 @@ class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback):
     ):
         super().__init__(*args, **kwargs)
         self.no_incumbent_percentile = no_incumbent_percentile
-
-    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
-        # Select all configurations that have lower cost than the incumbent
-        # Chekc whether the valeus are sorted
-        if (self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost).any():
-            relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost]
-            relevant_configs = relevant_configs.sort_values(COST_INDICATOR_COLUMN)
-        else:
-            relevant_configs = self.prior_data.sort_values(COST_INDICATOR_COLUMN)
-            # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
-            relevant_configs = relevant_configs.head(int(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0])))
-
-        return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
     def _accept_prior_baseline_perfect(self) -> bool:
         return True
 
 
-class PiBOWellPerformingPriorCallback(PiBOAbstractPriorCallback):
+class PiBOWellPerformingPriorCallback(PiBOAbstractPriorCallback, WellPerformingPriorCallback):
     def __init__(
         self,
         no_incumbent_percentile: float,
@@ -385,21 +409,26 @@ class PiBOWellPerformingPriorCallback(PiBOAbstractPriorCallback):
         super().__init__(*args, **kwargs)
         self.no_incumbent_percentile = no_incumbent_percentile
 
-    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
-        # Select all configurations that have a lower cost than the incumbent
-        # Chekc whether the valeus are sorted
-        if (self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost).any():
-            relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost]
-            relevant_configs = relevant_configs.sort_values(COST_INDICATOR_COLUMN)
-        else:
-            relevant_configs = self.prior_data.sort_values(COST_INDICATOR_COLUMN)
-            # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
-            relevant_configs = relevant_configs.head(int(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0])))
 
+class MediumPerformingPriorCallback(AbstractPriorCallback):
+    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
+        # Locate current cost in the prior data column median_cost
+        relevant_configs = self.prior_data[self.prior_data["median_cost"] <= incumbent_cost]
+
+        min_cluster = relevant_configs["cluster"].min()
+        max_cluster = relevant_configs["cluster"].max()
+
+        if min_cluster == max_cluster:
+            cluster = min_cluster
+        else:
+            cluster = self._sample_cluster(smbo, min_cluster, max_cluster, 0.15)
+
+        # Select lowest cost configuration in the cluster
+        relevant_configs = relevant_configs[relevant_configs["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)
         return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
 
-class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback):
+class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback, MediumPerformingPriorCallback):
     def __init__(
         self,
         no_incumbent_percentile: float,
@@ -410,29 +439,22 @@ class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback):
         self.no_incumbent_percentile = no_incumbent_percentile
         self.helpful_prior = None
 
-    def sample_prior(self, smbo, incumbent_cost) -> pd.DataFrame:
-        # 50 percent likelihood sample better, with 50% likelihood sample worse
-        if smbo.intensifier._rng.random() < 0.5:
-            self.helpful_prior = True
-            if (self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost).any():
-                relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost]
-                relevant_configs = relevant_configs.sort_values(COST_INDICATOR_COLUMN)
-            else:
-                relevant_configs = self.prior_data.sort_values(COST_INDICATOR_COLUMN)
-                # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
-                relevant_configs = relevant_configs.head(int(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0])))
-        else:
-            self.helpful_prior = False
-            relevant_configs = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] > incumbent_cost]
-            relevant_configs = relevant_configs.sort_values(COST_INDICATOR_COLUMN, ascending=False)
-
-        return self.draw_sample(relevant_configs, smbo.intensifier._rng)
-
     def _accept_prior_baseline_perfect(self) -> bool:
         return self.helpful_prior
 
+    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
+        prior = super().sample_prior(smbo, incumbent_cost)
+        prior_cost = prior[COST_INDICATOR_COLUMN].values[0]
 
-class PiBOMediumPriorCallback(PiBOAbstractPriorCallback):
+        if prior_cost < incumbent_cost:
+            self.helpful_prior = True
+        else:
+            self.helpful_prior = False
+
+        return prior
+
+
+class PiBOMediumPriorCallback(PiBOAbstractPriorCallback, MediumPerformingPriorCallback):
     def __init__(
         self,
         no_incumbent_percentile: float,
@@ -442,58 +464,77 @@ class PiBOMediumPriorCallback(PiBOAbstractPriorCallback):
         super().__init__(*args, **kwargs)
         self.no_incumbent_percentile = no_incumbent_percentile
 
-    def sample_prior(self, smbo, incumbent_cost) -> pd.DataFrame:
-        # TODO with 50 percent likelihood sample better, with 50% likelihood sample worse. We use the same distribution
-        if smbo.intensifier._rng.random() < 0.5:
-            self.helpful_prior = True
-            if (self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost).any():
-                relevant_configs: pd.DataFrame = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] < incumbent_cost]
-                relevant_configs = relevant_configs.sort_values(COST_INDICATOR_COLUMN)
-            else:
-                relevant_configs = self.prior_data.sort_values(COST_INDICATOR_COLUMN)
-                # If not better performing configurations are available, sample from no_incumbent_percentile of the configurations
-                relevant_configs = relevant_configs.head(int(np.ceil(self.no_incumbent_percentile * relevant_configs.shape[0])))
-        else:
-            self.helpful_prior = False
-            relevant_configs = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] > incumbent_cost]
-            relevant_configs = relevant_configs.sort_values(COST_INDICATOR_COLUMN, ascending=False)
 
+class MisleadingPriorCallback(AbstractPriorCallback):
+    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
+        better_configs = self.prior_data[self.prior_data["median_cost"] < incumbent_cost].sort_values(COST_INDICATOR_COLUMN)
+        worse_configs = self.prior_data[self.prior_data["median_cost"] >= incumbent_cost].sort_values(COST_INDICATOR_COLUMN)
+
+        better_cluster = better_configs["cluster"].max()
+        worse_cluster = worse_configs["cluster"].min()
+
+        min_cluster = max(0, better_cluster - 10)
+        max_cluster = min(100, worse_cluster + 10)
+
+        if smbo.intensifier._rng.random() < 0.5:
+            cluster = self._sample_cluster(smbo, min_cluster, better_cluster, 0.1)
+        else:
+            cluster = self._sample_cluster(smbo, worse_cluster, max_cluster, 0.1)
+
+        relevant_configs = self.prior_data[self.prior_data["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)
         return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
 
-class DynaBOMisleadingPriorCallback(DynaBOAbstractPriorCallback):
-    def sample_prior(self, smbo, incumbent_cost) -> pd.DataFrame:
-        # Select all configurations that have a higher cost than the incumbent
-        worse_performing_configs = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] > incumbent_cost]
-        worse_performing_configs = worse_performing_configs.sort_values(COST_INDICATOR_COLUMN, ascending=False)
+class DynaBOMisleadingPriorCallback(DynaBOAbstractPriorCallback, MisleadingPriorCallback):
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.helpful_prior = None
 
-        # Sample from the considered configurations
-        return self.draw_sample(worse_performing_configs, smbo.intensifier._rng)
+    def _accept_prior_baseline_perfect(self) -> bool:
+        return self.helpful_prior
 
+    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
+        prior = super().sample_prior(smbo, incumbent_cost)
+        prior_cost = prior[COST_INDICATOR_COLUMN].values[0]
+
+        if prior_cost < incumbent_cost:
+            self.helpful_prior = True
+        else:
+            self.helpful_prior = False
+
+        return prior
+
+
+class PiBOMisleadingPriorCallback(PiBOAbstractPriorCallback, MisleadingPriorCallback):
+    pass
+
+
+class DeceivingPriorCallback(AbstractPriorCallback):
+    relevant_cluster_lower_bound = 0.95
+    relevant_cluster_upper_bound = 1
+
+    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
+        # Select only the prior data in clusters between relevant_cluster_lower_bound and relevant_cluster_upper_bound
+        relevant_clusters = self.prior_data[
+            self.prior_data["cluster"].between(self.relevant_cluster_lower_bound * self.prior_data["cluster"].max(), self.relevant_cluster_upper_bound * self.prior_data["cluster"].max())
+        ]["cluster"].unique()
+        cluster = smbo.intensifier._rng.choice(relevant_clusters)
+        # Select lowest cost configuration in the cluster
+        relevant_configs = self.prior_data[self.prior_data["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)[-1:]
+        return relevant_configs
+
+
+class DynaBODeceivingPriorCallback(DynaBOAbstractPriorCallback, DeceivingPriorCallback):
     def _accept_prior_baseline_perfect(self) -> bool:
         return False
 
 
-class PiBOMisleadingPriorCallback(PiBOAbstractPriorCallback):
-    def sample_prior(self, smbo, incumbent_cost) -> pd.DataFrame:
-        # Select all configurations that have a higher cost than the incumbent
-        worse_performing_configs = self.prior_data[self.prior_data[COST_INDICATOR_COLUMN] > incumbent_cost]
-        worse_performing_configs = worse_performing_configs.sort_values(COST_INDICATOR_COLUMN, ascending=False)
-
-        # Sample from the considered configurations
-        return self.draw_sample(worse_performing_configs, smbo.intensifier._rng)
-
-
-class DynaBODeceivingPriorCallback(DynaBOAbstractPriorCallback):
-    # Negative optimization
-    def sample_prior(self, smbo, incumbent_cost) -> pd.DataFrame:
-        raise NotImplementedError("Please implement the sample_prior method.")
-
-
-class PiBODeceivingPriorCallback(DynaBOAbstractPriorCallback):
-    # TODO engative
-    def sample_prior(self, smbo, incumbent_cost) -> pd.DataFrame:
-        raise NotImplementedError("Please implement the sample_prior method.")
+class PiBODeceivingPriorCallback(PiBOAbstractPriorCallback, DeceivingPriorCallback):
+    pass
 
 
 class PriorOutOfRangeError(Exception):

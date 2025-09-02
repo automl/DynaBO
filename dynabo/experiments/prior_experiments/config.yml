@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table: 
-      name: prior_experiments
+      name: updated_rejection_fix
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)
@@ -58,6 +58,8 @@ PY_EXPERIMENTER:
         prior_validation_method: # approach
           type: VARCHAR(255)
         n_prior_validation_samples: # approach
+          type: INT
+        n_prior_based_samples: # approach
           type: INT
         prior_validation_manwhitney_p: # approach
           type: FLOAT

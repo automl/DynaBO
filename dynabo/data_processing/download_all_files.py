@@ -81,7 +81,7 @@ def download_yahpo_data():
 
 
 def download_mfpbench_data():
-    baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH, table_name="baseline")
+    baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH, table_name="baseline_refit")
     prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH)
 
     try:

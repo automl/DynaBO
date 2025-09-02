@@ -72,7 +72,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         acquisition_function=acquisition_function,
         max_steps=500,  # TODO wie viele local search steps sind reasonable?
     )
-    config_selector = ConfigSelector(scenario=smac_scenario, retries=100)
+    config_selector = ConfigSelector(scenario=smac_scenario, retries=100, retrain_after=1)
 
     intensifier = HyperparameterOptimizationFacade.get_intensifier(
         scenario=smac_scenario,

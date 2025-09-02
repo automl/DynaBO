@@ -79,7 +79,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         acquisition_function=acquisition_function,
         max_steps=500,  # TODO wie viele local search steps sind reasonable?
     )
-    config_selector = ConfigSelector(scenario=smac_scenario, retries=100)
+    config_selector = ConfigSelector(scenario=smac_scenario, retries=100, retrain_after=1)
 
     intensifier = HyperparameterOptimizationFacade.get_intensifier(
         scenario=smac_scenario,
@@ -140,11 +140,12 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         scenario=evaluator.scenario,
         dataset=evaluator.dataset,
         metric=benchmark_cfg.metric,
-        base_path="benchmark_data/prior_data",
+        base_path="benchmark_data/prior_data/",
         initial_design_size=initial_design._n_configs,
         validate_prior=prior_validation_cfg.validate,
         prior_validation_method=prior_validation_cfg.method,
         n_prior_validation_samples=prior_validation_cfg.n_samples,
+        n_prior_based_samples=prior_validation_cfg.n_prior_based_samples,
         prior_validation_manwhitney_p_value=prior_validation_cfg.manwhitney_p_value,
         prior_validation_difference_threshold=prior_validation_cfg.difference_threshold,
         prior_std_denominator=prior_cfg.std_denominator,
@@ -207,17 +208,17 @@ if __name__ == "__main__":
                 "n_trials": [50],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
-                "seed": list(range(10)),
+                "seed": list(range(30)),
             },
             benchmarklib=benchmarklib,
             benchmark_parameters={
                 "with_all_datasets": False,
                 "medium_and_hard": True,
             },
-            approach="pibo",
+            approach="dynabo",
             approach_parameters={
                 # Prior configurationz
-                "prior_kind_choices": ["good", "medium", "misleading"],
+                "prior_kind_choices": ["good", "medium", "misleading", "deceiving"],
                 "no_incumbent_percentile": 0.01,
                 "prior_std_denominator": 5,
                 # Dynabo when prior
@@ -226,14 +227,17 @@ if __name__ == "__main__":
                 "prior_at_start_choices": [True, False],
                 "prior_chance_theta_choices": [0.01, 0.015],
                 # Decay parameters
-                "prior_decay_enumerator_choices": [50],
+                "prior_decay_enumerator_choices": [
+                    50,
+                ],
                 "prior_decay_denominator": 10,
                 # Validation parameters
-                "validate_prior_choices": [True],
+                "validate_prior_choices": [True, False],
                 "prior_validation_method_choices": ["baseline_perfect", "difference"],
                 "n_prior_validation_samples": 500,
+                "n_prior_based_samples": 3,
                 "prior_validation_manwhitney_p_choices": [0.05],
-                "prior_validation_difference_threshold_choices": [-1],
+                "prior_validation_difference_threshold_choices": [-1, -0.5, -0.25, 0, 0.25, 0.5, 1],
             },
         )
     reset = False
@@ -241,4 +245,4 @@ if __name__ == "__main__":
         experimenter.reset_experiments("running", "error")
     execute = True
     if execute:
-        experimenter.execute(run_experiment, max_experiments=3, random_order=True)
+        experimenter.execute(run_experiment, max_experiments=1, random_order=True)
