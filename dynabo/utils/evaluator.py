@@ -567,7 +567,6 @@ def get_dynabo_dict(
                 config = deepcopy(base_config)
                 config["prior_validation_method"] = None
                 config["n_prior_validation_samples"] = None
-                config["n_prior_based_samples"] = None
                 config["prior_validation_manwhitney_p"] = None
                 config["prior_validation_difference_threshold"] = None
                 final_configs.append(config)
