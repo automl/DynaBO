@@ -45,20 +45,20 @@ def plot_final_results_mfpbench():
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=None,
     )
-    baseline_perfect_incumbent_df, baseline_perfect_prior_df = filter_prior_approach(
-        incumbent_df=prior_config_df,
-        prior_df=prior_prior_df,
-        select_dynabo=True,
-        select_pibo=False,
-        prior_decay_enumerator=50,
-        prior_std_denominator=5,
-        prior_static_position=True,
-        prior_every_n_trials=10,
-        validate_prior=True,
-        prior_validation_method="baseline_perfect",
-        prior_validation_manwhitney_p=None,
-        prior_validation_difference_threshold=None,
-    )
+    #baseline_perfect_incumbent_df, baseline_perfect_prior_df = filter_prior_approach(
+    #    incumbent_df=prior_config_df,
+    #    prior_df=prior_prior_df,
+    #    select_dynabo=True,
+    #    select_pibo=False,
+    #    prior_decay_enumerator=50,
+    #    prior_std_denominator=5,
+    #    prior_static_position=True,
+    #    prior_every_n_trials=10,
+    #    validate_prior=True,
+    #    prior_validation_method="baseline_perfect",
+    #    prior_validation_manwhitney_p=None,
+    #    prior_validation_difference_threshold=None,
+    #)
     threshold_incumbent_df, threshold_prior_df = filter_prior_approach(
         incumbent_df=prior_config_df,
         prior_df=prior_prior_df,
@@ -71,7 +71,7 @@ def plot_final_results_mfpbench():
         validate_prior=True,
         prior_validation_method="difference",
         prior_validation_manwhitney_p=None,
-        prior_validation_difference_threshold=-0.25,
+        prior_validation_difference_threshold=0,
     )
     pibo_incumbent_df, pibo_prior_df = filter_prior_approach(
         incumbent_df=prior_config_df,
@@ -92,13 +92,13 @@ def plot_final_results_mfpbench():
         "Vanilla BO": baseline_config_df,
         "DynaBO, accept all priors": accept_all_priors_configs,
         r"$\pi$BO": pibo_incumbent_df,
-        "DynaBO, perfect validation": baseline_perfect_incumbent_df,
+        #"DynaBO, perfect validation": baseline_perfect_incumbent_df,
         "DynaBO, threshold validation": threshold_incumbent_df,
     }
     prior_dict = {
         "DynaBO, accept all priors": accept_all_priors_priors,
         r"$\pi$BO": pibo_prior_df,
-        "DynaBO, perfect validation": baseline_perfect_prior_df,
+        #"DynaBO, perfect validation": baseline_perfect_prior_df,
         "DynaBO, threshold validation": threshold_prior_df,
     }
 
@@ -106,7 +106,7 @@ def plot_final_results_mfpbench():
         "Vanilla BO": {"color": "#000000", "marker": "o", "linestyle": (0, ())},  # Black, solid
         "DynaBO, accept all priors": {"color": "#E69F00", "marker": "s", "linestyle": (0, (1, 1))},  # Sky Blue, densely dotted
         r"$\pi$BO": {"color": "#009E73", "marker": "d", "linestyle": (0, (3, 5, 1, 5))},  # Green, dash-dot
-        "DynaBO, perfect validation": {"color": "#F0E442", "marker": "s", "linestyle": (0, (1, 1))},  # Blue, dash-dot-dot
+        #"DynaBO, perfect validation": {"color": "#F0E442", "marker": "s", "linestyle": (0, (1, 1))},  # Blue, dash-dot-dot
         "DynaBO, threshold validation": {"color": "#D55E00", "marker": "v", "linestyle": (0, (1, 1))},  # Pink, dash-dot dense
     }
     create_scenario_plots(
@@ -124,14 +124,33 @@ def plot_final_results_mfpbench():
 def plot_prior_rejection_ablation():
     baseline_config_df, prior_config_df, prior_prior_df = load_cost_data_mfpbench()
     
+    pibo_incumbent_df, pibo_prior_df = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=False,
+        select_pibo=True,
+        prior_decay_enumerator=50,
+        prior_std_denominator=5,
+        prior_static_position=None,
+        prior_every_n_trials=None,
+        validate_prior=None,
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+    )
+
+    
     thresholds = [-1, -0.5, -0.25, 0, 0.25, 0.5, 1]
     config_dict = {
         "Vanilla BO": baseline_config_df,
+        "PiBO": pibo_incumbent_df
     }
     prior_dict = {
-    }   
+        "PiBO": pibo_prior_df
+    }
     style_dict = {
         "Vanilla BO": {"color": "#000000", "marker": "o", "linestyle": (0, ())},  # Black, solid
+        "PiBO": {"color": "#009E73", "marker": "d", "linestyle": (0, (3, 5, 1, 5))},  # Green, dash-dot
     }
     # Standard seaborn color palette
     colors_palette = sns.color_palette("colorblind")[1:]
@@ -185,5 +204,5 @@ def plot_prior_rejection_ablation():
 
 
 if __name__ == "__main__":
-    plot_final_results_mfpbench()
+    #plot_final_results_mfpbench()
     plot_prior_rejection_ablation()

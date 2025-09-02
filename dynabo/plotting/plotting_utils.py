@@ -182,7 +182,7 @@ def plot_final_run(
     elif benchmarklib == "mfpbench":
         highest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == (max_ntrials - 20)]["regret"].mean()
         smallest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == max_ntrials]["regret"].mean()
-        ax.set_ylim(smallest_regret * 0.1, highest_regret * 1.5)
+        ax.set_ylim(smallest_regret * 0.5, highest_regret * 1.7)
 
     return ax
 
@@ -397,7 +397,7 @@ def create_scenario_plots(
         fig, axs = plt.subplots(1, 4, figsize=(24, 6), dpi=300)  # Wider and higher resolution
         axs = axs.flatten()
         plot_number = 0
-        for prior_kind in ["good", "medium", "misleading", "deceiving"]:
+        for prior_kind in ["medium", "misleading", "good", "deceiving", ]:
             ax = axs[plot_number]
             ax = plot_final_run(
                 config_dict,
@@ -433,7 +433,7 @@ def create_overall_plot(
     axs = axs.flatten()
 
     plot_number = 0
-    for prior_kind in ["good", "medium", "misleading", "deceiving"]:
+    for prior_kind in ["medium", "misleading", "good", "deceiving"]:
         ax = axs[plot_number]
 
         # Call the plotting function
@@ -465,9 +465,9 @@ def set_ax_style(ax, prior_kind: str, x_label, y_label):
     ax.legend().remove()
 
     if prior_kind == "good":
-        prior_name = "Informative"
+        prior_name = "(near) Optimal"
     elif prior_kind == "medium":
-        prior_name = "Semi-Informative"
+        prior_name = "(semi) Informative"
     elif prior_kind == "misleading":
         prior_name = "Misleading"
     elif prior_kind == "deceiving":
@@ -487,7 +487,7 @@ def set_ax_style(ax, prior_kind: str, x_label, y_label):
     ax.grid(True, linestyle="--", alpha=0.6)
     ax.tick_params(axis="both", labelsize=20)
     ax.set_xlabel(x_label, fontsize=25, fontweight="bold")
-    if prior_kind == "good":
+    if prior_kind == "medium":
         # remove y axis
         ax.set_ylabel(y_label, fontsize=25, fontweight="bold")
     else:

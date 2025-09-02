@@ -260,11 +260,11 @@ class AbstractPriorCallback(Callback, ABC):
         Samples a prior from the prior data.
         """
 
-    def _sample_cluster(self, min_cluster, max_cluster, decay):
+    def _sample_cluster(self, smbo, min_cluster, max_cluster, decay):
         vals = np.arange(min_cluster, max_cluster)
         probs = np.exp(-decay * (vals - min_cluster))
         probs /= probs.sum()
-        return np.random.choice(vals, p=probs[::-1])
+        return smbo.intensifier._rng.choice(vals, p=probs[::-1])
 
     def log_prior(self, smbo: SMBO, cost: float, config: Dict, prior_accepted: bool, prior_mean_acq_value: float, origin_mean_acq_value: float, superior_configuration: bool):
         """
@@ -378,7 +378,7 @@ class WellPerformingPriorCallback(AbstractPriorCallback):
         if min_cluster == max_cluster:
             cluster = min_cluster
         else:
-            cluster = self._sample_cluster(min_cluster, max_cluster, 0.1)
+            cluster = self._sample_cluster(smbo, min_cluster, max_cluster, 0.1)
 
         # Select lowest cost configuration in the cluster
         relevant_configs = relevant_configs[relevant_configs["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)[:1]
@@ -421,7 +421,7 @@ class MediumPerformingPriorCallback(AbstractPriorCallback):
         if min_cluster == max_cluster:
             cluster = min_cluster
         else:
-            cluster = self._sample_cluster(min_cluster, max_cluster, 0.15)
+            cluster = self._sample_cluster(smbo, min_cluster, max_cluster, 0.15)
 
         # Select lowest cost configuration in the cluster
         relevant_configs = relevant_configs[relevant_configs["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)
@@ -477,9 +477,9 @@ class MisleadingPriorCallback(AbstractPriorCallback):
         max_cluster = min(100, worse_cluster + 10)
 
         if smbo.intensifier._rng.random() < 0.5:
-            cluster = self._sample_cluster(min_cluster, better_cluster, 0.1)
+            cluster = self._sample_cluster(smbo, min_cluster, better_cluster, 0.1)
         else:
-            cluster = self._sample_cluster(worse_cluster, max_cluster, 0.1)
+            cluster = self._sample_cluster(smbo, worse_cluster, max_cluster, 0.1)
 
         relevant_configs = self.prior_data[self.prior_data["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)
         return self.draw_sample(relevant_configs, smbo.intensifier._rng)
