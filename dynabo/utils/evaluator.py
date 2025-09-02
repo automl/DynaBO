@@ -482,6 +482,7 @@ def get_dynabo_dict(
         prior_kind: str,
         no_incumbent_percentile: float,
         prior_std_denominator: int,
+        n_prior_based_samples: int,
         validate_prior: bool,
     ) -> Dict[str, Any]:
         """Create a base configuration dictionary."""
@@ -493,6 +494,7 @@ def get_dynabo_dict(
             "prior_std_denominator": prior_std_denominator,
             "prior_decay_enumerator": prior_decay_enumerator,
             "prior_decay_denominator": prior_decay_denominator,
+            "n_prior_based_samples": n_prior_based_samples,
             "prior_kind": prior_kind,
             "no_incumbent_percentile": no_incumbent_percentile,
             "validate_prior": validate_prior,
@@ -573,45 +575,42 @@ def get_dynabo_dict(
 
             for validation_method in prior_validation_method_choices:
                 if validation_method == "mann_whitney_u":
-                    for config in _add_mann_whitney_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples, n_prior_based_samples=n_prior_based_samples):
+                    for config in _add_mann_whitney_configs(deepcopy(base_config)):
                         final_configs.append(config)
                 elif validation_method == "difference":
-                    for config in _add_difference_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples, n_prior_based_samples=n_prior_based_samples):
+                    for config in _add_difference_configs(deepcopy(base_config)):
                         final_configs.append(config)
                 elif validation_method == "baseline_perfect":
-                    for config in _add_baseline_perfect_configs(deepcopy(base_config), n_prior_based_samples=n_prior_based_samples):
+                    for config in _add_baseline_perfect_configs(deepcopy(base_config)):
                         final_configs.append(config)
 
         return final_configs
 
-    def _add_mann_whitney_configs(base_config: Dict[str, Any], n_prior_validation_samples: int, n_prior_based_samples: int) -> Generator[Dict[str, Any], None, None]:
+    def _add_mann_whitney_configs(base_config: Dict[str, Any], n_prior_validation_samples: int) -> Generator[Dict[str, Any], None, None]:
         """Add configurations for Mann-Whitney validation method."""
         base_config["prior_validation_method"] = "mann_whitney_u"
         base_config["n_prior_validation_samples"] = n_prior_validation_samples
-        base_config["n_prior_based_samples"] = n_prior_based_samples
         for p_value in prior_validation_manwhitney_p_choices:
             config = deepcopy(base_config)
             config["prior_validation_manwhitney_p"] = p_value
             config["prior_validation_difference_threshold"] = None
             yield config
 
-    def _add_difference_configs(base_config: Dict[str, Any], n_prior_validation_samples: int, n_prior_based_samples: int) -> Generator[Dict[str, Any], None, None]:
+    def _add_difference_configs(base_config: Dict[str, Any], n_prior_validation_samples: int) -> Generator[Dict[str, Any], None, None]:
         """Add configurations for difference validation method."""
         base_config["prior_validation_method"] = "difference"
         base_config["n_prior_validation_samples"] = n_prior_validation_samples
-        base_config["n_prior_based_samples"] = n_prior_based_samples
         for threshold in prior_validation_difference_threshold_choices:
             config = deepcopy(base_config)
             config["prior_validation_manwhitney_p"] = None
             config["prior_validation_difference_threshold"] = threshold
             yield config
 
-    def _add_baseline_perfect_configs(base_config: Dict[str, Any], n_prior_based_samples: int) -> Generator[Dict[str, Any], None, None]:
+    def _add_baseline_perfect_configs(base_config: Dict[str, Any]) -> Generator[Dict[str, Any], None, None]:
         """Add configurations for baseline perfect validation method."""
         config = deepcopy(base_config)
         config["prior_validation_method"] = "baseline_perfect"
         config["n_prior_validation_samples"] = None
-        config["n_prior_based_samples"] = n_prior_based_samples
         config["prior_validation_manwhitney_p"] = None
         config["prior_validation_difference_threshold"] = None
 
@@ -627,6 +626,7 @@ def get_dynabo_dict(
                     prior_kind=prior_kind,
                     no_incumbent_percentile=no_incumbent_percentile,
                     prior_std_denominator=prior_std_denominator,
+                    n_prior_based_samples=n_prior_based_samples,
                     validate_prior=validate_prior,
                 )
 

@@ -163,16 +163,6 @@ class AbstractPriorCallback(Callback, ABC):
 
     def accept_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace, origin_configspace: ConfigurationSpace) -> bool:
         if self.validate_prior:
-            # Sample 3 configurations according to the prior search space
-            prior_samples = prior_configspace.sample_configuration(size=self.n_prior_based_samples)
-            runner = smbo._runner
-            target_function = runner._target_function
-            for config in prior_samples:
-                performance, runtime = target_function(config)
-                trial_info = TrialInfo(config=config, instance=None, seed=0)
-                trial_value = TrialValue(cost=performance, time=runtime)
-                smbo.tell(trial_info, trial_value)
-
             if self.prior_validation_method == PriorValidationMethod.BASELINE_PERFECT.value:
                 return self._accept_prior_baseline_perfect(), None, None
 
@@ -246,6 +236,17 @@ class AbstractPriorCallback(Callback, ABC):
         return prior_configspace, origin_configspace, cost, hyperparameter_config, superior_configuration
 
     def set_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace):
+        prior_samples = prior_configspace.sample_configuration(size=self.n_prior_based_samples)
+
+        runner = smbo._runner
+        target_function = runner._target_function
+
+        for config in prior_samples:
+            performance, runtime = target_function(config)
+            trial_info = TrialInfo(config=config, instance=None, seed=0)
+            trial_value = TrialValue(cost=performance, time=runtime)
+            smbo.tell(trial_info, trial_value)
+
         smbo.intensifier.config_selector._acquisition_maximizer.dynamic_init(prior_configspace)
         smbo.intensifier.config_selector._acquisition_function.dynamic_init(
             acquisition_function=smbo.intensifier.config_selector._acquisition_function._acquisition_function,
