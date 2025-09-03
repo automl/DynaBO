@@ -42,6 +42,22 @@ def plot_final_results_mfpbench():
         prior_static_position=True,
         prior_every_n_trials=10,
         validate_prior=False,
+        n_prior_based_samples=None,
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+    )
+    accept_all_priors_try_3_configs, accept_all_priors_try_3_priors = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=50,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        n_prior_based_samples=3,
+        validate_prior=False,
         prior_validation_method=None,
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=None,
@@ -70,6 +86,7 @@ def plot_final_results_mfpbench():
         prior_static_position=True,
         prior_every_n_trials=10,
         validate_prior=True,
+        n_prior_based_samples=3,
         prior_validation_method="difference",
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=0,
@@ -83,6 +100,7 @@ def plot_final_results_mfpbench():
         prior_std_denominator=5,
         prior_static_position=None,
         prior_every_n_trials=None,
+        n_prior_based_samples=None,
         validate_prior=None,
         prior_validation_method=None,
         prior_validation_manwhitney_p=None,
@@ -92,12 +110,14 @@ def plot_final_results_mfpbench():
     config_dict = {
         "Vanilla BO": baseline_config_df,
         "DynaBO, accept all priors": accept_all_priors_configs,
+        "DynaBO, accept all priors (3 samples)": accept_all_priors_try_3_configs,
         r"$\pi$BO": pibo_incumbent_df,
         # "DynaBO, perfect validation": baseline_perfect_incumbent_df,
         "DynaBO, threshold validation": threshold_incumbent_df,
     }
     prior_dict = {
         "DynaBO, accept all priors": accept_all_priors_priors,
+        "DynaBO, accept all priors (3 samples)": accept_all_priors_try_3_priors,
         r"$\pi$BO": pibo_prior_df,
         # "DynaBO, perfect validation": baseline_perfect_prior_df,
         "DynaBO, threshold validation": threshold_prior_df,
@@ -106,6 +126,7 @@ def plot_final_results_mfpbench():
     style_dict = {
         "Vanilla BO": {"color": "#000000", "marker": "o", "linestyle": (0, ())},  # Black, solid
         "DynaBO, accept all priors": {"color": "#E69F00", "marker": "s", "linestyle": (0, (1, 1))},  # Sky Blue, densely dotted
+        "DynaBO, accept all priors (3 samples)": {"color": "#2EA9A7", "marker": "s", "linestyle": (0, (3, 5, 1, 5))},  # Sky Blue, densely dotted
         r"$\pi$BO": {"color": "#009E73", "marker": "d", "linestyle": (0, (3, 5, 1, 5))},  # Green, dash-dot
         # "DynaBO, perfect validation": {"color": "#F0E442", "marker": "s", "linestyle": (0, (1, 1))},  # Blue, dash-dot-dot
         "DynaBO, threshold validation": {"color": "#D55E00", "marker": "v", "linestyle": (0, (1, 1))},  # Pink, dash-dot dense

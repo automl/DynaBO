@@ -83,6 +83,7 @@ def filter_prior_approach(
     prior_decay_enumerator: int,
     prior_static_position: Optional[bool],
     prior_every_n_trials: Optional[int],
+    n_prior_based_samples: Optional[int],
     validate_prior: Optional[bool],
     prior_validation_method: Optional[str],
     prior_validation_manwhitney_p: Optional[float],
@@ -96,6 +97,13 @@ def filter_prior_approach(
     if select_dynabo:
         incumbent_df = incumbent_df[incumbent_df["dynabo"] == True]
         prior_df = prior_df[prior_df["dynabo"] == True]
+
+        if n_prior_based_samples is not None:
+            incumbent_df = incumbent_df[incumbent_df["n_prior_based_samples"] == n_prior_based_samples]
+            prior_df = prior_df[prior_df["n_prior_based_samples"] == n_prior_based_samples]
+        else:
+            incumbent_df = incumbent_df[incumbent_df["n_prior_based_samples"].isnull()]
+            prior_df = prior_df[prior_df["n_prior_based_samples"].isnull()]
 
         if prior_static_position:
             incumbent_df = incumbent_df[(incumbent_df["prior_static_position"] == True) & (incumbent_df["prior_every_n_trials"] == prior_every_n_trials)]
@@ -397,7 +405,7 @@ def create_scenario_plots(
         fig, axs = plt.subplots(1, 4, figsize=(24, 6), dpi=300)  # Wider and higher resolution
         axs = axs.flatten()
         plot_number = 0
-        for prior_kind in ["medium", "misleading", "good", "deceiving", ]:
+        for prior_kind in ["good", "medium", "misleading", "deceiving"]:
             ax = axs[plot_number]
             ax = plot_final_run(
                 config_dict,
@@ -433,7 +441,7 @@ def create_overall_plot(
     axs = axs.flatten()
 
     plot_number = 0
-    for prior_kind in ["medium", "misleading", "good", "deceiving"]:
+    for prior_kind in ["good", "medium", "misleading", "deceiving"]:
         ax = axs[plot_number]
 
         # Call the plotting function
@@ -487,7 +495,7 @@ def set_ax_style(ax, prior_kind: str, x_label, y_label):
     ax.grid(True, linestyle="--", alpha=0.6)
     ax.tick_params(axis="both", labelsize=20)
     ax.set_xlabel(x_label, fontsize=25, fontweight="bold")
-    if prior_kind == "medium":
+    if prior_kind == "good":
         # remove y axis
         ax.set_ylabel(y_label, fontsize=25, fontweight="bold")
     else:
