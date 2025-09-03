@@ -3,7 +3,7 @@ from functools import partial
 
 from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
-from smac import HyperparameterOptimizationFacade, Scenario
+from smac import HyperparameterOptimizationFacade, Scenario, BlackBoxFacade
 from smac.main.config_selector import ConfigSelector
 
 from dynabo.smac_additions.dynamic_prior_callback import (
@@ -86,6 +86,8 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         max_config_calls=1,
     )
 
+    runhistory_encoder = BlackBoxFacade.get_runhistory_encoder(scenario=smac_scenario)
+
     if pibo:
         if prior_cfg.kind == "good":
             PriorCallbackClass = partial(PiBOWellPerformingPriorCallback, no_incumbent_percentile=prior_cfg.no_incumbent_percentile)
@@ -167,6 +169,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         initial_design=initial_design,
         intensifier=intensifier,
         overwrite=True,
+        runhistory_encoder=runhistory_encoder,
     )
 
     start_time = time.time()
@@ -197,7 +200,7 @@ if __name__ == "__main__":
         use_codecarbon=False,
     )
     benchmarklib = "mfpbench"
-    fill = False
+    fill = True
 
     if fill:
         fill_table(
@@ -218,7 +221,7 @@ if __name__ == "__main__":
             approach="dynabo",
             approach_parameters={
                 # Prior configurationz
-                "prior_kind_choices": ["good", "medium", "misleading", "deceiving"],
+                "prior_kind_choices": ["good"],
                 "no_incumbent_percentile": 0.01,
                 "prior_std_denominator": 5,
                 # Dynabo when prior
@@ -233,9 +236,9 @@ if __name__ == "__main__":
                 "prior_decay_denominator": 10,
                 # Validation parameters
                 "validate_prior_choices": [True],
-                "prior_validation_method_choices": ["baseline_perfect", "difference"],
-                "n_prior_validation_samples": 500,
-                "n_prior_based_samples": 4,
+                "prior_validation_method_choices": ["difference"],
+                "n_prior_validation_samples": 502,
+                "n_prior_based_samples": 3,
                 "prior_validation_manwhitney_p_choices": [0.05],
                 "prior_validation_difference_threshold_choices": [0],
             },
@@ -243,6 +246,6 @@ if __name__ == "__main__":
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = False
+    execute = True
     if execute:
         experimenter.execute(run_experiment, max_experiments=1, random_order=True)

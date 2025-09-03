@@ -3,7 +3,7 @@ PY_EXPERIMENTER:
 
   Database:
     provider: mysql
-    database: dynabo
+    database: dynabo_normal_scale
     table:
       name: baseline_refit
       keyfields:
