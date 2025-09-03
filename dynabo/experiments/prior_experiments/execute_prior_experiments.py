@@ -208,7 +208,7 @@ if __name__ == "__main__":
                 "n_trials": [50],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
-                "seed": list(range(30)),
+                "seed": list(range(10)),
             },
             benchmarklib=benchmarklib,
             benchmark_parameters={
@@ -232,17 +232,17 @@ if __name__ == "__main__":
                 ],
                 "prior_decay_denominator": 10,
                 # Validation parameters
-                "validate_prior_choices": [True, False],
+                "validate_prior_choices": [True],
                 "prior_validation_method_choices": ["baseline_perfect", "difference"],
                 "n_prior_validation_samples": 500,
-                "n_prior_based_samples": 3,
+                "n_prior_based_samples": 4,
                 "prior_validation_manwhitney_p_choices": [0.05],
-                "prior_validation_difference_threshold_choices": [-1, -0.5, -0.25, 0, 0.25, 0.5, 1],
+                "prior_validation_difference_threshold_choices": [0],
             },
         )
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = True
+    execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=1, random_order=True)
