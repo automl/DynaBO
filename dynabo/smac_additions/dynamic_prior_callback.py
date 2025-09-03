@@ -145,6 +145,8 @@ class AbstractPriorCallback(Callback, ABC):
         if self.intervene(smbo):
             prior_configspace, origin_configpsace, cost, logging_config, superior_configuraiton = self.construct_prior(smbo)
 
+            self.sample_from_prior(smbo, prior_configspace)
+
             prior_accepted, prior_mean_acq_value, origin_mean_acq_value = self.accept_prior(smbo, prior_configspace, origin_configpsace)
 
             if prior_accepted:
@@ -160,6 +162,21 @@ class AbstractPriorCallback(Callback, ABC):
             )
 
         return super().on_ask_start(smbo)
+
+    def sample_from_prior(self, smbo, prior_configspace):
+        prior_samples = (
+            prior_configspace.sample_configuration(size=self.n_prior_based_samples) if self.n_prior_based_samples != 1 else [prior_configspace.sample_configuration(size=self.n_prior_based_samples)]
+        )
+        runner = smbo._runner
+        target_function = runner._target_function
+
+        for config in prior_samples:
+            performance, runtime = target_function(config)
+            trial_info = TrialInfo(config=config, instance=None, seed=0)
+            trial_value = TrialValue(cost=performance, time=runtime)
+            smbo.tell(trial_info, trial_value)
+
+        smbo.intensifier.config_selector._acquisition_function.current_config_nuber = smbo.runhistory.finished
 
     def accept_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace, origin_configspace: ConfigurationSpace) -> bool:
         if self.validate_prior:
@@ -236,19 +253,6 @@ class AbstractPriorCallback(Callback, ABC):
         return prior_configspace, origin_configspace, cost, hyperparameter_config, superior_configuration
 
     def set_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace):
-        prior_samples = (
-            prior_configspace.sample_configuration(size=self.n_prior_based_samples) if self.n_prior_based_samples != 1 else [prior_configspace.sample_configuration(size=self.n_prior_based_samples)]
-        )
-
-        runner = smbo._runner
-        target_function = runner._target_function
-
-        for config in prior_samples:
-            performance, runtime = target_function(config)
-            trial_info = TrialInfo(config=config, instance=None, seed=0)
-            trial_value = TrialValue(cost=performance, time=runtime)
-            smbo.tell(trial_info, trial_value)
-
         smbo.intensifier.config_selector._acquisition_maximizer.dynamic_init(prior_configspace)
         smbo.intensifier.config_selector._acquisition_function.dynamic_init(
             acquisition_function=smbo.intensifier.config_selector._acquisition_function._acquisition_function,
