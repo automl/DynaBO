@@ -236,7 +236,9 @@ class AbstractPriorCallback(Callback, ABC):
         return prior_configspace, origin_configspace, cost, hyperparameter_config, superior_configuration
 
     def set_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace):
-        prior_samples = prior_configspace.sample_configuration(size=self.n_prior_based_samples)
+        prior_samples = (
+            prior_configspace.sample_configuration(size=self.n_prior_based_samples) if self.n_prior_based_samples != 1 else [prior_configspace.sample_configuration(size=self.n_prior_based_samples)]
+        )
 
         runner = smbo._runner
         target_function = runner._target_function
