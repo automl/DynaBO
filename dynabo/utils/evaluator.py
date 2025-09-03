@@ -574,10 +574,10 @@ def get_dynabo_dict(
 
             for validation_method in prior_validation_method_choices:
                 if validation_method == "mann_whitney_u":
-                    for config in _add_mann_whitney_configs(deepcopy(base_config)):
+                    for config in _add_mann_whitney_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples):
                         final_configs.append(config)
                 elif validation_method == "difference":
-                    for config in _add_difference_configs(deepcopy(base_config)):
+                    for config in _add_difference_configs(deepcopy(base_config), n_prior_validation_samples=n_prior_validation_samples):
                         final_configs.append(config)
                 elif validation_method == "baseline_perfect":
                     for config in _add_baseline_perfect_configs(deepcopy(base_config)):

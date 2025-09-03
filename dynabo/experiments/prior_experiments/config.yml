@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo
     table: 
-      name: updated_rejection_fix
+      name: n_prior_samples
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)
