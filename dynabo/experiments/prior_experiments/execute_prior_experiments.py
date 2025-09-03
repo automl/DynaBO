@@ -238,7 +238,7 @@ if __name__ == "__main__":
                 "validate_prior_choices": [True],
                 "prior_validation_method_choices": ["difference"],
                 "n_prior_validation_samples": 502,
-                "n_prior_based_samples": 3,
+                "n_prior_based_samples": 0,
                 "prior_validation_manwhitney_p_choices": [0.05],
                 "prior_validation_difference_threshold_choices": [0],
             },
@@ -246,6 +246,6 @@ if __name__ == "__main__":
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = False
+    execute = True
     if execute:
         experimenter.execute(run_experiment, max_experiments=1, random_order=True)
