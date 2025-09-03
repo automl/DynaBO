@@ -211,17 +211,17 @@ if __name__ == "__main__":
                 "n_trials": [50],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
-                "seed": list(range(10)),
+                "seed": list(range(30)),
             },
             benchmarklib=benchmarklib,
             benchmark_parameters={
                 "with_all_datasets": False,
                 "medium_and_hard": True,
             },
-            approach="dynabo",
+            approach="pibo",
             approach_parameters={
                 # Prior configurationz
-                "prior_kind_choices": ["good"],
+                "prior_kind_choices": ["good", "medium", "misleading", "deceiving"],
                 "no_incumbent_percentile": 0.01,
                 "prior_std_denominator": 5,
                 # Dynabo when prior
@@ -246,6 +246,6 @@ if __name__ == "__main__":
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = True
+    execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=1, random_order=True)
