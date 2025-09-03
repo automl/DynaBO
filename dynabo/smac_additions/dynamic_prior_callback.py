@@ -184,15 +184,13 @@ class AbstractPriorCallback(Callback, ABC):
                 return self._accept_prior_baseline_perfect(), None, None
 
             current_incumbent = smbo.intensifier.get_incumbent()
-            incumbent_configuration_dict = dict(current_incumbent)
-            incumbent_configuration_space = build_prior_configuration_space(origin_configspace, incumbent_configuration_dict, prior_std_denominator=self.prior_std_denominator * self.prior_number)
+            incumbent_cost = smbo.runhistory.get_cost(current_incumbent)
 
             prior_samples = prior_configspace.sample_configuration(size=self.n_prior_validation_samples)
-            incumbent_samples = incumbent_configuration_space.sample_configuration(size=self.n_prior_validation_samples)
 
             self.lcb.update(model=smbo.intensifier.config_selector._acquisition_function.model, num_data=smbo.runhistory.finished)
             lcb_prior_values = self.lcb(prior_samples).squeeze()
-            lcb_incumbent_values = self.lcb(incumbent_samples).squeeze()
+            lcb_incumbent_values = incumbent_cost * np.ones(self.n_prior_validation_samples)
             if self.prior_validation_method == PriorValidationMethod.MANN_WHITNEY_U.value:
                 result = mannwhitneyu(
                     lcb_prior_values,
