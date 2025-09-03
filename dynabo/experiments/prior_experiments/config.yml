@@ -3,9 +3,9 @@ PY_EXPERIMENTER:
 
   Database:
     provider: mysql
-    database: dynabo
+    database: dynabo_normal_scale
     table: 
-      name: n_prior_samples
+      name: prior_approaches
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)
