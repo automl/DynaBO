@@ -209,11 +209,11 @@ class AbstractPriorCallback(Callback, ABC):
                 else:
                     return True, lcb_prior_values.mean(), lcb_incumbent_values.mean()
             elif self.prior_validation_method == PriorValidationMethod.DIFFERENCE.value:
-                result = lcb_prior_values.mean() - lcb_incumbent_values.mean()
+                result = lcb_prior_values.max() - lcb_incumbent_values.max()
                 if result > self.prior_validation_difference_threshold:
-                    return True, lcb_prior_values.mean(), lcb_incumbent_values.mean()
+                    return True, lcb_prior_values.max(), lcb_incumbent_values.max()
                 else:
-                    return False, lcb_prior_values.mean(), lcb_incumbent_values.mean()
+                    return False, lcb_prior_values.max(), lcb_incumbent_values.max()
 
             else:
                 raise ValueError(f"Prior validation method {self.prior_validation_method} not supported.")
