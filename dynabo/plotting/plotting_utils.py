@@ -479,7 +479,7 @@ def set_ax_style(ax, prior_kind: str, x_label, y_label):
     elif prior_kind == "medium":
         prior_name = "(semi) Informative"
     elif prior_kind == "misleading":
-        prior_name = "Misleading"
+        prior_name = "Local"
     elif prior_kind == "deceiving":
         prior_name = "Adversarial"
     elif prior_kind == "dummy_value":

@@ -387,7 +387,9 @@ class WellPerformingPriorCallback(AbstractPriorCallback):
         min_cluster = relevant_configs["cluster"].min()
         max_cluster = relevant_configs["cluster"].max()
 
-        if min_cluster == max_cluster or relevant_configs.empty:
+        if relevant_configs.empty:
+            cluster = min_cluster
+        if min_cluster == max_cluster:
             cluster = min_cluster
         else:
             cluster = self._sample_cluster(smbo, min_cluster, max_cluster, 0.1)
@@ -515,7 +517,7 @@ class MisleadingPriorCallback(AbstractPriorCallback):
             relevant_distances = distance_matrix[0, :]
 
             # Remove the incumbent itself
-            closest_k_cluster_indexes = np.argsort(relevant_distances)[1:11]
+            closest_k_cluster_indexes = np.argsort(relevant_distances)[1:6]
             closest_k_clusters_centroids = gower_matrix_dataframe.iloc[closest_k_cluster_indexes]
 
             whole_entries = pd.merge(
