@@ -3,9 +3,9 @@ PY_EXPERIMENTER:
 
   Database:
     provider: mysql
-    database: dynabo
+    database: dynabo_normal_scale
     table:
-      name: baseline_refit
+      name: baseline
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)

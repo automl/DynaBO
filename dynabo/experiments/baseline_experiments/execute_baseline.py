@@ -2,7 +2,7 @@ import time
 
 from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
-from smac import HyperparameterOptimizationFacade, RandomFacade, Scenario
+from smac import HyperparameterOptimizationFacade, RandomFacade, Scenario, BlackBoxFacade
 from smac.acquisition.maximizer import LocalAndSortedRandomSearch
 from smac.main.config_selector import ConfigSelector
 
@@ -101,6 +101,8 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             max_config_calls=1,
         )
 
+        runhistory_encoder = BlackBoxFacade.get_runhistory_encoder(scenario=smac_scenario)
+
         smac = HyperparameterOptimizationFacade(
             scenario=smac_scenario,
             target_function=evaluator.train,
@@ -111,6 +113,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             initial_design=initial_design,
             intensifier=intensifier,
             overwrite=True,
+            runhistory_encoder=runhistory_encoder,
         )
     elif random:
         initial_design_size = None
@@ -148,7 +151,7 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = False
+    fill = True
     if fill:
         fill_table(
             py_experimenter=experimenter,
@@ -172,6 +175,6 @@ if __name__ == "__main__":
     if reset:
         experimenter.reset_experiments("error", "running")
 
-    execute = True
+    execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=1, random_order=True)

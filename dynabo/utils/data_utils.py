@@ -23,7 +23,9 @@ def connect_to_database(table_name: str) -> PyExperimenter:
     EXP_CONFIG_FILE_PATH = "dynabo/experiments/baseline_experiments/config.yml"
     DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
-    experimenter = PyExperimenter(experiment_configuration_file_path=EXP_CONFIG_FILE_PATH, database_credential_file_path=DB_CRED_FILE_PATH, use_codecarbon=False, table_name=table_name)
+    experimenter = PyExperimenter(
+        experiment_configuration_file_path=EXP_CONFIG_FILE_PATH, database_credential_file_path=DB_CRED_FILE_PATH, use_codecarbon=False, table_name=table_name, database_name="dynabo"
+    )
 
     return experimenter
 

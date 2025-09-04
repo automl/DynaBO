@@ -3,7 +3,7 @@ from functools import partial
 
 from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
-from smac import HyperparameterOptimizationFacade, Scenario
+from smac import HyperparameterOptimizationFacade, Scenario, BlackBoxFacade
 from smac.main.config_selector import ConfigSelector
 
 from dynabo.smac_additions.dynamic_prior_callback import (
@@ -86,6 +86,8 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         max_config_calls=1,
     )
 
+    runhistory_encoder = BlackBoxFacade.get_runhistory_encoder(scenario=smac_scenario)
+
     if pibo:
         if prior_cfg.kind == "good":
             PriorCallbackClass = partial(PiBOWellPerformingPriorCallback, no_incumbent_percentile=prior_cfg.no_incumbent_percentile)
@@ -167,6 +169,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         initial_design=initial_design,
         intensifier=intensifier,
         overwrite=True,
+        runhistory_encoder=runhistory_encoder,
     )
 
     start_time = time.time()
@@ -197,7 +200,7 @@ if __name__ == "__main__":
         use_codecarbon=False,
     )
     benchmarklib = "mfpbench"
-    fill = False
+    fill = True
 
     if fill:
         fill_table(
@@ -208,7 +211,7 @@ if __name__ == "__main__":
                 "n_trials": [50],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
-                "seed": list(range(10)),
+                "seed": list(range(30)),
             },
             benchmarklib=benchmarklib,
             benchmark_parameters={
@@ -232,12 +235,12 @@ if __name__ == "__main__":
                 ],
                 "prior_decay_denominator": 10,
                 # Validation parameters
-                "validate_prior_choices": [True],
-                "prior_validation_method_choices": ["baseline_perfect", "difference"],
+                "validate_prior_choices": [True, False],
+                "prior_validation_method_choices": ["difference", "baseline_perfect"],
                 "n_prior_validation_samples": 500,
-                "n_prior_based_samples": 4,
+                "n_prior_based_samples": 0,
                 "prior_validation_manwhitney_p_choices": [0.05],
-                "prior_validation_difference_threshold_choices": [0],
+                "prior_validation_difference_threshold_choices": [-1, -0.5, -0.25, -0.2, -0.15, -0.1, -0.05, 0, 0.25, 0.5, 1],
             },
         )
     reset = False
