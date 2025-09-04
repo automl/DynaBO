@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo_normal_scale
     table: 
-      name: pd1_final_rf
+      name: pd1_final_rf_misleading
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)
