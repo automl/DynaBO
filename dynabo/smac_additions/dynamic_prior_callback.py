@@ -387,7 +387,7 @@ class WellPerformingPriorCallback(AbstractPriorCallback):
         min_cluster = relevant_configs["cluster"].min()
         max_cluster = relevant_configs["cluster"].max()
 
-        if min_cluster == max_cluster:
+        if min_cluster == max_cluster or relevant_configs.empty:
             cluster = min_cluster
         else:
             cluster = self._sample_cluster(smbo, min_cluster, max_cluster, 0.1)
