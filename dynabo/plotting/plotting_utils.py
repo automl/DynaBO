@@ -112,6 +112,8 @@ def filter_prior_approach(
             raise NotImplementedError("No plotting implemented for non-static position")
 
         if validate_prior:
+            incumbent_df = incumbent_df[incumbent_df["n_prior_validation_samples"] == 500]
+            prior_df = prior_df[prior_df["n_prior_validation_samples"] == 500]
             if prior_validation_method == "mann_whitney_u":
                 incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "mann_whitney_u"]
                 prior_df = prior_df[prior_df["prior_validation_method"] == "mann_whitney_u"]
@@ -479,7 +481,7 @@ def set_ax_style(ax, prior_kind: str, x_label, y_label):
     elif prior_kind == "misleading":
         prior_name = "Misleading"
     elif prior_kind == "deceiving":
-        prior_name = "Deceiving"
+        prior_name = "Adversarial"
     elif prior_kind == "dummy_value":
         prior_name = "Prior Accept"
     else:

@@ -2,10 +2,10 @@ import os
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Dict, Optional, Tuple
-
+import gower
 import numpy as np
 import pandas as pd
-from ConfigSpace import ConfigurationSpace
+from ConfigSpace import ConfigurationSpace, Configuration, CategoricalHyperparameter
 from py_experimenter.result_processor import ResultProcessor
 from scipy.stats import mannwhitneyu
 from smac.acquisition.function import LCB
@@ -16,6 +16,7 @@ from smac.runhistory import TrialInfo, TrialValue
 from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.utils.configspace_utils import build_prior_configuration_space
 from dynabo.utils.evaluator import YAHPOGymEvaluator
+from copy import deepcopy
 
 COST_INDICATOR_COLUMN = "cost"
 
@@ -209,11 +210,11 @@ class AbstractPriorCallback(Callback, ABC):
                 else:
                     return True, lcb_prior_values.mean(), lcb_incumbent_values.mean()
             elif self.prior_validation_method == PriorValidationMethod.DIFFERENCE.value:
-                result = lcb_prior_values.max() - lcb_incumbent_values.max()
+                result = lcb_prior_values.mean() - lcb_incumbent_values.mean()
                 if result > self.prior_validation_difference_threshold:
-                    return True, lcb_prior_values.max(), lcb_incumbent_values.max()
+                    return True, lcb_prior_values.mean(), lcb_incumbent_values.mean()
                 else:
-                    return False, lcb_prior_values.max(), lcb_incumbent_values.max()
+                    return False, lcb_prior_values.mean(), lcb_incumbent_values.mean()
 
             else:
                 raise ValueError(f"Prior validation method {self.prior_validation_method} not supported.")
@@ -234,10 +235,10 @@ class AbstractPriorCallback(Callback, ABC):
         """
         self.prior_number += 1
 
-        current_incumbent = smbo.intensifier.get_incumbent()
-        incumbent_cost = smbo.runhistory.get_cost(current_incumbent)
+        current_incumbent_config = smbo.intensifier.get_incumbent()
+        incumbent_cost = smbo.runhistory.get_cost(current_incumbent_config)
 
-        sampled_config = self.sample_prior(smbo, incumbent_cost)
+        sampled_config = self.sample_prior(smbo, current_incumbent_config, incumbent_cost)
         prior_cost = sampled_config[COST_INDICATOR_COLUMN].values[0]
 
         # Check if the sampled configuration is better than the incumbent
@@ -266,7 +267,7 @@ class AbstractPriorCallback(Callback, ABC):
         )
 
     @abstractmethod
-    def sample_prior(self, smbo: SMBO, incumbent_cost: float) -> pd.DataFrame:
+    def sample_prior(self, smbo: SMBO, incumbent_config: Configuration, incumbent_cost: float) -> pd.DataFrame:
         """
         Samples a prior from the prior data.
         """
@@ -379,7 +380,7 @@ class PiBOAbstractPriorCallback(AbstractPriorCallback):
 
 
 class WellPerformingPriorCallback(AbstractPriorCallback):
-    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
+    def sample_prior(self, smbo: SMBO, incumbent_config: Configuration, incumbent_cost: float) -> Optional[pd.DataFrame]:
         # Locate current cost in the prior data column median_cost
         relevant_configs = self.prior_data[self.prior_data["median_cost"] <= incumbent_cost]
 
@@ -422,7 +423,7 @@ class PiBOWellPerformingPriorCallback(PiBOAbstractPriorCallback, WellPerformingP
 
 
 class MediumPerformingPriorCallback(AbstractPriorCallback):
-    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
+    def sample_prior(self, smbo: SMBO, incumbent_config: Configuration, incumbent_cost: float) -> Optional[pd.DataFrame]:
         # Locate current cost in the prior data column median_cost
         relevant_configs = self.prior_data[self.prior_data["median_cost"] <= incumbent_cost]
 
@@ -453,8 +454,8 @@ class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback, MediumPerformingPri
     def _accept_prior_baseline_perfect(self) -> bool:
         return self.helpful_prior
 
-    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
-        prior = super().sample_prior(smbo, incumbent_cost)
+    def sample_prior(self, smbo: SMBO, incumbent_config: Configuration, incumbent_cost: float) -> Optional[pd.DataFrame]:
+        prior = super().sample_prior(smbo, incumbent_config, incumbent_cost)
         prior_cost = prior[COST_INDICATOR_COLUMN].values[0]
 
         if prior_cost < incumbent_cost:
@@ -477,23 +478,55 @@ class PiBOMediumPriorCallback(PiBOAbstractPriorCallback, MediumPerformingPriorCa
 
 
 class MisleadingPriorCallback(AbstractPriorCallback):
-    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
-        better_configs = self.prior_data[self.prior_data["median_cost"] < incumbent_cost].sort_values(COST_INDICATOR_COLUMN)
-        worse_configs = self.prior_data[self.prior_data["median_cost"] >= incumbent_cost].sort_values(COST_INDICATOR_COLUMN)
+    def sample_prior(self, smbo: SMBO, incumbent_config: Configuration, incumbent_cost: float) -> Optional[pd.DataFrame]:
+        prior_data = deepcopy(self.prior_data)
 
-        better_cluster = better_configs["cluster"].max()
-        worse_cluster = worse_configs["cluster"].min()
+        closest_clusters = self.compute_closest_clusters(incumbent_config, prior_data)
+        relevant_configs = prior_data[prior_data["cluster"].isin(closest_clusters["cluster"].values)]
 
-        min_cluster = max(0, better_cluster - 10)
-        max_cluster = min(100, worse_cluster + 10)
+        # Select cluster with lowest median cost
+        min_median_cost = relevant_configs["median_cost"].min()
+        relevant_configs = prior_data[prior_data["median_cost"] == min_median_cost]
 
-        if smbo.intensifier._rng.random() < 0.5:
-            cluster = self._sample_cluster(smbo, min_cluster, better_cluster, 0.1)
-        else:
-            cluster = self._sample_cluster(smbo, worse_cluster, max_cluster, 0.1)
-
-        relevant_configs = self.prior_data[self.prior_data["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)
         return self.draw_sample(relevant_configs, smbo.intensifier._rng)
+
+    def compute_closest_clusters(self, incumbent_config: Configuration, prior_data: pd.DataFrame):
+        contains_categorical = False
+        for hyperparameter in incumbent_config.values():
+            if isinstance(hyperparameter, CategoricalHyperparameter):
+                contains_categorical = True
+                break
+
+        if contains_categorical:
+            raise ValueError("Categorical hyperparameters are not supported for misleading priors.")
+            distance_matrix = gower.gower_dist()
+        else:
+            # Preprocess Data
+            centroid_configurations = prior_data[[col for col in prior_data.columns if col.startswith("medoid_config") or col == "cluster"]].drop_duplicates()
+            centroid_configurations_only_config = centroid_configurations[[col for col in centroid_configurations.columns if col.startswith("medoid_config")]]
+            centroid_configurations_only_config.columns = [col.replace("medoid_config_", "") for col in centroid_configurations_only_config.columns]
+
+            # Create Distance Matrix
+            gower_matrix_dataframe = pd.DataFrame(columns=list(incumbent_config.keys()), data=[list(incumbent_config.values())])
+            gower_matrix_dataframe = pd.concat([gower_matrix_dataframe, centroid_configurations_only_config], ignore_index=True, axis=0)
+            distance_matrix = gower.gower_matrix(gower_matrix_dataframe)
+
+            # Select top 11 entries. The 10 closest clusters and the incumbent itself
+            relevant_distances = distance_matrix[0, :]
+
+            # Remove the incumbent itself
+            closest_k_cluster_indexes = np.argsort(relevant_distances)[1:11]
+            closest_k_clusters_centroids = gower_matrix_dataframe.iloc[closest_k_cluster_indexes]
+
+            whole_entries = pd.merge(
+                closest_k_clusters_centroids,
+                centroid_configurations,
+                left_on=list(closest_k_clusters_centroids.columns),
+                right_on=[f"medoid_config_{hyperparameter}" for hyperparameter in incumbent_config.keys()],
+                how="left",
+            )
+
+            return whole_entries[["cluster"]]
 
 
 class DynaBOMisleadingPriorCallback(DynaBOAbstractPriorCallback, MisleadingPriorCallback):
@@ -508,8 +541,8 @@ class DynaBOMisleadingPriorCallback(DynaBOAbstractPriorCallback, MisleadingPrior
     def _accept_prior_baseline_perfect(self) -> bool:
         return self.helpful_prior
 
-    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
-        prior = super().sample_prior(smbo, incumbent_cost)
+    def sample_prior(self, smbo: SMBO, incumbent_config: Configuration, incumbent_cost: float) -> Optional[pd.DataFrame]:
+        prior = super().sample_prior(smbo, incumbent_config, incumbent_cost)
         prior_cost = prior[COST_INDICATOR_COLUMN].values[0]
 
         if prior_cost < incumbent_cost:
@@ -528,7 +561,7 @@ class DeceivingPriorCallback(AbstractPriorCallback):
     relevant_cluster_lower_bound = 0.95
     relevant_cluster_upper_bound = 1
 
-    def sample_prior(self, smbo, incumbent_cost) -> Optional[pd.DataFrame]:
+    def sample_prior(self, smbo: SMBO, incumbent_config: Configuration, incumbent_cost: float) -> Optional[pd.DataFrame]:
         # Select only the prior data in clusters between relevant_cluster_lower_bound and relevant_cluster_upper_bound
         relevant_clusters = self.prior_data[
             self.prior_data["cluster"].between(self.relevant_cluster_lower_bound * self.prior_data["cluster"].max(), self.relevant_cluster_upper_bound * self.prior_data["cluster"].max())
@@ -558,7 +591,7 @@ class PiBOTestAllPriors(PiBOAbstractPriorCallback):
         self.prior_number = prior_number
         self.prior_data = self.prior_data.sort_values(COST_INDICATOR_COLUMN)
 
-    def sample_prior(self, smbo, incumbent_cost) -> pd.DataFrame:
+    def sample_prior(self, smbo: SMBO, incumbent_config: Configuration, incumbent_cost: float) -> pd.DataFrame:
         try:
             return pd.DataFrame(self.prior_data.iloc[self.prior_number].to_dict(), index=[0])
         except IndexError:

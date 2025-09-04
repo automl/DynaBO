@@ -218,7 +218,7 @@ if __name__ == "__main__":
                 "with_all_datasets": False,
                 "medium_and_hard": True,
             },
-            approach="pibo",
+            approach="dynabo",
             approach_parameters={
                 # Prior configurationz
                 "prior_kind_choices": ["good", "medium", "misleading", "deceiving"],
@@ -235,17 +235,17 @@ if __name__ == "__main__":
                 ],
                 "prior_decay_denominator": 10,
                 # Validation parameters
-                "validate_prior_choices": [True],
-                "prior_validation_method_choices": ["difference"],
-                "n_prior_validation_samples": 502,
+                "validate_prior_choices": [True, False],
+                "prior_validation_method_choices": ["difference", "baseline_perfect"],
+                "n_prior_validation_samples": 500,
                 "n_prior_based_samples": 0,
                 "prior_validation_manwhitney_p_choices": [0.05],
-                "prior_validation_difference_threshold_choices": [0],
+                "prior_validation_difference_threshold_choices": [-1, -0.5, -0.25, -0.2, -0.15, -0.1, -0.05, 0, 0.25, 0.5, 1],
             },
         )
     reset = False
     if reset:
         experimenter.reset_experiments("running", "error")
-    execute = True
+    execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=1, random_order=True)
