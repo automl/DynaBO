@@ -4,9 +4,8 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 import seaborn as sns
-from matplotlib import pyplot as plt
-
-
+from matplotlib import lines, pyplot as plt
+import numpy as np
 def load_datageneration_data():
     main_table = pd.read_csv("plotting_data/datageneration_medium_hard.csv")
     configs = pd.read_csv("plotting_data/datageneration_incumbent_medium_hard.csv")
@@ -33,23 +32,27 @@ def merge_df(df: pd.DataFrame, incumbents: pd.DataFrame, priors: Optional[pd.Dat
     return incumbent_df, prior_df
 
 
-def get_min_costs(dfs: Tuple[pd.DataFrame], benchmarklib: str) -> Dict[Tuple[str, int], float]:
+def get_min_costs(benchmarklib: str) -> Dict[Tuple[str, int], float]:
     """
     Compute the minimum cost.
     """
-    concat_df = pd.concat(dfs)
     if benchmarklib == "yahpogym":
+        data_generation_runs = pd.read_csv("benchmark_data/gt_prior_data/yahpogym/origin_table.csv")
         index = ["scenario", "dataset"]
+        data_generation_runs.loc[data_generation_runs["scenario"] == "lcbench", "cost"] /= 100
     elif benchmarklib == "mfpbench":
+        data_generation_runs = pd.read_csv("benchmark_data/gt_prior_data/mfpbench/origin_table.csv")        
         index = ["scenario"]
-    min_costs = concat_df.groupby(index)["cost"].min()
+    min_costs = data_generation_runs.groupby(index)["cost"].min()
     return min_costs.to_dict()
+
 
 
 def add_regret(dfs: List[pd.DataFrame], min_costs: Dict[Tuple[str, int], float], benchmarklib: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Add the regret to the dataframes.
     """
+
     for df in dfs:
         min_cost_series = pd.Series(min_costs)
         # Use the scenario and dataset columns to index the Series—
@@ -88,6 +91,7 @@ def filter_prior_approach(
     prior_validation_method: Optional[str],
     prior_validation_manwhitney_p: Optional[float],
     prior_validation_difference_threshold: Optional[float] = None,
+    prior_chance_theta: Optional[float] = None,
 ):
     assert select_dynabo ^ select_pibo
 
@@ -109,11 +113,10 @@ def filter_prior_approach(
             incumbent_df = incumbent_df[(incumbent_df["prior_static_position"] == True) & (incumbent_df["prior_every_n_trials"] == prior_every_n_trials)]
             prior_df = prior_df[(prior_df["prior_static_position"] == True) & (prior_df["prior_every_n_trials"] == prior_every_n_trials)]
         else:
-            raise NotImplementedError("No plotting implemented for non-static position")
+            incumbent_df = incumbent_df[(incumbent_df["prior_static_position"] == False) & (incumbent_df["prior_chance_theta"] == prior_chance_theta)]
+            prior_df = prior_df[(prior_df["prior_static_position"] == False) & (prior_df["prior_chance_theta"] == prior_chance_theta)]
 
         if validate_prior:
-            incumbent_df = incumbent_df[incumbent_df["n_prior_validation_samples"] == 500]
-            prior_df = prior_df[prior_df["n_prior_validation_samples"] == 500]
             if prior_validation_method == "mann_whitney_u":
                 incumbent_df = incumbent_df[incumbent_df["prior_validation_method"] == "mann_whitney_u"]
                 prior_df = prior_df[prior_df["prior_validation_method"] == "mann_whitney_u"]
@@ -168,6 +171,11 @@ def plot_final_run(
         max_ntrials,
     )
 
+    if benchmarklib == "yahpogym":
+        marker_every = 20
+    elif benchmarklib == "mfpbench":
+        marker_every = 5
+
     for key, df in config_dict.items():
         sns.lineplot(
             x="after_n_evaluations",
@@ -181,19 +189,16 @@ def plot_final_run(
             linestyle=style_dict[key]["linestyle"],
             marker=style_dict[key]["marker"],
             markersize=8,
-            markevery=5,
+            markevery=marker_every,
         )
 
-    if benchmarklib == "yahpogym":
-        # check smallest regret after 50 trials
-        highest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == (50)]["regret"].mean()
-        smallest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == max_ntrials]["regret"].mean()
-        ax.set_ylim(smallest_regret * 0.1, highest_regret * 1.1)
-    elif benchmarklib == "mfpbench":
-        highest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == (max_ntrials - 20)]["regret"].mean()
-        smallest_regret = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["after_n_evaluations"] == max_ntrials]["regret"].mean()
-        ax.set_ylim(smallest_regret * 0.5, highest_regret * 1.7)
-
+    if "DynaBO, accept all priors" in prior_dict:
+        prior_locations = prior_dict["DynaBO, accept all priors"]["after_n_evaluations"].unique()
+        for prior_location in prior_locations:
+            ax.axvline(x=prior_location, color="#E69F00", linestyle="--", alpha=0.3, linewidth=2, label = None)
+    #ax.set_yscale("log")
+    # Set lim to minimal value
+    ax.set_ylim(bottom=0.001, top=0.225)
     return ax
 
 
@@ -314,20 +319,29 @@ def extract_incumbent_steps(df_dict: Dict[str, pd.DataFrame], min_ntrials: int, 
     return df_dict
 
 
-def set_fig_style(fig, axs, title: str, ncol):
-    fig.suptitle(title, fontsize=25, fontweight="bold", y=1)
+def set_fig_style(fig, axs, title: str, ncol,):
+    #fig.suptitle(title, fontsize=25, fontweight="bold", y=1)
 
     # Extract all plotted lines from axs and only keep unique lines
     label_line_dict = {line.get_label(): line for ax in axs for line in ax.get_lines()}
     labels, lines = zip(*label_line_dict.items())
+    # Remove weird labels
+    final_labels = []
+    final_lines = []
+    for label, line in list(zip(labels, lines)):
+        if label.startswith("_"):
+            continue
+        final_labels.append(label)
+        final_lines.append(line)
+    
 
     fig.legend(
-        lines,
-        labels,
+        final_lines,
+        final_labels,
         loc="upper center",
-        bbox_to_anchor=(0.5, 0.0),
         ncol=ncol,
         fontsize=20,
+        bbox_to_anchor=(0.5, 0.0),
     )
 
     # Adjust layout for better spacing
@@ -336,7 +350,7 @@ def set_fig_style(fig, axs, title: str, ncol):
 
 def save_fig(path: str):
     # Save the figure with high quality
-    plt.savefig(path, bbox_inches="tight", dpi=300, transparent=True)
+    plt.savefig(path, dpi=300, transparent=True, bbox_inches="tight")
 
     plt.close()
 
@@ -357,41 +371,6 @@ def remove_weird_datasets(
     return baseline_config_df, dynabo_incumbent_df, dynabo_prior_df, pibo_incumbent_df, pibo_prior_df
 
 
-def create_dataset_plots(config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], error_bar_type: str, scenarios: List[str], benchmarklib: str, base_path: str, ncol: int):
-    if benchmarklib == "yahpogym":
-        min_ntrials = 1
-        max_n_trials = 200
-    elif benchmarklib == "mfpbench":
-        min_ntrials = 1
-        max_n_trials = 50
-
-    for scenario in scenarios:
-        datasets = config_dict["Vanilla BO"][config_dict["Vanilla BO"]["scenario"] == scenario]["dataset"].unique()
-        for dataset in datasets:
-            os.makedirs(f"{base_path}/{scenario}", exist_ok=True)
-            fig, axs = plt.subplots(1, 3, figsize=(18, 6), dpi=300)  # Wider and higher resolution
-            axs = axs.flatten()
-            plot_number = 0
-            for prior_kind in ["good", "medium", "misleading"]:
-                ax = axs[plot_number]
-                ax = plot_final_run(
-                    config_dict,
-                    prior_dict,
-                    scenario,
-                    dataset,
-                    prior_kind,
-                    ax=ax,
-                    benchmarklib=benchmarklib,
-                    min_ntrials=min_ntrials,
-                    max_ntrials=max_n_trials,
-                    error_bar_type=error_bar_type,
-                )
-                plot_number += 1
-                set_ax_style(ax, prior_kind=prior_kind, x_label="Number of Evaluations", y_label="Regret")
-            set_fig_style(fig, axs, f"Average regret on {scenario}", ncol=ncol)
-            save_fig(f"{base_path}/{scenario}/{dataset}.pdf")
-        print(f"Saved {scenario}")
-
 
 def create_scenario_plots(
     config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, str], error_bar_type: str, scenarios: List[str], benchmarklib: str, base_path: str, ncol: int
@@ -403,11 +382,44 @@ def create_scenario_plots(
         min_ntrials = 1
         max_n_trials = 50
     for scenario in scenarios:
-        os.makedirs(f"plots/scenario_plots/{benchmarklib}//regret", exist_ok=True)
-        fig, axs = plt.subplots(1, 4, figsize=(24, 6), dpi=300)  # Wider and higher resolution
-        axs = axs.flatten()
-        plot_number = 0
         for prior_kind in ["good", "medium", "misleading", "deceiving"]:
+            fig, ax = plt.subplots(1, 1, figsize=(5.3, 4), dpi=300)
+
+            # Call the plotting function
+            ax = plot_final_run(
+                config_dict,
+                prior_dict,
+                style_dict,
+                scenario,
+                None,
+                prior_kind,
+                ax=ax,
+                benchmarklib=benchmarklib,
+                min_ntrials=min_ntrials,
+                max_ntrials=max_n_trials,
+                error_bar_type=error_bar_type,
+            )
+
+            set_ax_style(ax, x_label="Number of Evaluations", y_label="Regret")
+
+            set_fig_style(fig, [ax], "Overall Regret Across Different Priors", ncol=ncol)
+            os.makedirs(f"{base_path}/{benchmarklib}/regret/{scenario}", exist_ok=True)
+            save_fig(f"{base_path}/{benchmarklib}/regret/{scenario}/{prior_kind}.pdf")
+
+def create_deceiving_longer_scenarios(
+    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, str], error_bar_type: str, scenarios: List[str], benchmarklib: str, base_path: str, ncol: int
+):
+    if benchmarklib == "yahpogym":
+        min_ntrials = 1
+        max_n_trials = 500
+    elif benchmarklib == "mfpbench":
+        min_ntrials = 1
+        max_n_trials = 500
+    for scenario in scenarios:
+        fig, ax = plt.subplots(1, 1, figsize=(8, 3), dpi=300)  # Wider and higher resolution
+        axs = [ax]
+        plot_number = 0
+        for prior_kind in ["deceiving"]:
             ax = axs[plot_number]
             ax = plot_final_run(
                 config_dict,
@@ -423,27 +435,25 @@ def create_scenario_plots(
                 error_bar_type=error_bar_type,
             )
             plot_number += 1
-            set_ax_style(ax, prior_kind=prior_kind, x_label="Number of Evaluations", y_label="Regret")
-        set_fig_style(fig, axs, f"Average regret on {scenario}", ncol=ncol)
-        save_fig(f"{base_path}/{benchmarklib}/regret/{scenario}.pdf")
-        print(f"Saved {scenario}")
+            set_ax_style(ax, x_label="Number of Evaluations", y_label="Regret")
+        set_fig_style(fig, axs, f"Average regret on {scenario}", ncol=ncol, )
+        save_fig(f"{base_path}/{scenario}.pdf")
 
 
-def create_overall_plot(
-    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, Dict[str, str]], error_bar_type: str, benchnmarklib: str, base_path: str, ncol: int
+def create_overall_plot_longer(
+    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, Dict[str, str]], error_bar_type: str, benchmarklib: str, base_path: str, ncol: int
 ):
-    os.makedirs(f"plots/scenario_plots/{benchnmarklib}/regret", exist_ok=True)
-    if benchnmarklib == "yahpogym":
+    os.makedirs(f"plots/scenario_plots/{benchmarklib}/regret", exist_ok=True)
+    if benchmarklib == "yahpogym":
         min_ntrials = 1
         max_n_trials = 200
-    elif benchnmarklib == "mfpbench":
+    elif benchmarklib == "mfpbench":
         min_ntrials = 1
-        max_n_trials = 50
-    fig, axs = plt.subplots(1, 4, figsize=(24, 6), dpi=300)
-    axs = axs.flatten()
-
+        max_n_trials = 500
+    fig, ax = plt.subplots(1, 1, figsize=(8, 3), dpi=300)
+    axs = [ax]
     plot_number = 0
-    for prior_kind in ["good", "medium", "misleading", "deceiving"]:
+    for prior_kind in ["deceiving"]:
         ax = axs[plot_number]
 
         # Call the plotting function
@@ -455,51 +465,185 @@ def create_overall_plot(
             None,
             prior_kind,
             ax=ax,
-            benchmarklib=benchnmarklib,
+            benchmarklib=benchmarklib,
             min_ntrials=min_ntrials,
             max_ntrials=max_n_trials,
             error_bar_type=error_bar_type,
         )
 
-        set_ax_style(ax, prior_kind=prior_kind, x_label="Number of Evaluations", y_label="Regret")
+        set_ax_style(ax, x_label="Number of Evaluations", y_label="Regret")
 
         plot_number += 1
 
     set_fig_style(fig, axs, "Overall Regret Across Different Priors", ncol=ncol)
 
-    save_fig(f"{base_path}/{benchnmarklib}/regret/overall.pdf")
+    save_fig(f"{base_path}/overall.pdf")
+
+def create_overall_plot(
+    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, Dict[str, str]], error_bar_type: str, benchmarklib: str, base_path: str, ncol: int
+):
+    if benchmarklib == "yahpogym":
+        min_ntrials = 1
+        max_n_trials = 200
+    elif benchmarklib == "mfpbench":
+        min_ntrials = 1
+        max_n_trials = 50
+
+    for prior_kind in ["good", "medium", "misleading", "deceiving"]:
+        fig, ax = plt.subplots(1, 1, figsize=(5, 4), dpi=300)
+
+        # Call the plotting function
+        ax = plot_final_run(
+            config_dict,
+            prior_dict,
+            style_dict,
+            None,
+            None,
+            prior_kind,
+            ax=ax,
+            benchmarklib=benchmarklib,
+            min_ntrials=min_ntrials,
+            max_ntrials=max_n_trials,
+            error_bar_type=error_bar_type,
+        )
+
+        set_ax_style(ax, x_label="Number of Evaluations", y_label="Regret")
+
+        set_fig_style(fig, [ax], "Overall Regret Across Different Priors", ncol=ncol)
+        os.makedirs(f"{base_path}/{benchmarklib}/regret/overall", exist_ok=True)
+        save_fig(f"{base_path}/{benchmarklib}/regret/overall/{prior_kind}.pdf")
 
 
-def set_ax_style(ax, prior_kind: str, x_label, y_label):
+
+
+def set_ax_style(ax, x_label, y_label, benchmarklib: str = "mfpbench"):
     # Remove ax legend
     ax.legend().remove()
-
-    if prior_kind == "good":
-        prior_name = "(near) Optimal"
-    elif prior_kind == "medium":
-        prior_name = "(semi) Informative"
-    elif prior_kind == "misleading":
-        prior_name = "Misleading"
-    elif prior_kind == "deceiving":
-        prior_name = "Adversarial"
-    elif prior_kind == "dummy_value":
-        prior_name = "Prior Accept"
-    else:
-        raise ValueError(f"Prior kind {prior_kind} not supported")
-    # Improve title aesthetics
-    ax.set_title(
-        f"{prior_name}",
-        fontsize=30,
-        fontweight="bold",
-    )
 
     # Enhance axes labels and grid
     ax.grid(True, linestyle="--", alpha=0.6)
     ax.tick_params(axis="both", labelsize=20)
     ax.set_xlabel(x_label, fontsize=25, fontweight="bold")
-    if prior_kind == "good":
-        # remove y axis
+    ax.set_ylabel(y_label, fontsize=25, fontweight="bold")
+
+    # Increase tick label size
+    ax.tick_params(axis="both", which="major", labelsize=25)
+    # set y ticks to 0.05, 0.1, 0.15, 0.2
+    ax.set_yticks([0.05, 0.1, 0.15, 0.2])
+    #ax.set_xticks([0, 25, 50])
+
+    # Incraese line width
+    for line in ax.get_lines():
+        line.set_linewidth(3.5)
+
+    # Increase the marker size
+    for line in ax.get_lines():
+        if line.get_marker() != "None":
+            line.set_markersize(15)
+
+    # Remove x label entirely
+    ax.set_xlabel(None)
+
+
+def create_final_cost_boxplot(config_dict, style_dict, benchmarklib, base_path):
+    def get_prior_kind_symbol(prior_kind):
+        if prior_kind == "good":
+            return "Expert"
+        elif prior_kind == "medium":
+            return "Advanced"
+        elif prior_kind == "misleading":
+            return "Local"
+        elif prior_kind == "deceiving":
+            return "Adversarial"
+        else:
+            raise ValueError(f"Prior kind {prior_kind} not supported")
+        
+    def set_ax_style(ax, x_label, y_label):
+        ax.legend().remove()
+        ax.grid(True, linestyle="--", alpha=0.6)
+        ax.tick_params(axis="both", labelsize=20)
+        ax.set_xlabel(x_label, fontsize=25, fontweight="bold")
         ax.set_ylabel(y_label, fontsize=25, fontweight="bold")
-    else:
-        ax.set_ylabel(None)
-        ax.set_yticklabels([])
+
+    def set_fig_style(fig, axs, ncol):
+        # Extract handles and labels from the first Axes
+        handles, labels = axs[0].get_legend_handles_labels()
+        # If there are no handles (e.g. no legend created yet), generate from lines manually
+        if not handles:
+            handles = [plt.Line2D([], [], color=axs[0].lines[i].get_color(), lw=4) 
+                    for i in range(len(axs[0].lines))]
+            labels = [axs[0].lines[i].get_label() for i in range(len(axs[0].lines))]
+
+        # Create a figure-level legend
+        fig.legend(
+            handles,
+            labels,
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.05),
+            ncol=ncol,
+            fontsize=20
+        )
+
+    for scenario in config_dict[r"$-\infty$"]["scenario"].unique():
+        overall_df = pd.DataFrame(columns=["prior_kind", "method", "final_regret"])
+
+        for prior_kind in ["good", "medium", "misleading", "deceiving"]:
+            max_evaluations = config_dict[r"$\infty$"]["after_n_evaluations"].max()
+            relevant_df = pd.DataFrame(columns=["prior_kind", "method", "final_regret"])
+
+            for key, df in config_dict.items():
+                max_evaluations = df["after_n_evaluations"].max()
+                if 'prior_kind' in df.columns:
+                    local_df = df[(df["after_n_evaluations"] == max_evaluations) & (df["scenario"] == scenario) & (df["prior_kind"] == prior_kind)][["final_regret"]]
+                else:
+                    local_df = df[(df["after_n_evaluations"] == max_evaluations) & (df["scenario"] == scenario)][["final_regret"]]
+                
+                local_df["method"] = key
+                local_df["prior_kind"] = get_prior_kind_symbol(prior_kind)
+                local_df = local_df[["prior_kind", "method", "final_regret"]]
+                relevant_df = pd.concat([local_df, relevant_df])
+            overall_df = pd.concat([overall_df, relevant_df])
+        fig, ax = plt.subplots(figsize=(14, 4))
+        sns.boxenplot(
+            data=overall_df,
+            x="prior_kind",
+            y="final_regret",
+            hue="method",
+            ax=ax,
+            palette=style_dict,
+            order = ["Expert", "Advanced", "Local", "Adversarial"],
+        )
+        set_ax_style(ax, x_label="Prior Kind", y_label="Final Regret")
+        set_fig_style(fig, [ax], ncol=len(style_dict)/2)
+        fig.savefig(f"{base_path}_{scenario}_final_cost_barplot.pdf", dpi=300, transparent=True, bbox_inches="tight")
+
+    # Overall
+    overall_df = pd.DataFrame(columns=["prior_kind", "method", "final_regret"])
+
+    for prior_kind in ["good", "medium", "misleading", "deceiving"]:
+        max_evaluations = config_dict[r"$\infty$"]["after_n_evaluations"].max()
+        relevant_df = pd.DataFrame(columns=["prior_kind", "method", "final_regret"])
+        for key, df in config_dict.items():
+            max_evaluations = df["after_n_evaluations"].max()
+            if 'prior_kind' in df.columns:
+                local_df = df[(df["after_n_evaluations"] == max_evaluations) & (df["prior_kind"] == prior_kind)][["final_regret"]]
+            else:
+                local_df = df[(df["after_n_evaluations"] == max_evaluations)][["final_regret"]]
+            local_df["method"] = key
+            local_df["prior_kind"] = get_prior_kind_symbol(prior_kind)
+            local_df = local_df[["prior_kind", "method", "final_regret"]]
+            relevant_df = pd.concat([local_df, relevant_df])
+        overall_df = pd.concat([overall_df, relevant_df])
+    fig, ax = plt.subplots(figsize=(14, 4))
+    sns.boxenplot(
+        data=overall_df,
+        x="prior_kind",
+        y="final_regret",
+        hue="method",
+        ax=ax,
+        palette=style_dict,
+    )
+
+    set_ax_style(ax, x_label="Prior Kind", y_label="Final Regret")
+    set_fig_style(fig, [ax], ncol=len(style_dict)/2)
+    fig.savefig(f"{base_path}_overall_final_cost_barplot.pdf", dpi=300, transparent=True, bbox_inches="tight")

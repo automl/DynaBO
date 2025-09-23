@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo_normal_scale
     table:
-      name: baseline_yahpo
+      name: data_generation_yahpo
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)

@@ -129,7 +129,7 @@ class AbstractPriorCallback(Callback, ABC):
         # TODO adapt
         path = os.path.join(base_path, benchmarklib)
         if benchmarklib == "yahpogym":
-            path = os.path.join(path, scenario, dataset, metric, "prior_table.csv")
+            path = os.path.join(path, "cluster", scenario, f"{dataset}.csv")
         elif benchmarklib == "mfpbench":
             path = os.path.join(path, "cluster", f"{scenario}.csv")
         return path
@@ -330,28 +330,25 @@ class DynaBOAbstractPriorCallback(AbstractPriorCallback):
 
     def intervene(self, smbo: SMBO) -> bool:
         def _intervene_static_position():
-            return smbo.runhistory.finished >= self.initial_design_size + 1 and (smbo.runhistory.finished - self.initial_design_size - 1) % self.prior_every_n_trials == 0
+            return smbo.runhistory.finished >= self.initial_design_size + 1 and (smbo.runhistory.finished - self.initial_design_size - 1) % self.prior_every_n_trials == 0  and self.prior_number < 4
 
         def _intervene_dynamic_position():
             if smbo.runhistory.finished < self.initial_design_size + 1:  # We do not intervene before the initial design is finished
                 self.n_trials_since_last_prior += 1
                 return False
             else:
-                if smbo.runhistory.finished >= self.initial_design_size + 1:  # We use the prior at the start of the optimization
-                    if self.prior_at_start:
+                if smbo.runhistory.finished == self.initial_design_size + 1:  # We use the prior at the start of the optimization
+                    if self.prior_at_start :
+                        self.n_trials_since_last_prior = 0
+                        return True
+                else:
+                    chance = 1 - np.exp(-self.prior_chance_theta * self.n_trials_since_last_prior)
+                    if smbo.intensifier._rng.random() < chance:
                         self.n_trials_since_last_prior = 0
                         return True
                     else:
-                        chance = 1 - np.exp(-self.prior_chance_theta * self.n_trials_since_last_prior)
-                        if smbo.intensifier._rng.random() < chance:
-                            self.n_trials_since_last_prior = 0
-                            return True
-                        else:
-                            self.n_trials_since_last_prior += 1
-                            return False
-                else:
-                    self.n_trials_since_last_prior += 1
-                    return False
+                        self.n_trials_since_last_prior += 1
+                        return False
 
         if self.prior_static_position:
             return _intervene_static_position()
@@ -387,13 +384,15 @@ class WellPerformingPriorCallback(AbstractPriorCallback):
         min_cluster = relevant_configs["cluster"].min()
         max_cluster = relevant_configs["cluster"].max()
 
-        if min_cluster == max_cluster or relevant_configs.empty:
+        if relevant_configs.empty:
+            cluster = 0
+        elif min_cluster == max_cluster:
             cluster = min_cluster
         else:
             cluster = self._sample_cluster(smbo, min_cluster, max_cluster, 0.1)
 
         # Select lowest cost configuration in the cluster
-        relevant_configs = relevant_configs[relevant_configs["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)[:1]
+        relevant_configs = self.prior_data[self.prior_data["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)[:1]
         return relevant_configs
 
 
@@ -430,13 +429,15 @@ class MediumPerformingPriorCallback(AbstractPriorCallback):
         min_cluster = relevant_configs["cluster"].min()
         max_cluster = relevant_configs["cluster"].max()
 
-        if min_cluster == max_cluster:
+        if relevant_configs.empty:
+            cluster = 0
+        elif min_cluster == max_cluster:
             cluster = min_cluster
         else:
             cluster = self._sample_cluster(smbo, min_cluster, max_cluster, 0.15)
 
         # Select lowest cost configuration in the cluster
-        relevant_configs = relevant_configs[relevant_configs["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)
+        relevant_configs = self.prior_data[self.prior_data["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)[:1]
         return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
 
@@ -491,42 +492,40 @@ class MisleadingPriorCallback(AbstractPriorCallback):
         return self.draw_sample(relevant_configs, smbo.intensifier._rng)
 
     def compute_closest_clusters(self, incumbent_config: Configuration, prior_data: pd.DataFrame):
-        contains_categorical = False
-        for hyperparameter in incumbent_config.values():
-            if isinstance(hyperparameter, CategoricalHyperparameter):
-                contains_categorical = True
-                break
+        # Preprocess Data
+        centroid_configurations = prior_data[[col for col in prior_data.columns if col.startswith("medoid_config") or col == "cluster"]].drop_duplicates()
+        centroid_configurations_only_config = centroid_configurations[[col for col in centroid_configurations.columns if col.startswith("medoid_config")]]
+        centroid_configurations_only_config.columns = [col.replace("medoid_config_", "") for col in centroid_configurations_only_config.columns]
 
-        if contains_categorical:
-            raise ValueError("Categorical hyperparameters are not supported for misleading priors.")
-            distance_matrix = gower.gower_dist()
-        else:
-            # Preprocess Data
-            centroid_configurations = prior_data[[col for col in prior_data.columns if col.startswith("medoid_config") or col == "cluster"]].drop_duplicates()
-            centroid_configurations_only_config = centroid_configurations[[col for col in centroid_configurations.columns if col.startswith("medoid_config")]]
-            centroid_configurations_only_config.columns = [col.replace("medoid_config_", "") for col in centroid_configurations_only_config.columns]
+        # Create Distance Matrix
+        keys = list(incumbent_config.config_space.keys())
+        values = list()
+        for key in keys:
+            if key in incumbent_config.keys():
+                values.append(incumbent_config[key])
+            else:
+                values.append(np.nan)
+        gower_matrix_dataframe = pd.DataFrame(columns=list(keys), data=[values])
+        gower_matrix_dataframe = pd.concat([gower_matrix_dataframe, centroid_configurations_only_config], ignore_index=True, axis=0)
+        cat_features = [not pd.api.types.is_numeric_dtype(gower_matrix_dataframe[col]) for col in gower_matrix_dataframe.columns]
+        distance_matrix = gower.gower_matrix(gower_matrix_dataframe.fillna(-1), cat_features=cat_features)
 
-            # Create Distance Matrix
-            gower_matrix_dataframe = pd.DataFrame(columns=list(incumbent_config.keys()), data=[list(incumbent_config.values())])
-            gower_matrix_dataframe = pd.concat([gower_matrix_dataframe, centroid_configurations_only_config], ignore_index=True, axis=0)
-            distance_matrix = gower.gower_matrix(gower_matrix_dataframe)
+        # Select top 11 entries. The 10 closest clusters and the incumbent itself
+        relevant_distances = distance_matrix[0, :]
 
-            # Select top 11 entries. The 10 closest clusters and the incumbent itself
-            relevant_distances = distance_matrix[0, :]
+        # Remove the incumbent itself
+        closest_k_cluster_indexes = np.argsort(relevant_distances)[1:6]
+        closest_k_clusters_centroids = gower_matrix_dataframe.iloc[closest_k_cluster_indexes]
 
-            # Remove the incumbent itself
-            closest_k_cluster_indexes = np.argsort(relevant_distances)[1:11]
-            closest_k_clusters_centroids = gower_matrix_dataframe.iloc[closest_k_cluster_indexes]
+        whole_entries = pd.merge(
+            closest_k_clusters_centroids,
+            centroid_configurations,
+            left_on=list(closest_k_clusters_centroids.columns),
+            right_on=[f"medoid_config_{hyperparameter}" for hyperparameter in incumbent_config.config_space.keys()],
+            how="left",
+        )
 
-            whole_entries = pd.merge(
-                closest_k_clusters_centroids,
-                centroid_configurations,
-                left_on=list(closest_k_clusters_centroids.columns),
-                right_on=[f"medoid_config_{hyperparameter}" for hyperparameter in incumbent_config.keys()],
-                how="left",
-            )
-
-            return whole_entries[["cluster"]]
+        return whole_entries[["cluster"]]
 
 
 class DynaBOMisleadingPriorCallback(DynaBOAbstractPriorCallback, MisleadingPriorCallback):

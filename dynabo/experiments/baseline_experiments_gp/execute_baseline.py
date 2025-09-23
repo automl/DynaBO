@@ -17,7 +17,7 @@ from dynabo.utils.configuration_data_classes import (
 )
 from dynabo.utils.evaluator import MFPBenchEvaluator, YAHPOGymEvaluator, ask_tell_opt, fill_table
 
-EXP_CONFIG_FILE_PATH = "dynabo/experiments/baseline_experiments/config.yml"
+EXP_CONFIG_FILE_PATH = "dynabo/experiments/baseline_experiments_gp/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
 only_two_hyperparameters = False
@@ -102,7 +102,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         )
 
         runhistory_encoder = BlackBoxFacade.get_runhistory_encoder(scenario=smac_scenario)
-
+        model = BlackBoxFacade.get_model(scenario=smac_scenario)
         smac = HyperparameterOptimizationFacade(
             scenario=smac_scenario,
             target_function=evaluator.train,
@@ -114,6 +114,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             intensifier=intensifier,
             overwrite=True,
             runhistory_encoder=runhistory_encoder,
+            model=model,
         )
     elif random:
         initial_design_size = None
@@ -145,7 +146,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
 if __name__ == "__main__":
     initialise_experiments()
-    benchmarklib = "yahpogym"
+    benchmarklib = "mfpbench"
     experimenter = PyExperimenter(
         experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
         database_credential_file_path=DB_CRED_FILE_PATH,
@@ -158,15 +159,15 @@ if __name__ == "__main__":
             common_parameters={
                 "acquisition_function": ["expected_improvement"],
                 "timeout_total": [3600],
-                "n_trials": [200],
+                "n_trials": [500],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
                 "seed": list(range(30)),
             },
             benchmarklib=benchmarklib,
             benchmark_parameters={
-                "with_all_datasets": True,
-                "medium_and_hard": False,
+                "with_all_datasets": False,
+                "medium_and_hard": True,
             },
             approach="baseline",
             approach_parameters=None,

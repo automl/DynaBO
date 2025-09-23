@@ -17,7 +17,7 @@ from dynabo.utils.configuration_data_classes import (
 )
 from dynabo.utils.evaluator import MFPBenchEvaluator, YAHPOGymEvaluator, ask_tell_opt, fill_table
 
-EXP_CONFIG_FILE_PATH = "dynabo/experiments/baseline_experiments/config.yml"
+EXP_CONFIG_FILE_PATH = "dynabo/experiments/data_generation/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
 only_two_hyperparameters = False
@@ -94,7 +94,6 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             acquisition_function=acquisition_function,
             max_steps=500,  # TODO wie viele local search steps sind reasonable?
         )
-        config_selector = ConfigSelector(scenario=smac_scenario, retries=100, retrain_after=1)
 
         intensifier = HyperparameterOptimizationFacade.get_intensifier(
             scenario=smac_scenario,
@@ -108,7 +107,6 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
             target_function=evaluator.train,
             acquisition_function=acquisition_function,
             acquisition_maximizer=local_and_prior_search,
-            config_selector=config_selector,
             callbacks=[incumbent_callback],
             initial_design=initial_design,
             intensifier=intensifier,
@@ -158,10 +156,10 @@ if __name__ == "__main__":
             common_parameters={
                 "acquisition_function": ["expected_improvement"],
                 "timeout_total": [3600],
-                "n_trials": [200],
+                "n_trials": [5000],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
-                "seed": list(range(30)),
+                "seed": list(range(10)),
             },
             benchmarklib=benchmarklib,
             benchmark_parameters={

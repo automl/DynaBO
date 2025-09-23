@@ -19,19 +19,19 @@ def create_prior_data_path_pd1(scenario: str):
     return os.path.join("benchmark_data", "prior_data", "mfpbench", scenario)
 
 
-def connect_to_database(table_name: str) -> PyExperimenter:
+def connect_to_database(database_name, table_name: str) -> PyExperimenter:
     EXP_CONFIG_FILE_PATH = "dynabo/experiments/baseline_experiments/config.yml"
     DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
     experimenter = PyExperimenter(
-        experiment_configuration_file_path=EXP_CONFIG_FILE_PATH, database_credential_file_path=DB_CRED_FILE_PATH, use_codecarbon=False, table_name=table_name, database_name="dynabo"
+        experiment_configuration_file_path=EXP_CONFIG_FILE_PATH, database_credential_file_path=DB_CRED_FILE_PATH, use_codecarbon=False, table_name=table_name, database_name=database_name
     )
 
     return experimenter
 
 
-def save_base_table(benchmark_name: str, table_name: str, only_incumbent: bool = False):
-    experimenter = connect_to_database(table_name)
+def save_base_table(benchmark_name: str, table_name: str, only_incumbent: bool = False, database_name: str = "dynabo") -> pd.DataFrame:
+    experimenter = connect_to_database(database_name, table_name)
     base_table = experimenter.get_table()
     if only_incumbent:
         configs = experimenter.get_logtable("configs", condition="incumbent = 1")
