@@ -13,8 +13,6 @@ from smac.utils.logging import get_logger
 
 from dynabo.smac_additions.prior_random_search import PriorRandomSearch
 
-__copyright__ = "Copyright 2022, automl.org"
-__license__ = "3-clause BSD"
 
 logger = get_logger(__name__)
 
