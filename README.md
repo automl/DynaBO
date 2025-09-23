@@ -1,7 +1,7 @@
 # DynaBO
 This is the implementation of our ICLR 2025 submission titled **DynaBO: Dynamic Priors in Bayesian Optimization for Hyperparameter Optimization**. In the paper we propose a method to incorporate dynamic user feedback in the form of priors at runtime.
 
-![DynaBO evaluation results on lcbench](plots/scenario_plots/yahpogym/regret/lcbench.png)
+![DynaBO evaluation results on lcbench](final_matrix.png)
 
 ## Install
 To install and run our method, you need to execute the following steps:
