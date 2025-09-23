@@ -35,17 +35,6 @@ clean-build: ## remove build artifacts
 	find . -name '*.egg-info' -exec rm -fr {} +
 	find . -name '*.egg' -exec rm -f {} +
 
-clean-pyc: ## remove Python file artifacts
-	find . -name '*.pyc' -exec rm -f {} +
-	find . -name '*.pyo' -exec rm -f {} +
-	find . -name '*~' -exec rm -f {} +
-	find . -name '__pycache__' -exec rm -fr {} +
-
-clean-test: ## remove test and coverage artifacts
-	rm -fr .tox/
-	rm -f .coverage
-	rm -fr htmlcov/
-	rm -fr .pytest_cache
 ruff: ## run ruff as a formatter
 	python -m ruff --exit-zero dynabo
 	python -m ruff --silent --exit-zero --no-cache --fix dynabo
@@ -54,22 +43,6 @@ isort:
 
 test: ## run tests quickly with the default Python
 	python -m pytest tests
-cov-report:
-	coverage html -d coverage_html
-
-coverage: ## check code coverage quickly with the default Python
-	coverage run --source dynabo -m pytest
-	coverage report -m
-	coverage html
-	$(BROWSER) htmlcov/index.html
-
-docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/dynabo.rst
-	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ dynabo
-	$(MAKE) -C docs clean
-	$(MAKE) -C docs html
-	$(BROWSER) docs/_build/html/index.html
 install: clean ## install the package to the active Python's site-packages
 	uv sync
 	uv run python scripts/patch_yahpo_configspace.py
