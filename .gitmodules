@@ -6,6 +6,11 @@
 [submodule "benchmark_data/yahpo_data"]
     path = benchmark_data/yahpo_data
     url = https://github.com/slds-lmu/yahpo_data
+
 [submodule "lib/SMAC3"]
 	path = lib/SMAC3
 	url = https://github.com/automl/SMAC3.git
+
+[submodule "lib/yahpo_gym"]
+    path = lib/yahpo_gym
+    url  = https://github.com/slds-lmu/yahpo_gym
