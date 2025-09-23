@@ -12,8 +12,8 @@ from dynabo.data_processing.download_all_files import (
     PD1_ABLATION_INCUMBENT_PATH,
     PD1_ABLATION_PRIOR_PATH,
     PD1_ABLATION_TABLE_PATH,
-    PD1_BASELINE_INCUMBENT_PATH,
-    PD1_BASELINE_TABLE_PATH,
+    RF_PD1_BASELINE_INCUMBENT_PATH,
+    RF_PD1_BASELINE_TABLE_PATH,
 )
 from dynabo.plotting.plotting_utils import add_regret, get_min_costs, merge_df, preprocess_configs, save_fig, set_ax_style
 
@@ -42,8 +42,8 @@ def load_cost_data_mfpbench_ablate_priors(prior_std_denominator: int):
     """
     Load the cost data for pd1, saved in the filesystem. Do some data cleaning for lcbench and add regret.
     """
-    baseline_table = pd.read_csv(PD1_BASELINE_TABLE_PATH)
-    baseline_config_df = pd.read_csv(PD1_BASELINE_INCUMBENT_PATH)
+    baseline_table = pd.read_csv(RF_PD1_BASELINE_TABLE_PATH)
+    baseline_config_df = pd.read_csv(RF_PD1_BASELINE_INCUMBENT_PATH)
     baseline_config_df, _ = merge_df(baseline_table, baseline_config_df, None)
 
     prior_table = pd.read_csv(PD1_ABLATION_TABLE_PATH)

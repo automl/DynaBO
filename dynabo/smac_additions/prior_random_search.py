@@ -127,4 +127,4 @@ class PriorRandomSearch(AbstractAcquisitionMaximizer):
         if n_points > 1:
             return configspace.sample_configuration(size=n_points)
         else:
-            return [configspace.sample_configuration()]
+            return [configspace.sample_configuration(n_points)]

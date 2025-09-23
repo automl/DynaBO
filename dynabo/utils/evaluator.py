@@ -114,15 +114,15 @@ class AbstractEvaluator:
 
 
 YAHPOGYM_SCENARIO_OPTIONS = [
-    "rbv2_ranger",
+    #"rbv2_ranger",
     "rbv2_xgboost",
-    "rbv2_svm",
-    "rbv2_glmnet",
+    #"rbv2_svm",
+    #"rbv2_glmnet",
     "lcbench",
-    "nb301",
-    "rbv2_aknn",
-    "rbv2_rpart",
-    "rbv2_super",
+    #"nb301",
+    #"rbv2_aknn",
+    #"rbv2_rpart",
+    #"rbv2_super",
 ]
 
 
@@ -132,7 +132,8 @@ class YAHPOGymEvaluator(AbstractEvaluator):
         self.metric = metric
         self.runtime_metric_name = runtime_metric_name
 
-        local_config._config = "benchmark_data/yahpo_data"
+        local_config._config = {"data_path": str("benchmark_data/yahpo_data")}
+           # TODO set this properly
         self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario, multithread=False)
         self.benchmark.set_instance(value=self.dataset)
         self.default_fidelity_config = self.benchmark.get_fidelity_space().get_default_configuration()

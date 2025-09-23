@@ -16,11 +16,12 @@ logger = get_logger(__name__)
 
 
 class ConfigSpacePdfWrapper:
-    def __init__(self, configspace: ConfigurationSpace, decay_beta: float, prior_start: int, prior_floor: float, discretize: bool, discrete_bins_factor: float):
+    def __init__(self, configspace: ConfigurationSpace, decay_beta: float, prior_start: int, prior_floor: float, discretize: bool, discrete_bins_factor: float, dynabo: bool):
         self.configspace = configspace
         self.decay_beta = decay_beta
         self.prior_start = prior_start
         self.prior_floor = prior_floor
+        self.dynabo = dynabo
 
         # Variables to discretize
         self._discretize = discretize
@@ -36,8 +37,12 @@ class ConfigSpacePdfWrapper:
         # in the same order
         for parameter, X_col in zip(self.configspace.values(), X.T):
             prior_values *= parameter._pdf(X_col[:, np.newaxis]) + self.prior_floor
-
-        return np.power(prior_values, self.decay_beta / self.iteration_number(n))
+        #if self.iteration_number(n) >= 50:
+        #    return np.ones((len(X), 1))
+        if self.dynabo:
+            return np.power(prior_values, self.decay_beta / np.square(self.iteration_number(n)))
+        else:
+            return np.power(prior_values, self.decay_beta / self.iteration_number(n))
 
     def _compute_discretized_pdf(
         self,
@@ -79,11 +84,13 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
         self,
         acquisition_function,
         initial_design_size: int,
+        dynabo,
         discretize=False,
         discrete_bins_factor=10,
     ):
         self._acquisition_function: AbstractAcquisitionFunction = acquisition_function
         self._initial_design_size = initial_design_size
+        self._dynabo = dynabo
         self._discretize = discretize
         self._discrete_bins_factor = discrete_bins_factor
 
@@ -121,7 +128,7 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
         self._decay_beta = decay_beta
         self._prior_configspaces.append(
             ConfigSpacePdfWrapper(
-                configspace=prior_configspace, decay_beta=decay_beta, prior_start=prior_start, prior_floor=prior_floor, discretize=self._discretize, discrete_bins_factor=self._discrete_bins_factor
+                configspace=prior_configspace, decay_beta=decay_beta, prior_start=prior_start, prior_floor=prior_floor, discretize=self._discretize, discrete_bins_factor=self._discrete_bins_factor, dynabo=self._dynabo
             )
         )
 
