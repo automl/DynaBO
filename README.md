@@ -20,9 +20,9 @@ make install
 ```
 
 ## Execution
-Our experiments rely on the library. They therefore require either using a mysql database. The process of using PyExperimenter is described in its [documentation](https://github.com/tornede/py_experimenter).
+Our experiments rely on the PyExperimenter library. They therefore require using a mysql database. The process of using PyExperimenter is described in its [documentation](https://github.com/tornede/py_experimenter).
 To replicate our experiments you need to execute the following steps
 1. Create gt_data needed for priors by running: ``dynabo/experiments/data_generation/execute_baseline.py`` for both ``mfbench`` and ``yahpogym``. 
 2. Create priors by running ``dynabo/data_processing/extract_gt_priors.py``
-3. Execute the baselines, dynabo, and πBO using the scripts located in ``dynabo/experiments``. In our experiments ran slurm jobs utilizing the scripts in ``cluster_scripts``.
+3. Execute the baselines, dynabo, and πBO using the scripts located in ``dynabo/experiments``. In our experiments we ran slurm jobs utilizing the scripts in ``cluster_scripts``.
 4. Create plots using ``dynabo/plotting/plotting.py``.
