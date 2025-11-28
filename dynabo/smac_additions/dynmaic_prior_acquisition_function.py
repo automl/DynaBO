@@ -16,12 +16,13 @@ logger = get_logger(__name__)
 
 
 class ConfigSpacePdfWrapper:
-    def __init__(self, configspace: ConfigurationSpace, decay_beta: float, prior_start: int, prior_floor: float, discretize: bool, discrete_bins_factor: float, dynabo: bool):
+    def __init__(self, configspace: ConfigurationSpace, decay_beta: float, prior_start: int, prior_floor: float, discretize: bool, discrete_bins_factor: float, dynabo: bool, prior_decay: str):
         self.configspace = configspace
         self.decay_beta = decay_beta
         self.prior_start = prior_start
         self.prior_floor = prior_floor
         self.dynabo = dynabo
+        self.prior_decay = prior_decay
 
         # Variables to discretize
         self._discretize = discretize
@@ -40,7 +41,20 @@ class ConfigSpacePdfWrapper:
         #if self.iteration_number(n) >= 50:
         #    return np.ones((len(X), 1))
         if self.dynabo:
-            return np.power(prior_values, self.decay_beta / np.square(self.iteration_number(n)))
+            if self.prior_decay == "logarithmic":
+                return np.power(prior_values, self.decay_beta / np.log(self.iteration_number(n) + 1))
+            elif self.prior_decay == "linear":
+                return np.power(prior_values, self.decay_beta / self.iteration_number(n))
+            elif self.prior_decay == "quadratic":
+                return np.power(prior_values, self.decay_beta / np.square(self.iteration_number(n)))
+            elif self.prior_decay == "cubic":
+                return np.power(prior_values, self.decay_beta / np.power(self.iteration_number(n), 3))
+            elif self.prior_decay == "^4":
+                return np.power(prior_values, self.decay_beta / np.power(self.iteration_number(n), 4))
+            elif self.prior_decay == "^5":
+                return np.power(prior_values, self.decay_beta / np.power(self.iteration_number(n), 5))
+            else:
+                raise ValueError(f"Unknown prior decay type: {self.prior_decay}")
         else:
             return np.power(prior_values, self.decay_beta / self.iteration_number(n))
 
@@ -85,12 +99,14 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
         acquisition_function,
         initial_design_size: int,
         dynabo,
+        prior_decay="quadratic",
         discretize=False,
         discrete_bins_factor=10,
     ):
         self._acquisition_function: AbstractAcquisitionFunction = acquisition_function
         self._initial_design_size = initial_design_size
         self._dynabo = dynabo
+        self._prior_decay = prior_decay
         self._discretize = discretize
         self._discrete_bins_factor = discrete_bins_factor
 
@@ -119,16 +135,20 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
         prior_configspace: ConfigurationSpace,
         decay_beta: float,
         prior_start: int,
+        remove_old_prior: bool = False,
         prior_floor: float = 1e-12,
     ):
         self._acquisition_function: AbstractAcquisitionFunction = acquisition_function
         self._functions: list[AbstractAcquisitionFunction] = []
         self._eta: float | None = None
+        
+        if remove_old_prior:
+            self._prior_configspaces = []
 
         self._decay_beta = decay_beta
         self._prior_configspaces.append(
             ConfigSpacePdfWrapper(
-                configspace=prior_configspace, decay_beta=decay_beta, prior_start=prior_start, prior_floor=prior_floor, discretize=self._discretize, discrete_bins_factor=self._discrete_bins_factor, dynabo=self._dynabo
+                configspace=prior_configspace, decay_beta=decay_beta, prior_start=prior_start, prior_floor=prior_floor, discretize=self._discretize, discrete_bins_factor=self._discrete_bins_factor, dynabo=self._dynabo, prior_decay=self._prior_decay
             )
         )
 
@@ -175,5 +195,8 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
                 "acquisition_function": af_impact,
                 **{f"prior_{i}": prior_impacts[i] for i in range(len(self._prior_configspaces))},
             }
-        result = acq_values * np.prod(prior_values, axis=0)
+        if not self._prior_configspaces:
+            return acq_values
+        else:
+            result = acq_values * np.sum(np.array(prior_values), axis=0)
         return result

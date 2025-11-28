@@ -73,6 +73,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         acquisition_function=HyperparameterOptimizationFacade.get_acquisition_function(smac_scenario),
         initial_design_size=initial_design._n_configs,
         dynabo=dynabo,
+        prior_decay=config["prior_decay"],
     )
 
     local_and_prior_search = LocalAndPriorSearch(
@@ -204,7 +205,7 @@ if __name__ == "__main__":
         use_codecarbon=False,
     )
     benchmarklib = "mfpbench"
-    fill = True
+    fill = False
 
     if fill:
         fill_table(
@@ -212,15 +213,15 @@ if __name__ == "__main__":
             common_parameters={
                 "acquisition_function": ["expected_improvement"],
                 "timeout_total": [3600],
-                "n_trials": [50],
+                "n_trials": [500],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
                 "seed": list(range(30)),
             },
             benchmarklib=benchmarklib,
             benchmark_parameters={
-                "with_all_datasets": False,
-                "medium_and_hard": True,
+                "with_all_datasets": True,
+                "medium_and_hard": False,
             },
             approach="dynabo",
             approach_parameters={
@@ -231,20 +232,22 @@ if __name__ == "__main__":
                 # Dynabo when prior
                 "prior_static_position": True,
                 "prior_every_n_trials_choices": [10],
-                "prior_at_start_choices": [True, False],
-                "prior_chance_theta_choices": [0.01, 0.015],
+                "prior_at_start_choices": [True],
+                "prior_chance_theta_choices": [0.015, 0.02],
                 # Decay parameters
                 "prior_decay_enumerator_choices": [
                     5,
                 ],
                 "prior_decay_denominator": 1,
+                "remove_old_priors_choices": [False],
+                "prior_decay_choices": ["linear"],
                 # Validation parameters
                 "validate_prior_choices": [True, False],
-                "prior_validation_method_choices": ["difference", "baseline_perfect"],
+                "prior_validation_method_choices": ["difference"],
                 "n_prior_validation_samples": 500,
                 "n_prior_based_samples": 0,
                 "prior_validation_manwhitney_p_choices": [0.05],
-                "prior_validation_difference_threshold_choices": [-0.15,]
+                "prior_validation_difference_threshold_choices": [-0.15],
             },
         )
     reset = False

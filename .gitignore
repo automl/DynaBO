@@ -143,3 +143,4 @@ benchmark_data/gt_prior_data/yahpo/origin_table.csv
 benchmark_data/gt_prior_data/mfpbench/origin_table.csv
 benchmark_data/gt_prior_data/yahpogym/origin_table.csv
 plots
+plots_product

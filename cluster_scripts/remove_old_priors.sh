@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH -t 04:00:00
-#SBATCH --array=1-727
+#SBATCH -t 01:00:00
+#SBATCH --array=1-480
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu 6G
 #SBATCH -J dynabo-prior
-#SBATCH --nice=10000
 #SBATCH -e /mnt/home/lfehring/DynaBO/logs/%x/%A_%a.err
 #SBATCH -o /mnt/home/lfehring/DynaBO/logs/%x/%A_%a.out
+
 
 cd /mnt/home/lfehring/DynaBO
 
@@ -17,4 +17,5 @@ ml Miniforge3
 source /mnt/home/lfehring/.bashrc
 conda activate DynaBO
 
-/mnt/home/lfehring/DynaBO/.venv/bin/python dynabo/experiments/prior_experiments_gaussian/execute_prior_experiments.py
+/mnt/home/lfehring/DynaBO/.venv/bin/python dynabo/experiments/remove_old_priors/execute_prior_experiments.py
+

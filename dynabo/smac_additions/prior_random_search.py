@@ -39,8 +39,11 @@ class PriorRandomSearch(AbstractAcquisitionMaximizer):
         self,
         prior_configspace: ConfigurationSpace,
         prior_decay: Callable[[float], float] = lambda x: np.exp(-0.126 * x),
+        remove_old_prior: bool = False,
     ):
         decayed_prior_configspace = PriorConfigSpaceWrapper(prior_configspace, prior_decay)
+        if remove_old_prior:
+            self._prior_configspace = []
         self._prior_configspace.append(decayed_prior_configspace)
 
         self._is_active = True

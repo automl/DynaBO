@@ -66,8 +66,9 @@ class LocalAndPriorSearch(AbstractAcquisitionMaximizer):
         self,
         prior_configspace: ConfigurationSpace,
         prior_decay: Callable[[float], float] = lambda x: np.exp(-0.126 * x),
+        remove_old_prior: bool = False,
     ):
-        self._random_search._dynamic_init(prior_configspace, prior_decay)
+        self._random_search._dynamic_init(prior_configspace, prior_decay, remove_old_prior=remove_old_prior)
 
     @property
     def acquisition_function(self) -> AbstractAcquisitionFunction | None:  # noqa: D102

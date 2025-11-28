@@ -13,6 +13,7 @@ class PriorKind(str, Enum):
     MISLEADING = "misleading"
     DECEIVING = "deceiving"
     DUMMY_VALUE = "dummy_value"
+    MIXED = "mixed"
 
 
 class ValidationMethod(str, Enum):

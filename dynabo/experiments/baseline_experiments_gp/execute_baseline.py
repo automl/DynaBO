@@ -152,14 +152,14 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    fill = False
+    fill = True
     if fill:
         fill_table(
             py_experimenter=experimenter,
             common_parameters={
                 "acquisition_function": ["expected_improvement"],
                 "timeout_total": [3600],
-                "n_trials": [500],
+                "n_trials": [50],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
                 "seed": list(range(30)),
@@ -176,6 +176,6 @@ if __name__ == "__main__":
     if reset:
         experimenter.reset_experiments("error", "running")
 
-    execute = True
+    execute = False
     if execute:
         experimenter.execute(run_experiment, max_experiments=1, random_order=True)

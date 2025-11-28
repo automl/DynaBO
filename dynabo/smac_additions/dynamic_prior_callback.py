@@ -87,6 +87,7 @@ class AbstractPriorCallback(Callback, ABC):
         prior_std_denominator: float,
         prior_decay_enumerator: int,
         prior_decay_denominator: int,
+        remove_old_prior:bool = False,
         result_processor: ResultProcessor = None,
         evaluator: YAHPOGymEvaluator = None,
     ):
@@ -106,6 +107,7 @@ class AbstractPriorCallback(Callback, ABC):
         self.prior_std_denominator = prior_std_denominator
         self.prior_decay_enumerator = prior_decay_enumerator
         self.prior_decay_denominator = prior_decay_denominator
+        self.remove_old_prior = remove_old_prior
 
         self.result_processor = result_processor
         self.evaluator = evaluator
@@ -258,12 +260,13 @@ class AbstractPriorCallback(Callback, ABC):
         return prior_configspace, origin_configspace, cost, hyperparameter_config, superior_configuration
 
     def set_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace):
-        smbo.intensifier.config_selector._acquisition_maximizer.dynamic_init(prior_configspace)
+        smbo.intensifier.config_selector._acquisition_maximizer.dynamic_init(prior_configspace, remove_old_prior=self.remove_old_prior)
         smbo.intensifier.config_selector._acquisition_function.dynamic_init(
             acquisition_function=smbo.intensifier.config_selector._acquisition_function._acquisition_function,
             prior_configspace=prior_configspace,
             decay_beta=self.prior_decay_enumerator / self.prior_decay_denominator,
             prior_start=smbo.runhistory.finished,
+            remove_old_prior=self.remove_old_prior,
         )
 
     @abstractmethod
@@ -327,6 +330,7 @@ class DynaBOAbstractPriorCallback(AbstractPriorCallback):
         self.prior_every_n_trials = prior_every_n_trials
         self.prior_chance_theta = prior_chance_theta
         self.prior_at_start = prior_at_start
+
 
     def intervene(self, smbo: SMBO) -> bool:
         def _intervene_static_position():
@@ -598,3 +602,78 @@ class PiBOTestAllPriors(PiBOAbstractPriorCallback):
 
     def _accept_prior_baseline_perfect(self) -> bool:
         return True
+
+
+class MixedPriorsCallback(AbstractPriorCallback):
+    def __init__(self, no_incumbent_percentile, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.well_performing_callback = DynaBOWellPerformingPriorCallback(
+            no_incumbent_percentile=no_incumbent_percentile,
+            prior_static_position=None,
+            prior_every_n_trials=None,
+            prior_chance_theta=None,
+            prior_at_start=None,
+            *args,
+            **kwargs,
+        )
+
+        self.medium_performing_callback = DynaBOMediumPriorCallback(
+            no_incumbent_percentile=no_incumbent_percentile,
+            prior_static_position=None,
+            prior_every_n_trials=None,
+            prior_chance_theta=None,
+            prior_at_start=None,
+            *args,
+            **kwargs,
+        )
+
+        self.misleading_prior_callback = DynaBOMisleadingPriorCallback(
+            prior_static_position=None,
+            prior_every_n_trials=None,
+            prior_chance_theta=None,
+            prior_at_start=None,
+            *args,
+            **kwargs,
+        )
+        self.deceiving_prior_callback = DynaBODeceivingPriorCallback(
+            prior_static_position=None,
+            prior_every_n_trials=None,
+            prior_chance_theta=None,
+            prior_at_start=None,
+            *args,
+            **kwargs,
+        )
+        self.last_Was_helpful = None
+        self.good_prior = None
+
+
+    def sample_prior(self, smbo: SMBO, incumbent_config: Configuration, incumbent_cost: float) -> Optional[pd.DataFrame]:
+        if self.last_Was_helpful is not None:
+            if self.last_Was_helpful:
+                return self.deceiving_prior_callback.sample_prior(smbo, incumbent_config, incumbent_cost)
+            else:
+                return self.misleading_prior_callback.sample_prior(smbo, incumbent_config, incumbent_cost)
+        
+        self.last_Was_helpful = True
+        chance = smbo.intensifier._rng.random()
+        if chance < 1/3:
+            self.good_prior = True
+            return self.well_performing_callback.sample_prior(smbo, incumbent_config, incumbent_cost)
+        elif chance < 2/3:
+            self.good_prior = False
+            return self.medium_performing_callback.sample_prior(smbo, incumbent_config, incumbent_cost)
+        else:
+            self.good_prior = False
+            return self.misleading_prior_callback.sample_prior(smbo, incumbent_config, incumbent_cost)
+
+
+    def intervene(self, smbo: SMBO) -> bool:
+        if self.initial_design_size < smbo.runhistory.finished < self.initial_design_size + 3:
+            return True
+        return False
+        
+    def _accept_prior_baseline_perfect(self) -> bool:
+        if self.good_prior:
+            return self.well_performing_callback._accept_prior_baseline_perfect()
+        else:
+            return self.deceiving_prior_callback._accept_prior_baseline_perfect()

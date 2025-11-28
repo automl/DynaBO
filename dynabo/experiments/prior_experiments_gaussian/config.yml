@@ -3,9 +3,9 @@ PY_EXPERIMENTER:
 
   Database:
     provider: mysql
-    database: dynabo_normal_scale
+    database: dynabo_sum
     table: 
-      name: iclr_pd1_gp
+      name: iclr_rebuttal_prior_gp_longer
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)
@@ -65,6 +65,10 @@ PY_EXPERIMENTER:
           type: FLOAT
         prior_validation_difference_threshold: # approach
           type: FLOAT
+        remove_old_priors: # approach
+          type: BOOLEAN
+        prior_decay:
+          type: VARCHAR(255)
 
       result_timestamps: False
       resultfields:

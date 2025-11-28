@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo_sum
     table: 
-      name: iclr_rebuttal_remove_ablation
+      name: iclr_rebuttal_negative_positive
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)
@@ -69,6 +69,7 @@ PY_EXPERIMENTER:
           type: BOOLEAN
         prior_decay:
           type: VARCHAR(255)
+
 
       result_timestamps: False
       resultfields:

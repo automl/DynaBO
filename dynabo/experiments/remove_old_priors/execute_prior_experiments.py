@@ -1,5 +1,4 @@
 import time
-from functools import partial
 
 from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
@@ -7,15 +6,8 @@ from smac import HyperparameterOptimizationFacade, Scenario, BlackBoxFacade
 from smac.main.config_selector import ConfigSelector
 
 from dynabo.smac_additions.dynamic_prior_callback import (
-    DynaBODeceivingPriorCallback,
-    DynaBOMediumPriorCallback,
-    DynaBOMisleadingPriorCallback,
-    DynaBOWellPerformingPriorCallback,
     LogIncumbentCallback,
-    PiBODeceivingPriorCallback,
-    PiBOMediumPriorCallback,
-    PiBOMisleadingPriorCallback,
-    PiBOWellPerformingPriorCallback,
+    MixedPriorsCallback,
 )
 from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
@@ -31,7 +23,7 @@ from dynabo.utils.configuration_data_classes import (
 )
 from dynabo.utils.evaluator import MFPBenchEvaluator, YAHPOGymEvaluator, ask_tell_opt, fill_table
 
-EXP_CONFIG_FILE_PATH = "dynabo/experiments/prior_experiments/config.yml"
+EXP_CONFIG_FILE_PATH = "dynabo/experiments/remove_old_priors/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
 
 
@@ -72,8 +64,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     acquisition_function = DynamicPriorAcquisitionFunction(
         acquisition_function=HyperparameterOptimizationFacade.get_acquisition_function(smac_scenario),
         initial_design_size=initial_design._n_configs,
-        dynabo=dynabo,
-        prior_decay=config["prior_decay"],
+        dynabo=False,
     )
 
     local_and_prior_search = LocalAndPriorSearch(
@@ -90,57 +81,9 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
     runhistory_encoder = BlackBoxFacade.get_runhistory_encoder(scenario=smac_scenario)
 
-    if pibo:
-        if prior_cfg.kind == "good":
-            PriorCallbackClass = partial(PiBOWellPerformingPriorCallback, no_incumbent_percentile=prior_cfg.no_incumbent_percentile)
-        elif prior_cfg.kind == "medium":
-            PriorCallbackClass = partial(PiBOMediumPriorCallback, no_incumbent_percentile=prior_cfg.no_incumbent_percentile)
-        elif prior_cfg.kind == "misleading":
-            PriorCallbackClass = PiBOMisleadingPriorCallback
-        elif prior_cfg.kind == "deceiving":
-            PriorCallbackClass = PiBODeceivingPriorCallback
-        else:
-            raise ValueError(f"Prior kind {prior_cfg.kind} not supported")
-    elif dynabo:
-        if prior_cfg.kind == "good":
-            PriorCallbackClass = partial(
-                DynaBOWellPerformingPriorCallback,
-                no_incumbent_percentile=prior_cfg.no_incumbent_percentile,
-                prior_static_position=prior_cfg.prior_static_position,
-                prior_every_n_trials=prior_cfg.prior_every_n_trials,
-                prior_chance_theta=prior_cfg.chance_theta,
-                prior_at_start=prior_cfg.at_start,
-            )
-        elif prior_cfg.kind == "medium":
-            PriorCallbackClass = partial(
-                DynaBOMediumPriorCallback,
-                no_incumbent_percentile=prior_cfg.no_incumbent_percentile,
-                prior_static_position=prior_cfg.prior_static_position,
-                prior_every_n_trials=prior_cfg.prior_every_n_trials,
-                prior_chance_theta=prior_cfg.chance_theta,
-                prior_at_start=prior_cfg.at_start,
-            )
-        elif prior_cfg.kind == "misleading":
-            PriorCallbackClass = partial(
-                DynaBOMisleadingPriorCallback,
-                prior_static_position=prior_cfg.prior_static_position,
-                prior_every_n_trials=prior_cfg.prior_every_n_trials,
-                prior_chance_theta=prior_cfg.chance_theta,
-                prior_at_start=prior_cfg.at_start,
-            )
-        elif prior_cfg.kind == "deceiving":
-            PriorCallbackClass = partial(
-                DynaBODeceivingPriorCallback,
-                prior_static_position=prior_cfg.prior_static_position,
-                prior_every_n_trials=prior_cfg.prior_every_n_trials,
-                prior_chance_theta=prior_cfg.chance_theta,
-                prior_at_start=prior_cfg.at_start,
-            )
-        else:
-            raise ValueError(f"Prior kind {prior_cfg.kind} not supported")
-
-    prior_callback = PriorCallbackClass(
+    prior_callback = MixedPriorsCallback(
         remove_old_prior=config["remove_old_priors"],
+        no_incumbent_percentile=prior_cfg.no_incumbent_percentile,
         benchmarklib=benchmark_cfg.benchmarklib,
         scenario=evaluator.scenario,
         dataset=evaluator.dataset,
@@ -162,6 +105,8 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
     incumbent_callback = LogIncumbentCallback(result_processor=result_processor, evaluator=evaluator)
 
+    model = BlackBoxFacade.get_model(scenario=smac_scenario)
+
     smac = HyperparameterOptimizationFacade(
         scenario=smac_scenario,
         target_function=evaluator.train,
@@ -173,6 +118,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         intensifier=intensifier,
         overwrite=True,
         runhistory_encoder=runhistory_encoder,
+        model =model,
     )
 
     start_time = time.time()
@@ -218,34 +164,34 @@ if __name__ == "__main__":
             },
             benchmarklib=benchmarklib,
             benchmark_parameters={
-                "with_all_datasets": True,
-                "medium_and_hard": False,
+                "with_all_datasets": False,
+                "medium_and_hard": True,
             },
             approach="dynabo",
             approach_parameters={
                 # Prior configurationz
-                "prior_kind_choices": ["good", "medium", "misleading", "deceiving"],
+                "prior_kind_choices": ["mixed"],
                 "no_incumbent_percentile": 0.01,
                 "prior_std_denominator": 5,
                 # Dynabo when prior
                 "prior_static_position": True,
                 "prior_every_n_trials_choices": [10],
-                "prior_at_start_choices": [True],
-                "prior_chance_theta_choices": [0.015, 0.02],
+                "prior_at_start_choices": [True, False],
+                "prior_chance_theta_choices": [0.01, 0.015],
                 # Decay parameters
                 "prior_decay_enumerator_choices": [
                     5,
                 ],
                 "prior_decay_denominator": 1,
+                "prior_decay_choices": ["linear",],
                 "remove_old_priors_choices": [False, True],
-                "prior_decay_choices": ["linear"],
                 # Validation parameters
-                "validate_prior_choices": [True],
-                "prior_validation_method_choices": ["difference"],
+                "validate_prior_choices": [False],
+                "prior_validation_method_choices": ["difference", "baseline_perfect"],
                 "n_prior_validation_samples": 500,
                 "n_prior_based_samples": 0,
                 "prior_validation_manwhitney_p_choices": [0.05],
-                "prior_validation_difference_threshold_choices": [-0.15],
+                "prior_validation_difference_threshold_choices": [-0.15,]
             },
         )
     reset = False

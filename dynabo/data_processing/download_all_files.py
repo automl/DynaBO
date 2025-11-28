@@ -21,6 +21,18 @@ YAHPO_ABLATION_TABLE_PATH = "plotting_data/yahpogym/yahpo_ablation.csv"
 YAHPO_ABLATION_INCUMBENT_PATH = "plotting_data/yahpogym/yahpo_ablation_incumbent.csv"
 YAHPO_ABLATION_PRIOR_PATH = "plotting_data/yahpogym/yahpo_ablation_priors.csv"
 
+PRIOR_DECAY_ABLATION_TABLE_PATH = "plotting_data/pd1/decay_ablation.csv"
+PRIOR_DECAY_ABLATION_INCUMBENT_PATH = "plotting_data/pd1/decay_ablation_incumbent.csv"
+PRIOR_DECAY_ABLATION_PRIOR_PATH = "plotting_data/pd1/decay_ablation_priors.csv"
+
+REMOVE_OLD_PRIORS_ABLATION_TABLE_PATH = "plotting_data/pd1/remove_old_priors_ablation.csv"
+REMOVE_OLD_PRIORS_ABLATION_INCUMBENT_PATH = "plotting_data/pd1/remove_old_priors_ablation_incumbent.csv"
+REMOVE_OLD_PRIORS_ABLATION_PRIOR_PATH = "plotting_data/pd1/remove_old_priors_ablation_priors.csv"
+
+MIXED_PRIORS_TABLE_PATH = "plotting_data/pd1/mixed_priors.csv"
+MIXED_PRIORS_INCUMBENT_PATH = "plotting_data/pd1/mixed_priors_incumbent.csv"
+MIXED_PRIORS_PRIORS_PATH = "plotting_data/pd1/mixed_priors_priors.csv"
+
 # Random Forest DAta
 RF_PD1_BASELINE_TABLE_PATH = "plotting_data/pd1/rf/baseline.csv"
 RF_PD1_BASELINE_INCUMBENT_PATH = "plotting_data/pd1/rf/baseline_incumbent.csv"
@@ -55,8 +67,8 @@ GP_PD1_PRIOR_PRIORS_PATH = "plotting_data/pd1/gp/prior_priors.csv"
 
 
 def download_yahpo_data():
-    baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH, table_name="baseline_yahpo")
-    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, table_name="yahpo_prior_experiments")
+    baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH, database_name="dynabo_normal_scale",table_name="baseline_yahpo")
+    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="dynabo_sum", table_name="iclr_rebuttal_prior_rf_yahpo")
 
     try:
         baseline_experimenter.get_table().to_csv(YAHPO_BASELINE_TABLE_PATH, index=False)
@@ -74,8 +86,8 @@ def download_yahpo_data():
 
 
 def download_mfpbench_rf_data():
-    baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH, table_name="baseline")
-    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, table_name="iclr_pd1_normal")
+    baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH, database_name = "dynabo_normal_scale", table_name="baseline")
+    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="dynabo_sum",table_name="iclr_rebuttal_prior")
 
     try:
         baseline_experimenter.get_table().to_csv(RF_PD1_BASELINE_TABLE_PATH, index=False)
@@ -92,7 +104,7 @@ def download_mfpbench_rf_data():
 
 def download_mfpbench_gp_data():
     baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH, table_name="baseline_gaussian")
-    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, table_name="new_decay_gp")
+    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="dynabo_sum", table_name="iclr_rebuttal_prior_gp")
 
     try:
         baseline_experimenter.get_table().to_csv(GP_PD1_BASELINE_TABLE_PATH, index=False)
@@ -109,7 +121,7 @@ def download_mfpbench_gp_data():
 
 def download_mfpbench_misleading_longer_data():
     baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH, table_name="baseline_deceiving_longer")
-    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, table_name="new_decay_rf_longer")
+    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="dynabo_sum", table_name="iclr_rebuttal_prior_rf_longer")
 
     baseline_experimenter.get_table().to_csv(RF_PD1_BASELINE_DECEIVING_LONGER_PATH, index=False)
     baseline_experimenter.get_logtable("configs").to_csv(RF_PD1_BASELINE_DECEIVING_LONGER_INCUMBENT_PATH, index=False)
@@ -120,7 +132,7 @@ def download_mfpbench_misleading_longer_data():
 
     
     baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH, table_name="baseline_deceiving_longer_gp")
-    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, table_name="new_decay_gp_longer")
+    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="dynabo_sum", table_name="iclr_rebuttal_prior_gp_longer")
 
     baseline_experimenter.get_table().to_csv(GP_PD1_BASELINE_DECEIVING_LONGER_PATH, index=False)
     baseline_experimenter.get_logtable("configs").to_csv(GP_PD1_BASELINE_DECEIVING_LONGER_INCUMBENT_PATH, index=False)
@@ -130,7 +142,7 @@ def download_mfpbench_misleading_longer_data():
     prior_experimenter.get_logtable("priors").to_csv(GP_PD1_DECEIVING_LONGER_PRIOR_PRIORS_PATH, index=False)
 
 def download_dynamic_priors_data():
-    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, table_name="iclr_rf_dynamic")
+    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, table_name="iclr_rebuttal_prior_dyn")
 
     try:
         prior_experimenter.get_table().to_csv(RF_PD1_DYNAMIC_PRIORS_TABLE_PATH, index=False)
@@ -139,6 +151,37 @@ def download_dynamic_priors_data():
     except Exception:
         print("No Prior")
 
+def downloiad_prior_decay_ablation_data():
+    ablation_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="dynabo_normal_scale", table_name="iclr_rebuttal_prior_abl")
+
+    try:
+        ablation_experimenter.get_table().to_csv(PRIOR_DECAY_ABLATION_TABLE_PATH, index=False)
+        ablation_experimenter.get_logtable("configs", condition="incumbent = 1").to_csv(PRIOR_DECAY_ABLATION_INCUMBENT_PATH, index=False)
+        ablation_experimenter.get_logtable("priors").to_csv(PRIOR_DECAY_ABLATION_PRIOR_PATH, index=False)
+    except Exception:
+        print("No Prior")
+
+def download_remove_priors_ablation():
+    ablation_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="dynabo_sum", table_name="iclr_rebuttal_remove_ablation")
+
+    try:
+        ablation_experimenter.get_table().to_csv(REMOVE_OLD_PRIORS_ABLATION_TABLE_PATH, index=False)
+        ablation_experimenter.get_logtable("configs", condition="incumbent = 1").to_csv(REMOVE_OLD_PRIORS_ABLATION_INCUMBENT_PATH, index=False)
+        ablation_experimenter.get_logtable("priors").to_csv(REMOVE_OLD_PRIORS_ABLATION_PRIOR_PATH, index=False)
+    except Exception:
+        print("No Prior")
+
+def download_mixed_priors():
+    ablation_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="dynabo_sum", table_name="iclr_rebuttal_negative_positive")
+
+    try:
+        ablation_experimenter.get_table().to_csv(MIXED_PRIORS_TABLE_PATH, index=False)
+        ablation_experimenter.get_logtable("configs", condition="incumbent = 1").to_csv(MIXED_PRIORS_INCUMBENT_PATH, index=False)
+        ablation_experimenter.get_logtable("priors").to_csv(MIXED_PRIORS_PRIORS_PATH, index=False)
+    except Exception:
+        print("No Prior")
+    
+
 
 if __name__ == "__main__":
     #download_mfpbench_rf_data()
@@ -146,4 +189,7 @@ if __name__ == "__main__":
     #download_mfpbench_misleading_longer_data()
     #download_ablate_priors_data()
     #download_yahpo_data()
-    download_dynamic_priors_data()
+    #download_dynamic_priors_data()
+    #downloiad_prior_decay_ablation_data()
+    #download_remove_priors_ablation()
+    download_mixed_priors()

@@ -262,6 +262,8 @@ def fill_table(
             prior_kind_choices=approach_parameters["prior_kind_choices"],
             no_incumbent_percentile=approach_parameters["no_incumbent_percentile"],
             prior_std_denominator=approach_parameters["prior_std_denominator"],
+            remove_old_priors_choices=approach_parameters["remove_old_priors_choices"],
+            prior_decay_choices=approach_parameters["prior_decay_choices"],
             # Prior location
             prior_static_position=approach_parameters["prior_static_position"],
             prior_every_n_trials_choices=approach_parameters["prior_every_n_trials_choices"],
@@ -429,6 +431,8 @@ def get_pibo_dict(
             "prior_every_n_trials": None,
             "prior_at_start": None,
             "prior_chance_theta": None,
+            "remove_old_priors": None,
+            "prior_decay": None,
             "validate_prior": None,
             "prior_validation_method": None,
             "n_prior_validation_samples": None,
@@ -445,6 +449,8 @@ def get_dynabo_dict(
     prior_kind_choices: List[str],
     no_incumbent_percentile: float,
     prior_std_denominator: int,
+    remove_old_priors_choices: List[bool],
+    prior_decay_choices: List[str],
     prior_static_position: bool,
     prior_every_n_trials_choices: List[int],
     prior_chance_theta_choices: List[float],
@@ -504,6 +510,8 @@ def get_dynabo_dict(
     def add_position_configs(
         base_config: Dict[str, Any],
         prior_static_position: bool,
+        remove_old_priors_choices: List[bool],
+        prior_decay_choices: List[str],
         prior_every_n_trials_choices: List[int],
         prior_at_start_choices: List[bool],
         prior_chance_theta_choices: List[float],
@@ -521,7 +529,7 @@ def get_dynabo_dict(
         Returns:
             List of configurations with different position settings
         """
-        configs = []
+        preliminary_configs = []
 
         if prior_static_position:  # If the start and end position are static, we only need to add one config
             for prior_every_n_trials in prior_every_n_trials_choices:
@@ -530,7 +538,7 @@ def get_dynabo_dict(
                 base_copy["prior_every_n_trials"] = prior_every_n_trials
                 base_copy["prior_at_start"] = None
                 base_copy["prior_chance_theta"] = None
-                configs.append(base_copy)
+                preliminary_configs.append(base_copy)
         else:  # If the start and end position are not static, we need to add all combinations of prior_at_start and prior_chance_theta
             for prior_at_start in prior_at_start_choices:
                 for prior_chance_theta in prior_chance_theta_choices:
@@ -539,10 +547,18 @@ def get_dynabo_dict(
                     base_copy["prior_every_n_trials"] = None
                     base_copy["prior_at_start"] = prior_at_start
                     base_copy["prior_chance_theta"] = prior_chance_theta
-                    configs.append(base_copy)
+                    preliminary_configs.append(base_copy)
+        final_configs = []
+        for remove_old_priors in remove_old_priors_choices:
+            for prior_decay in prior_decay_choices:
+                for config in preliminary_configs:
+                    conifg_copy = deepcopy(config)
+                    conifg_copy["remove_old_priors"] = remove_old_priors
+                    conifg_copy["prior_decay"] = prior_decay
+                    final_configs.append(conifg_copy)
 
-        return configs
 
+        return final_configs
     def add_validation_method(
         preliminary_configs: List[Dict[str, Any]],
         validate_prior: bool,
@@ -630,7 +646,7 @@ def get_dynabo_dict(
                     validate_prior=validate_prior,
                 )
 
-                preliminary_configs = add_position_configs(base_config, prior_static_position, prior_every_n_trials_choices, prior_at_start_choices, prior_chance_theta_choices)
+                preliminary_configs = add_position_configs(base_config, prior_static_position, remove_old_priors_choices, prior_decay_choices, prior_every_n_trials_choices, prior_at_start_choices, prior_chance_theta_choices)
 
                 validation_configs = add_validation_method(preliminary_configs, validate_prior, prior_validation_method_choices, n_prior_validation_samples)
                 dynabo_configs.extend(validation_configs)

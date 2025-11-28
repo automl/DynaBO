@@ -24,10 +24,19 @@ from dynabo.data_processing.download_all_files import (
     RF_PD1_DYNAMIC_PRIORS_TABLE_PATH,
     RF_PD1_DYNAMIC_PRIORS_INCUMBENT_PATH,
     RF_PD1_DYNAMIC_PRIORS_PRIORS_PATH,
+    PRIOR_DECAY_ABLATION_TABLE_PATH,
+    PRIOR_DECAY_ABLATION_INCUMBENT_PATH,
+    PRIOR_DECAY_ABLATION_PRIOR_PATH,
+    REMOVE_OLD_PRIORS_ABLATION_TABLE_PATH,
+    REMOVE_OLD_PRIORS_ABLATION_INCUMBENT_PATH,
+    REMOVE_OLD_PRIORS_ABLATION_PRIOR_PATH,
+    MIXED_PRIORS_TABLE_PATH,
+    MIXED_PRIORS_INCUMBENT_PATH,
+    MIXED_PRIORS_PRIORS_PATH
 )
-from dynabo.plotting.plotting_utils import add_regret, create_overall_plot, create_overall_plot_longer, create_scenario_plots, filter_prior_approach, get_min_costs, merge_df, create_deceiving_longer_scenarios, create_final_cost_boxplot
+from dynabo.plotting.plotting_utils import add_regret, create_mixed_plot, create_overall_plot, create_overall_plot_longer, create_scenario_plots, filter_prior_approach, get_min_costs, merge_df, create_deceiving_longer_scenarios, create_final_cost_boxplot_rejection
 import seaborn as sns
-
+import numpy as np
 
 def load_cost_data_mfpbench(surrogate:str):
     """
@@ -79,6 +88,7 @@ def plot_final_results_mfpbench(surrogate:str):
         prior_validation_method=None,
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=None,
+        remove_old_priors=False,
     )
     threshold_incumbent_df, threshold_prior_df = filter_prior_approach(
         incumbent_df=prior_config_df,
@@ -94,6 +104,7 @@ def plot_final_results_mfpbench(surrogate:str):
         prior_validation_method="difference",
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=-0.15,
+        remove_old_priors=False,
     )
     pibo_incumbent_df, pibo_prior_df = filter_prior_approach(
         incumbent_df=prior_config_df,
@@ -118,7 +129,7 @@ def plot_final_results_mfpbench(surrogate:str):
         "DynaBO": threshold_incumbent_df,
     }
     prior_dict = {
-        "DynaBO, accept all priors": accept_all_priors_priors,
+        #"DynaBO, accept all priors": accept_all_priors_priors,
         r"$\pi$BO": pibo_prior_df,
         "DynaBO": threshold_prior_df,
     }
@@ -126,9 +137,10 @@ def plot_final_results_mfpbench(surrogate:str):
     style_dict = {
         "Vanilla BO": {"color": "#000000", "marker": "o", "linestyle": (0, ())},  # Black, solid
         "DynaBO, accept all priors": {"color": "#E69F00", "marker": "s", "linestyle": (0, (1, 1))},  # Sky Blue, densely dotted
-        "DynaBO, accept all priors (3 samples)": {"color": "#2EA9A7", "marker": "s", "linestyle": (0, (3, 5, 1, 5))},  # Sky Blue, densely dotted
+        "DynaBO, accept all priors (removed)": {"color": "#2EA9A7", "marker": "s", "linestyle": (0, (3, 5, 1, 5))},  # Sky Blue, densely dotted
         r"$\pi$BO": {"color": "#009E73", "marker": "d", "linestyle": (0, (3, 5, 1, 5))},  # Green, dash-dot
         "DynaBO": {"color": "#D55E00", "marker": "v", "linestyle": (0, (1, 1))},  # Pink, dash-dot dense
+        "DynaBO (removed)": {"color": "#CC79A7", "marker": "v", "linestyle": (0, (3, 5, 1, 5))},  # Pink, dash-dot dense
     }
     create_scenario_plots(
         config_dict,
@@ -141,6 +153,89 @@ def plot_final_results_mfpbench(surrogate:str):
         ncol=4,
     )
     create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="mfpbench", base_path=f"plots/final_result_plots/{surrogate}", ncol=len(style_dict))
+
+def plot_final_results_mfpbench(surrogate:str):
+    baseline_config_df, prior_config_df, prior_prior_df = load_cost_data_mfpbench(surrogate = surrogate)
+    accept_all_priors_configs, accept_all_priors_priors = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=False,
+        n_prior_based_samples=0, 
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+        remove_old_priors=False,
+    )
+    threshold_incumbent_df, threshold_prior_df = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=True,
+        n_prior_based_samples=0,
+        prior_validation_method="difference",
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=-0.15,
+        remove_old_priors=False,
+    )
+    pibo_incumbent_df, pibo_prior_df = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=False,
+        select_pibo=True,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=None,
+        prior_every_n_trials=None,
+        n_prior_based_samples=None,
+        validate_prior=None,
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+    )
+
+    config_dict = {
+        "Vanilla BO": baseline_config_df,
+        #"DynaBO, accept all priors": accept_all_priors_configs,
+        r"$\pi$BO": pibo_incumbent_df,
+        "DynaBO": threshold_incumbent_df,
+    }
+    prior_dict = {
+        #"DynaBO, accept all priors": accept_all_priors_priors,
+        r"$\pi$BO": pibo_prior_df,
+        "DynaBO": threshold_prior_df,
+    }
+
+    style_dict = {
+        "Vanilla BO": {"color": "#000000", "marker": "o", "linestyle": (0, ())},  # Black, solid
+        "DynaBO, accept all priors": {"color": "#E69F00", "marker": "s", "linestyle": (0, (1, 1))},  # Sky Blue, densely dotted
+        "DynaBO, accept all priors (removed)": {"color": "#2EA9A7", "marker": "s", "linestyle": (0, (3, 5, 1, 5))},  # Sky Blue, densely dotted
+        r"$\pi$BO": {"color": "#009E73", "marker": "d", "linestyle": (0, (3, 5, 1, 5))},  # Green, dash-dot
+        "DynaBO": {"color": "#D55E00", "marker": "v", "linestyle": (0, (1, 1))},  # Pink, dash-dot dense
+        "DynaBO (removed)": {"color": "#CC79A7", "marker": "v", "linestyle": (0, (3, 5, 1, 5))},  # Pink, dash-dot dense
+    }
+    create_scenario_plots(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="mfpbench",
+        base_path=f"plots/final_result_plots/{surrogate}",
+        ncol=4,
+    )
+    create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="mfpbench", base_path=f"plots/final_result_plots/{surrogate}", ncol=len(style_dict))
+
 
 
 def plot_misleading_longer_results_mfpbench(surrogate: str):
@@ -194,6 +289,7 @@ def plot_misleading_longer_results_mfpbench(surrogate: str):
         prior_validation_method=None,
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=None,
+        remove_old_priors=False,
     )
     threshold_incumbent_df, threshold_prior_df = filter_prior_approach(
         incumbent_df=prior_config_df,
@@ -209,6 +305,7 @@ def plot_misleading_longer_results_mfpbench(surrogate: str):
         prior_validation_method="difference",
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=-0.15,
+        remove_old_priors=False,
     )
     pibo_incumbent_df, pibo_prior_df = filter_prior_approach(
         incumbent_df=prior_config_df,
@@ -224,6 +321,7 @@ def plot_misleading_longer_results_mfpbench(surrogate: str):
         prior_validation_method=None,
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=None,
+        remove_old_priors=None,
     )
 
     config_dict = {
@@ -235,7 +333,7 @@ def plot_misleading_longer_results_mfpbench(surrogate: str):
     prior_dict = {
         "DynaBO, accept all priors": accept_all_priors_priors,
         r"$\pi$BO": pibo_prior_df,
-        "DynaBO - validation": threshold_prior_df,
+        "DynaBO": threshold_prior_df,
     }
 
     style_dict = {
@@ -347,6 +445,7 @@ def plot_prior_rejection_ablation_barplot(surrogate:str):
         prior_validation_method=None,
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=None,
+        remove_old_priors=False
     )
 
     thresholds = [0.5, 0.25, 0, -0.05, -0.1, -0.15, -0.2, -0.25, -0.5, -1]
@@ -372,6 +471,7 @@ def plot_prior_rejection_ablation_barplot(surrogate:str):
             prior_validation_method="difference",
             prior_validation_manwhitney_p=None,
             prior_validation_difference_threshold=threshold,
+            remove_old_priors=False
         )
         config_dict[r"$\tau$=" + str(threshold)] = threshold_incumbent_df
         style_dict[r"$\tau$=" + str(threshold)] = colors_palette[entry % len(colors_palette)]
@@ -379,7 +479,7 @@ def plot_prior_rejection_ablation_barplot(surrogate:str):
     config_dict[r"$-\infty$"] = accept_all_priors_configs
     style_dict[r"$-\infty$"] = colors_palette[1]
 
-    create_final_cost_boxplot(config_dict, style_dict, benchmarklib="mfpbench", base_path=f"plots/prior_rejection_ablation/{surrogate}/final_cost_barplot")
+    create_final_cost_boxplot_rejection(config_dict, style_dict, benchmarklib="mfpbench", base_path=f"plots/prior_rejection_ablation/{surrogate}/final_cost_barplot")
 
 
 def plot_prior_based_samples_ablation():
@@ -470,6 +570,7 @@ def plot_dynamic_prior_location(surrogate:str):
         prior_validation_method=None,
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=None,
+        remove_old_priors=None
     )
 
     dynamic_df, dynamic_priors_df = filter_prior_approach(
@@ -487,6 +588,7 @@ def plot_dynamic_prior_location(surrogate:str):
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=-0.15,
         prior_chance_theta=0.015,
+        remove_old_priors=False
     )
 
 
@@ -515,11 +617,436 @@ def plot_dynamic_prior_location(surrogate:str):
     )
     create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="mfpbench", base_path=f"plots/dynamic_prior_location/{surrogate}", ncol=len(style_dict))
 
+def plot_final_results_mfpbench(surrogate:str):
+    baseline_config_df, prior_config_df, prior_prior_df = load_cost_data_mfpbench(surrogate = surrogate)
+    accept_all_priors_configs, accept_all_priors_priors = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=False,
+        n_prior_based_samples=0, 
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+        remove_old_priors=False,
+    )
+    threshold_incumbent_df, threshold_prior_df = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=True,
+        n_prior_based_samples=0,
+        prior_validation_method="difference",
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=-0.15,
+        remove_old_priors=False,
+    )
+    pibo_incumbent_df, pibo_prior_df = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=False,
+        select_pibo=True,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=None,
+        prior_every_n_trials=None,
+        n_prior_based_samples=None,
+        validate_prior=None,
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+    )
+
+    config_dict = {
+        "Vanilla BO": baseline_config_df,
+        #"DynaBO, accept all priors": accept_all_priors_configs,
+        r"$\pi$BO": pibo_incumbent_df,
+        "DynaBO": threshold_incumbent_df,
+    }
+    prior_dict = {
+        #"DynaBO, accept all priors": accept_all_priors_priors,
+        r"$\pi$BO": pibo_prior_df,
+        "DynaBO": threshold_prior_df,
+    }
+
+    style_dict = {
+        "Vanilla BO": {"color": "#000000", "marker": "o", "linestyle": (0, ())},  # Black, solid
+        "DynaBO, accept all priors": {"color": "#E69F00", "marker": "s", "linestyle": (0, (1, 1))},  # Sky Blue, densely dotted
+        "DynaBO, accept all priors (removed)": {"color": "#2EA9A7", "marker": "s", "linestyle": (0, (3, 5, 1, 5))},  # Sky Blue, densely dotted
+        r"$\pi$BO": {"color": "#009E73", "marker": "d", "linestyle": (0, (3, 5, 1, 5))},  # Green, dash-dot
+        "DynaBO": {"color": "#D55E00", "marker": "v", "linestyle": (0, (1, 1))},  # Pink, dash-dot dense
+        "DynaBO (removed)": {"color": "#CC79A7", "marker": "v", "linestyle": (0, (3, 5, 1, 5))},  # Pink, dash-dot dense
+    }
+    create_scenario_plots(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="mfpbench",
+        base_path=f"plots/final_result_plots/{surrogate}",
+        ncol=4,
+    )
+    create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="mfpbench", base_path=f"plots/final_result_plots/{surrogate}", ncol=len(style_dict))
+
+def load_prior_decay_ablation(surrogate:str):
+    """
+    Load the cost data for pd1, saved in the filesystem. Do some data cleaning for lcbench and add regret.
+    """
+
+    if surrogate not in ["rf"]:
+        raise ValueError(f"Surrogate {surrogate} not recognized. Choose either 'rf' or 'gp'.")
+    
+
+    baseline_table = pd.read_csv(RF_PD1_BASELINE_TABLE_PATH)
+    baseline_config_df = pd.read_csv(RF_PD1_BASELINE_INCUMBENT_PATH)
+    baseline_config_df, _ = merge_df(baseline_table, baseline_config_df, None)
+
+    prior_table = pd.read_csv(PRIOR_DECAY_ABLATION_TABLE_PATH)
+    prior_configs = pd.read_csv(PRIOR_DECAY_ABLATION_INCUMBENT_PATH)
+    prior_priors = pd.read_csv(PRIOR_DECAY_ABLATION_PRIOR_PATH)
+    prior_config_df, prior_priors_df = merge_df(prior_table, prior_configs, prior_priors)
+
+    min_costs = get_min_costs(benchmarklib="mfpbench")
+    baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], min_costs, benchmarklib="mfpbench")
+
+    return baseline_config_df, prior_config_df, prior_priors_df
+
+def plot_decay_ablation(surrogate:str):
+    baseline_config_df, prior_config_df, prior_prior_df = load_prior_decay_ablation(surrogate = surrogate)
+    logratithmic_decay_configs, logratithmic_decay_priors  = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=False,
+        n_prior_based_samples=0, 
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+        remove_old_priors=False,
+        prior_decay="logarithmic"
+    )
+    
+    linear_decay_configs, linear_decay_priors = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=False,
+        n_prior_based_samples=0, 
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+        remove_old_priors=False,
+        prior_decay="linear"
+    )
+    quadratic_decay_configs, quadratic_decay_priors = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=False,
+        n_prior_based_samples=0, 
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+        remove_old_priors=False,
+        prior_decay="quadratic"
+    )
+
+    cubic_decay_configs, cubic_decay_priors = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=False,
+        n_prior_based_samples=0, 
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+        remove_old_priors=False,
+        prior_decay="cubic"
+    )
+
+    to_four_decay_configs, to_four_decay_priors = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=False,
+        n_prior_based_samples=0, 
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+        remove_old_priors=False,
+        prior_decay="^4"
+    )
+
+    to_five_decay_configs, to_five_decay_priors = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=False,
+        n_prior_based_samples=0, 
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+        remove_old_priors=False,
+        prior_decay="^5"
+    )
+
+    # Compute Average regret for each scneario and each decay method
+    config_dict = {
+        "Logarithmic Decay": logratithmic_decay_configs,
+        "Linear Decay": linear_decay_configs,
+        "Quadratic Decay": quadratic_decay_configs,
+        "Cubic Decay": cubic_decay_configs,
+        "To the Power of 4 Decay": to_four_decay_configs,
+        "To the Power of 5 Decay": to_five_decay_configs,
+    }
+
+    prior_types = ["good", "medium", "misleading", "deceiving"]
+
+    rows = []
+
+    for key, df in config_dict.items():
+        row = {"config": key}
+        for p in prior_types:
+            subset = df[df["prior_kind"] == p]["final_regret"]
+
+            mean_val = subset.mean()
+            std_val = subset.std(ddof=1)                # sample std
+            n = subset.shape[0]
+            stderr_val = std_val / np.sqrt(n) if n > 0 else np.nan
+
+            # round both mean and stderr to 3 decimals
+            row[f"{p}_mean"] = round(mean_val, 3) if not np.isnan(mean_val) else np.nan
+            row[f"{p}_stderr"] = round(stderr_val, 3) if not np.isnan(stderr_val) else np.nan
+
+        rows.append(row)
+
+    result_df = pd.DataFrame(rows)
+    print(result_df)
+
+def load_remove_old_priors_ablation(surrogate):
+    """
+    Load the cost data for pd1, saved in the filesystem. Do some data cleaning for lcbench and add regret.
+    """
+
+    if surrogate not in ["rf"]:
+        raise ValueError(f"Surrogate {surrogate} not recognized. Choose either 'rf' or 'gp'.")
+    
+
+    baseline_table = pd.read_csv(RF_PD1_BASELINE_TABLE_PATH)
+    baseline_config_df = pd.read_csv(RF_PD1_BASELINE_INCUMBENT_PATH)
+    baseline_config_df, _ = merge_df(baseline_table, baseline_config_df, None)
+
+    prior_table = pd.read_csv(REMOVE_OLD_PRIORS_ABLATION_TABLE_PATH)
+    prior_configs = pd.read_csv(REMOVE_OLD_PRIORS_ABLATION_INCUMBENT_PATH)
+    prior_priors = pd.read_csv(REMOVE_OLD_PRIORS_ABLATION_PRIOR_PATH)
+    prior_config_df, prior_priors_df = merge_df(prior_table, prior_configs, prior_priors)
+
+    min_costs = get_min_costs(benchmarklib="mfpbench")
+    baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], min_costs, benchmarklib="mfpbench")
+
+    return baseline_config_df, prior_config_df, prior_priors_df
+
+def remove_old_priros_ablation():
+    baseline_config_df, prior_config_df, prior_prior_df = load_prior_decay_ablation(surrogate = "rf")
+    
+    dynabo_configs, dynabo_priros = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=True,
+        n_prior_based_samples=0, 
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+        remove_old_priors=False,
+        prior_decay="linear"
+    )
+
+    remove_old_priors_configs, remove_old_priors_priors = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=True,
+        n_prior_based_samples=0, 
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+        remove_old_priors=True,
+        prior_decay="linear"
+    )
+
+    # Compute Average regret for each scneario and each decay method
+    config_dict = {
+        "Vanilla BO": baseline_config_df,
+        "DynaBO": dynabo_configs,
+        "Remove Old Priors": remove_old_priors_configs
+    }
+
+    prior_dict = {
+        "DynaBO": dynabo_priros
+    }
+
+    style_dict = {
+        "Vanilla BO": {"color": "#000000", "marker": "o", "linestyle": (0, ())},  # Black, solid
+        "Remove Old Priors": {"color": "#009E73", "marker": "d", "linestyle": (0, (3, 5, 1, 5))},  # Green, dash-dot
+        "DynaBO": {"color": "#D55E00", "marker": "v", "linestyle": (0, (1, 1))},  # Pink, dash-dot dense
+    }
+    create_scenario_plots(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="mfpbench",
+        base_path=f"plots/remove_old_priors/rf",
+        ncol=3,
+    )
+        
+def load_mixed_priors(surrogate):
+    """
+    Load the cost data for pd1, saved in the filesystem. Do some data cleaning for lcbench and add regret.
+    """
+
+    if surrogate not in ["rf"]:
+        raise ValueError(f"Surrogate {surrogate} not recognized. Choose either 'rf' or 'gp'.")
+    
+
+    baseline_table = pd.read_csv(RF_PD1_BASELINE_TABLE_PATH)
+    baseline_config_df = pd.read_csv(RF_PD1_BASELINE_INCUMBENT_PATH)
+    baseline_config_df, _ = merge_df(baseline_table, baseline_config_df, None)
+
+    prior_table = pd.read_csv(MIXED_PRIORS_TABLE_PATH)
+    prior_configs = pd.read_csv(MIXED_PRIORS_INCUMBENT_PATH)
+    prior_priors = pd.read_csv(MIXED_PRIORS_PRIORS_PATH)
+    prior_config_df, prior_priors_df = merge_df(prior_table, prior_configs, prior_priors)
+
+    min_costs = get_min_costs(benchmarklib="mfpbench")
+    baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], min_costs, benchmarklib="mfpbench")
+
+    return baseline_config_df, prior_config_df, prior_priors_df
+
+def plot_mixed_priors():
+    baseline_config_df, prior_config_df, prior_prior_df = load_mixed_priors(surrogate = "rf")
+    
+    dynabo_configs, dynabo_priros = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=False,
+        n_prior_based_samples=0, 
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+        remove_old_priors=False,
+        prior_decay="linear"
+    )
+
+    remove_old_priors_configs, remove_old_priors_priors = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=False,
+        n_prior_based_samples=0, 
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+        remove_old_priors=True,
+        prior_decay="linear"
+    )
+
+    # Compute Average regret for each scneario and each decay method
+    config_dict = {
+        "DynaBO": dynabo_configs,
+        "Remove Old Priors": remove_old_priors_configs
+    }
+
+    prior_dict = {
+        "DynaBO": dynabo_priros
+    }
+
+    style_dict = {
+        "Remove Old Priors": {"color": "#009E73", "marker": "d", "linestyle": (0, (3, 5, 1, 5))},  # Green, dash-dot
+        "DynaBO": {"color": "#D55E00", "marker": "v", "linestyle": (0, (1, 1))},  # Pink, dash-dot dense
+    }
+    create_mixed_plot(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        benchmarklib="mfpbench",
+        base_path=f"plots/mixed_priors/rf",
+        ncol=3,
+    )
+
+
+
 if __name__ == "__main__":
     #plot_dynamic_prior_location("rf")
     #plot_final_results_mfpbench("gp")
     #plot_prior_rejection_ablation_barplot("rf")
-    plot_misleading_longer_results_mfpbench("gp")
-    plot_misleading_longer_results_mfpbench("rf")
-
-    
+    #plot_misleading_longer_results_mfpbench("gp")
+    #plot_misleading_longer_results_mfpbench("rf")
+    #plot_decay_ablation("rf")
+    #remove_old_priros_ablation()
+    plot_mixed_priors()

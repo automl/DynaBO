@@ -32,6 +32,10 @@ def load_cost_data_yahpogym(surrogate:str):
         prior_config_df, prior_priors_df = merge_df(prior_table, prior_configs, prior_priors)
 
         # If scenario = #lcbench divide cost by 100
+        baseline_config_df = baseline_config_df[baseline_config_df["benchmarklib"] == "yahpogym"]
+        prior_config_df = prior_config_df[prior_config_df["benchmarklib"] == "yahpogym"]
+        prior_priors_df = prior_priors_df[prior_priors_df["benchmarklib"] == "yahpogym"]
+
         baseline_config_df.loc[baseline_config_df["scenario"] == "lcbench", "cost"] /= 100
         prior_config_df.loc[prior_config_df["scenario"] == "lcbench", "cost"] /= 100
 
@@ -46,6 +50,8 @@ def load_cost_data_yahpogym(surrogate:str):
 
 def plot_final_results_yahpogym(surrogate:str):
     baseline_config_df, prior_config_df, prior_prior_df = load_cost_data_yahpogym(surrogate = surrogate)
+
+
     accept_all_priors_configs, accept_all_priors_priors = filter_prior_approach(
         incumbent_df=prior_config_df,
         prior_df=prior_prior_df,
@@ -60,6 +66,7 @@ def plot_final_results_yahpogym(surrogate:str):
         prior_validation_method=None,
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=None,
+        remove_old_priors=False,
     )
     threshold_incumbent_df, threshold_prior_df = filter_prior_approach(
         incumbent_df=prior_config_df,
@@ -75,6 +82,7 @@ def plot_final_results_yahpogym(surrogate:str):
         prior_validation_method="difference",
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=-0.15,
+        remove_old_priors=False,
     )
     pibo_incumbent_df, pibo_prior_df = filter_prior_approach(
         incumbent_df=prior_config_df,
@@ -90,6 +98,7 @@ def plot_final_results_yahpogym(surrogate:str):
         prior_validation_method=None,
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=None,
+        remove_old_priors=False,
     )
 
     config_dict = {
@@ -100,7 +109,7 @@ def plot_final_results_yahpogym(surrogate:str):
         "DynaBO, threshold validation": threshold_incumbent_df,
     }
     prior_dict = {
-        "DynaBO, accept all priors": accept_all_priors_priors,
+        "DynaBO": accept_all_priors_priors,
         r"$\pi$BO": pibo_prior_df,
         # "DynaBO, perfect validation": baseline_perfect_prior_df,
         "DynaBO, threshold validation": threshold_prior_df,

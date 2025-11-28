@@ -92,6 +92,8 @@ def filter_prior_approach(
     prior_validation_manwhitney_p: Optional[float],
     prior_validation_difference_threshold: Optional[float] = None,
     prior_chance_theta: Optional[float] = None,
+    remove_old_priors: Optional[bool] = None,
+    prior_decay: Optional[str] = None,
 ):
     assert select_dynabo ^ select_pibo
 
@@ -101,6 +103,12 @@ def filter_prior_approach(
     if select_dynabo:
         incumbent_df = incumbent_df[incumbent_df["dynabo"] == True]
         prior_df = prior_df[prior_df["dynabo"] == True]
+        incumbent_df = incumbent_df[incumbent_df["remove_old_priors"] == remove_old_priors]
+        prior_df = prior_df[prior_df["remove_old_priors"] == remove_old_priors]
+
+        if prior_decay is not None:
+            incumbent_df = incumbent_df[incumbent_df["prior_decay"] == prior_decay]
+            prior_df = prior_df[prior_df["prior_decay"] == prior_decay]
 
         if n_prior_based_samples is not None:
             incumbent_df = incumbent_df[incumbent_df["n_prior_based_samples"] == n_prior_based_samples]
@@ -192,8 +200,8 @@ def plot_final_run(
             markevery=marker_every,
         )
 
-    if "DynaBO, accept all priors" in prior_dict:
-        prior_locations = prior_dict["DynaBO, accept all priors"]["after_n_evaluations"].unique()
+    if "DynaBO" in prior_dict:
+        prior_locations = prior_dict["DynaBO"]["after_n_evaluations"].unique()
         for prior_location in prior_locations:
             ax.axvline(x=prior_location, color="#E69F00", linestyle="--", alpha=0.3, linewidth=2, label = None)
     #ax.set_yscale("log")
@@ -335,14 +343,14 @@ def set_fig_style(fig, axs, title: str, ncol,):
         final_lines.append(line)
     
 
-    fig.legend(
-        final_lines,
-        final_labels,
-        loc="upper center",
-        ncol=ncol,
-        fontsize=20,
-        bbox_to_anchor=(0.5, 0.0),
-    )
+    #fig.legend(
+    #    final_lines,
+    #    final_labels,
+    #    loc="upper center",
+    #    ncol=ncol,
+    #    fontsize=20,
+    #    bbox_to_anchor=(0.5, 0.0),
+    #)
 
     # Adjust layout for better spacing
     fig.tight_layout()
@@ -350,7 +358,7 @@ def set_fig_style(fig, axs, title: str, ncol,):
 
 def save_fig(path: str):
     # Save the figure with high quality
-    plt.savefig(path, dpi=300, transparent=True, bbox_inches="tight")
+    plt.savefig(path, dpi=300, transparent=True, bbox_inches='tight')
 
     plt.close()
 
@@ -400,7 +408,7 @@ def create_scenario_plots(
                 error_bar_type=error_bar_type,
             )
 
-            set_ax_style(ax, x_label="Number of Evaluations", y_label="Regret")
+            set_ax_style(ax, x_label="Number of Evaluations", y_label="Regret", benchmarklib=benchmarklib)
 
             set_fig_style(fig, [ax], "Overall Regret Across Different Priors", ncol=ncol)
             os.makedirs(f"{base_path}/{benchmarklib}/regret/{scenario}", exist_ok=True)
@@ -513,7 +521,39 @@ def create_overall_plot(
         os.makedirs(f"{base_path}/{benchmarklib}/regret/overall", exist_ok=True)
         save_fig(f"{base_path}/{benchmarklib}/regret/overall/{prior_kind}.pdf")
 
+def create_mixed_plot(
+    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, Dict[str, str]], error_bar_type: str, benchmarklib: str, base_path: str, ncol: int
+):
+    if benchmarklib == "yahpogym":
+        min_ntrials = 1
+        max_n_trials = 200
+    elif benchmarklib == "mfpbench":
+        min_ntrials = 1
+        max_n_trials = 50
 
+    for prior_kind in ["mixed"]:
+        fig, ax = plt.subplots(1, 1, figsize=(8, 3), dpi=300)
+
+        # Call the plotting function
+        ax = plot_final_run(
+            config_dict,
+            prior_dict,
+            style_dict,
+            None,
+            None,
+            prior_kind,
+            ax=ax,
+            benchmarklib=benchmarklib,
+            min_ntrials=min_ntrials,
+            max_ntrials=max_n_trials,
+            error_bar_type=error_bar_type,
+        )
+
+        set_ax_style(ax, x_label="Number of Evaluations", y_label="Regret")
+
+        set_fig_style(fig, [ax], "Overall Regret Across Different Priors", ncol=ncol)
+        os.makedirs(f"{base_path}/{benchmarklib}/regret/overall", exist_ok=True)
+        save_fig(f"{base_path}/{benchmarklib}/regret/overall/{prior_kind}.pdf")
 
 
 def set_ax_style(ax, x_label, y_label, benchmarklib: str = "mfpbench"):
@@ -530,8 +570,10 @@ def set_ax_style(ax, x_label, y_label, benchmarklib: str = "mfpbench"):
     ax.tick_params(axis="both", which="major", labelsize=25)
     # set y ticks to 0.05, 0.1, 0.15, 0.2
     ax.set_yticks([0.05, 0.1, 0.15, 0.2])
-    #ax.set_xticks([0, 25, 50])
-
+    if benchmarklib == "yahpogym":
+        ax.set_xticks([0, 100, 200])
+    elif benchmarklib == "mfpbench":
+        ax.set_xticks([0, 25, 50])
     # Incraese line width
     for line in ax.get_lines():
         line.set_linewidth(3.5)
@@ -545,7 +587,7 @@ def set_ax_style(ax, x_label, y_label, benchmarklib: str = "mfpbench"):
     ax.set_xlabel(None)
 
 
-def create_final_cost_boxplot(config_dict, style_dict, benchmarklib, base_path):
+def create_final_cost_boxplot_rejection(config_dict, style_dict, benchmarklib, base_path):
     def get_prior_kind_symbol(prior_kind):
         if prior_kind == "good":
             return "Expert"
@@ -575,14 +617,14 @@ def create_final_cost_boxplot(config_dict, style_dict, benchmarklib, base_path):
             labels = [axs[0].lines[i].get_label() for i in range(len(axs[0].lines))]
 
         # Create a figure-level legend
-        fig.legend(
-            handles,
-            labels,
-            loc="upper center",
-            bbox_to_anchor=(0.5, -0.05),
-            ncol=ncol,
-            fontsize=20
-        )
+        #fig.legend(
+        #    handles,
+        #    labels,
+        #    loc="upper center",
+        #    bbox_to_anchor=(0.5, -0.05),
+        #    ncol=ncol,
+        #    fontsize=20
+        #)
 
     for scenario in config_dict[r"$-\infty$"]["scenario"].unique():
         overall_df = pd.DataFrame(columns=["prior_kind", "method", "final_regret"])
