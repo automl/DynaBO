@@ -617,14 +617,15 @@ def create_final_cost_boxplot_rejection(config_dict, style_dict, benchmarklib, b
             labels = [axs[0].lines[i].get_label() for i in range(len(axs[0].lines))]
 
         # Create a figure-level legend
-        #fig.legend(
-        #    handles,
-        #    labels,
-        #    loc="upper center",
-        #    bbox_to_anchor=(0.5, -0.05),
-        #    ncol=ncol,
-        #    fontsize=20
-        #)
+        fig.legend(
+            handles,
+            labels,
+            loc="center left",       # Anchor the left center of the legend
+            bbox_to_anchor=(1.02, 0.5),  # Slightly outside the plot, less whitespace
+            ncol=2,                  # Two columns
+            fontsize=20
+        )
+
 
     for scenario in config_dict[r"$-\infty$"]["scenario"].unique():
         overall_df = pd.DataFrame(columns=["prior_kind", "method", "final_regret"])
@@ -676,7 +677,7 @@ def create_final_cost_boxplot_rejection(config_dict, style_dict, benchmarklib, b
             local_df = local_df[["prior_kind", "method", "final_regret"]]
             relevant_df = pd.concat([local_df, relevant_df])
         overall_df = pd.concat([overall_df, relevant_df])
-    fig, ax = plt.subplots(figsize=(14, 4))
+    fig, ax = plt.subplots(figsize=(15, 3.75))
     sns.boxenplot(
         data=overall_df,
         x="prior_kind",
