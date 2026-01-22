@@ -25,6 +25,8 @@ dependencies = [
     "gower>=0.1.2",
     "ipykernel>=6.29.5",
     "deap>=1.4.3",
+    "syne-tune==0.10.0",
+    "rtpt>=0.0.4",
 ]
 
 [tool.hatch.metadata]

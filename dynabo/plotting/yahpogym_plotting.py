@@ -4,22 +4,19 @@ from dynabo.data_processing.download_all_files import (
     YAHPO_BASELINE_TABLE_PATH,
     YAHPO_BASELINE_INCUMBENT_PATH,
     YAHPO_PRIOR_TABLE_PATH,
-    YAHPO_PRIOR_INCUMBENT_PATH ,
-    YAHPO_PRIOR_PRIORS_PATH ,
-
+    YAHPO_PRIOR_INCUMBENT_PATH,
+    YAHPO_PRIOR_PRIORS_PATH,
 )
-from dynabo.plotting.plotting_utils import add_regret, create_overall_plot, create_scenario_plots, filter_prior_approach, get_min_costs, merge_df
-import seaborn as sns
+from dynabo.plotting.plotting_utils import add_regret, create_scenario_plots, filter_prior_approach, get_min_costs, merge_df
 
 
-def load_cost_data_yahpogym(surrogate:str):
+def load_cost_data_yahpogym(surrogate: str):
     """
     Load the cost data for pd1, saved in the filesystem. Do some data cleaning for lcbench and add regret.
     """
 
     if surrogate not in ["rf", "gp"]:
         raise ValueError(f"Surrogate {surrogate} not recognized. Choose either 'rf' or 'gp'.")
-    
 
     if surrogate == "rf":
         baseline_table = pd.read_csv(YAHPO_BASELINE_TABLE_PATH)
@@ -48,9 +45,8 @@ def load_cost_data_yahpogym(surrogate:str):
     return baseline_config_df, prior_config_df, prior_priors_df
 
 
-def plot_final_results_yahpogym(surrogate:str):
-    baseline_config_df, prior_config_df, prior_prior_df = load_cost_data_yahpogym(surrogate = surrogate)
-
+def plot_final_results_yahpogym(surrogate: str):
+    baseline_config_df, prior_config_df, prior_prior_df = load_cost_data_yahpogym(surrogate=surrogate)
 
     accept_all_priors_configs, accept_all_priors_priors = filter_prior_approach(
         incumbent_df=prior_config_df,
@@ -62,11 +58,12 @@ def plot_final_results_yahpogym(surrogate:str):
         prior_static_position=True,
         prior_every_n_trials=40,
         validate_prior=False,
-        n_prior_based_samples=0, 
+        n_prior_based_samples=0,
         prior_validation_method=None,
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=None,
         remove_old_priors=False,
+        prior_decay="linear",
     )
     threshold_incumbent_df, threshold_prior_df = filter_prior_approach(
         incumbent_df=prior_config_df,
@@ -83,6 +80,7 @@ def plot_final_results_yahpogym(surrogate:str):
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=-0.15,
         remove_old_priors=False,
+        prior_decay="linear",
     )
     pibo_incumbent_df, pibo_prior_df = filter_prior_approach(
         incumbent_df=prior_config_df,
@@ -99,17 +97,18 @@ def plot_final_results_yahpogym(surrogate:str):
         prior_validation_manwhitney_p=None,
         prior_validation_difference_threshold=None,
         remove_old_priors=False,
+        prior_decay="linear",
     )
 
     config_dict = {
         "Vanilla BO": baseline_config_df,
-        #"DynaBO, accept all priors": accept_all_priors_configs,
+        # "DynaBO, accept all priors": accept_all_priors_configs,
         r"$\pi$BO": pibo_incumbent_df,
         # "DynaBO, perfect validation": baseline_perfect_incumbent_df,
         "DynaBO, threshold validation": threshold_incumbent_df,
     }
     prior_dict = {
-        "DynaBO": accept_all_priors_priors,
+        "DynaBO": threshold_prior_df,
         r"$\pi$BO": pibo_prior_df,
         # "DynaBO, perfect validation": baseline_perfect_prior_df,
         "DynaBO, threshold validation": threshold_prior_df,
@@ -133,7 +132,7 @@ def plot_final_results_yahpogym(surrogate:str):
         base_path=f"plots/final_result_plots/{surrogate}",
         ncol=4,
     )
-    #create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="yahpogym", base_path=f"plots/final_result_plots/{surrogate}", ncol=len(style_dict))
+    # create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="yahpogym", base_path=f"plots/final_result_plots/{surrogate}", ncol=len(style_dict))
 
 
 if __name__ == "__main__":

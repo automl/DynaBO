@@ -4,7 +4,6 @@ from copy import deepcopy
 from typing import Any, Dict, Generator, List, Optional
 
 import pandas as pd
-from carps.utils.running import make_task
 from ConfigSpace import Configuration, ConfigurationSpace
 from omegaconf import OmegaConf
 from py_experimenter.experimenter import PyExperimenter
@@ -12,6 +11,7 @@ from py_experimenter.result_processor import ResultProcessor
 from smac.facade.hyperparameter_optimization_facade import HyperparameterOptimizationFacade
 from smac.runhistory import TrialInfo, TrialValue
 from yahpo_gym import benchmark_set, local_config
+from carps.objective_functions.mfpbench import MFPBenchObjectiveFunction
 
 
 class AbstractEvaluator:
@@ -114,15 +114,15 @@ class AbstractEvaluator:
 
 
 YAHPOGYM_SCENARIO_OPTIONS = [
-    #"rbv2_ranger",
+    # "rbv2_ranger",
     "rbv2_xgboost",
-    #"rbv2_svm",
-    #"rbv2_glmnet",
+    # "rbv2_svm",
+    # "rbv2_glmnet",
     "lcbench",
-    #"nb301",
-    #"rbv2_aknn",
-    #"rbv2_rpart",
-    #"rbv2_super",
+    # "nb301",
+    # "rbv2_aknn",
+    # "rbv2_rpart",
+    # "rbv2_super",
 ]
 
 
@@ -133,7 +133,7 @@ class YAHPOGymEvaluator(AbstractEvaluator):
         self.runtime_metric_name = runtime_metric_name
 
         local_config._config = {"data_path": str("benchmark_data/yahpo_data")}
-           # TODO set this properly
+        # TODO set this properly
         self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario, multithread=False)
         self.benchmark.set_instance(value=self.dataset)
         self.default_fidelity_config = self.benchmark.get_fidelity_space().get_default_configuration()
@@ -199,14 +199,15 @@ class MFPBenchEvaluator(AbstractEvaluator):
         # setup mfpbench config
         exp_config = OmegaConf.load("CARP-S/carps/configs/task/MFPBench/SO/pd1/" + self.scenario + ".yaml")
         exp_config.seed = seed
-        self.task = make_task(exp_config)
+        self.objective_function = MFPBenchObjectiveFunction(benchmark_name="pd1", benchmark=scenario, metric=["valid_error_rate"])
+        self.configuration_space: ConfigurationSpace = self.objective_function.configspace
 
         self.config_space = self.get_configuration_space()
 
     def _train(self, config: Configuration, seed: int = 0):
         # We use the full fidelity space
-        ti = TrialInfo(config=config, budget=1.0, seed=seed)
-        res = self.task.objective_function.evaluate(ti)
+        ti = TrialInfo(config=config, seed=seed)
+        res = self.objective_function.evaluate(ti)
 
         performance = round(float(res.cost), 6)
         runtime = round(float(res.virtual_time), 3)
@@ -214,7 +215,7 @@ class MFPBenchEvaluator(AbstractEvaluator):
         return float(performance), float(runtime)
 
     def get_configuration_space(self) -> ConfigurationSpace:
-        return self.task.objective_function.configspace
+        return self.objective_function.configspace
 
     @staticmethod
     def get_datasets(with_all_datasets: bool, medium_and_hard: bool) -> List[Dict[str, Any]]:
@@ -557,8 +558,8 @@ def get_dynabo_dict(
                     conifg_copy["prior_decay"] = prior_decay
                     final_configs.append(conifg_copy)
 
-
         return final_configs
+
     def add_validation_method(
         preliminary_configs: List[Dict[str, Any]],
         validate_prior: bool,
@@ -646,7 +647,9 @@ def get_dynabo_dict(
                     validate_prior=validate_prior,
                 )
 
-                preliminary_configs = add_position_configs(base_config, prior_static_position, remove_old_priors_choices, prior_decay_choices, prior_every_n_trials_choices, prior_at_start_choices, prior_chance_theta_choices)
+                preliminary_configs = add_position_configs(
+                    base_config, prior_static_position, remove_old_priors_choices, prior_decay_choices, prior_every_n_trials_choices, prior_at_start_choices, prior_chance_theta_choices
+                )
 
                 validation_configs = add_validation_method(preliminary_configs, validate_prior, prior_validation_method_choices, n_prior_validation_samples)
                 dynabo_configs.extend(validation_configs)

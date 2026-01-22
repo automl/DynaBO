@@ -3,9 +3,9 @@ PY_EXPERIMENTER:
 
   Database:
     provider: mysql
-    database: dynabo_normal_scale
+    database: DynaBO_full_fidelity
     table:
-      name: data_generation_yahpo
+      name: data_generation_pd1_gaussian
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)

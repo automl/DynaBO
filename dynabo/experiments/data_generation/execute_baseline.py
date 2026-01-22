@@ -4,7 +4,6 @@ from py_experimenter.experimenter import PyExperimenter
 from py_experimenter.result_processor import ResultProcessor
 from smac import HyperparameterOptimizationFacade, RandomFacade, Scenario, BlackBoxFacade
 from smac.acquisition.maximizer import LocalAndSortedRandomSearch
-from smac.main.config_selector import ConfigSelector
 
 from ConfigSpace import Constant, ConfigurationSpace
 
@@ -16,6 +15,7 @@ from dynabo.utils.configuration_data_classes import (
     SMACConfig,
 )
 from dynabo.utils.evaluator import MFPBenchEvaluator, YAHPOGymEvaluator, ask_tell_opt, fill_table
+from smac.main.config_selector import ConfigSelector
 
 EXP_CONFIG_FILE_PATH = "dynabo/experiments/data_generation/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
@@ -102,9 +102,14 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
         runhistory_encoder = BlackBoxFacade.get_runhistory_encoder(scenario=smac_scenario)
 
+        model = BlackBoxFacade.get_model(scenario=smac_scenario)
+        config_selector = ConfigSelector(scenario=smac_scenario, retries=100, retrain_after=1)
+
         smac = HyperparameterOptimizationFacade(
             scenario=smac_scenario,
             target_function=evaluator.train,
+            model=model,
+            config_selector=config_selector,
             acquisition_function=acquisition_function,
             acquisition_maximizer=local_and_prior_search,
             callbacks=[incumbent_callback],
@@ -143,7 +148,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
 if __name__ == "__main__":
     initialise_experiments()
-    benchmarklib = "yahpogym"
+    benchmarklib = "mfpbench"
     experimenter = PyExperimenter(
         experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
         database_credential_file_path=DB_CRED_FILE_PATH,
@@ -154,7 +159,7 @@ if __name__ == "__main__":
         fill_table(
             py_experimenter=experimenter,
             common_parameters={
-                "acquisition_function": ["expected_improvement"],
+                "acquisition_function": ["confidence_bound"],
                 "timeout_total": [3600],
                 "n_trials": [5000],
                 "initial_design__n_configs_per_hyperparameter": [10],

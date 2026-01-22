@@ -231,16 +231,18 @@ if __name__ == "__main__":
                 "prior_static_position": True,
                 "prior_every_n_trials_choices": [10],
                 "prior_at_start_choices": [True],
-                "prior_chance_theta_choices": [0.015, 0.02],
+                "prior_chance_theta_choices": [0.015],
                 # Decay parameters
                 "prior_decay_enumerator_choices": [
                     5,
                 ],
                 "prior_decay_denominator": 1,
-                "remove_old_priors_choices": [False, True],
-                "prior_decay_choices": ["linear"],
+                "remove_old_priors_choices": [True, False],
+                "prior_decay_choices": [
+                    "linear",
+                ],
                 # Validation parameters
-                "validate_prior_choices": [True],
+                "validate_prior_choices": [True, False],
                 "prior_validation_method_choices": ["difference"],
                 "n_prior_validation_samples": 500,
                 "n_prior_based_samples": 0,
@@ -253,4 +255,4 @@ if __name__ == "__main__":
         experimenter.reset_experiments("running", "error")
     execute = True
     if execute:
-        experimenter.execute(run_experiment, max_experiments=1, random_order=True)
+        experimenter.execute(run_experiment, max_experiments=30, random_order=True)

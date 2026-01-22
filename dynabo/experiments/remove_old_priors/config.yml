@@ -3,9 +3,9 @@ PY_EXPERIMENTER:
 
   Database:
     provider: mysql
-    database: dynabo_sum
+    database: DynaBO_full_fidelity
     table: 
-      name: iclr_rebuttal_negative_positive
+      name: remove_old_priors
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)
@@ -69,7 +69,6 @@ PY_EXPERIMENTER:
           type: BOOLEAN
         prior_decay:
           type: VARCHAR(255)
-
 
       result_timestamps: False
       resultfields:

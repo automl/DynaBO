@@ -1,10 +1,9 @@
 #!/bin/bash
 #SBATCH -t 04:00:00
-#SBATCH --array=1-727
+#SBATCH --array=1-1440
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu 6G
 #SBATCH -J dynabo-prior
-#SBATCH --nice=10000
 #SBATCH -e /mnt/home/lfehring/DynaBO/logs/%x/%A_%a.err
 #SBATCH -o /mnt/home/lfehring/DynaBO/logs/%x/%A_%a.out
 

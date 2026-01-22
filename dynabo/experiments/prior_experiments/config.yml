@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: dynabo_sum
     table: 
-      name: iclr_rebuttal_remove_ablation
+      name: testing
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)

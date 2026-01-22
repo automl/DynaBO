@@ -144,3 +144,8 @@ benchmark_data/gt_prior_data/mfpbench/origin_table.csv
 benchmark_data/gt_prior_data/yahpogym/origin_table.csv
 plots
 plots_product
+iclr_submission/plotting_data
+iclr_submission/benchmark_data
+
+# SpFlow library
+lib/SPFlow/

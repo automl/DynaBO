@@ -30,7 +30,7 @@ def connect_to_database(database_name, table_name: str) -> PyExperimenter:
     return experimenter
 
 
-def save_base_table(benchmark_name: str, table_name: str, only_incumbent: bool = False, database_name: str = "dynabo") -> pd.DataFrame:
+def save_base_table(benchmark_name: str, table_name: str, database_name: str, only_incumbent: bool = False) -> pd.DataFrame:
     experimenter = connect_to_database(database_name, table_name)
     base_table = experimenter.get_table()
     if only_incumbent:

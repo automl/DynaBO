@@ -145,7 +145,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
 if __name__ == "__main__":
     initialise_experiments()
-    benchmarklib = "yahpogym"
+    benchmarklib = "mfpbench"
     experimenter = PyExperimenter(
         experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,
         database_credential_file_path=DB_CRED_FILE_PATH,
@@ -158,7 +158,7 @@ if __name__ == "__main__":
             common_parameters={
                 "acquisition_function": ["expected_improvement"],
                 "timeout_total": [3600],
-                "n_trials": [200],
+                "n_trials": [500],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
                 "seed": list(range(30)),

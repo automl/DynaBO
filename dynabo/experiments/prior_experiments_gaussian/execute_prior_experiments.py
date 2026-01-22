@@ -174,7 +174,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         intensifier=intensifier,
         overwrite=True,
         runhistory_encoder=runhistory_encoder,
-        model =model,
+        model=model,
     )
 
     start_time = time.time()
@@ -213,7 +213,7 @@ if __name__ == "__main__":
             common_parameters={
                 "acquisition_function": ["expected_improvement"],
                 "timeout_total": [3600],
-                "n_trials": [500],
+                "n_trials": [50],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
                 "seed": list(range(30)),
@@ -223,7 +223,7 @@ if __name__ == "__main__":
                 "with_all_datasets": True,
                 "medium_and_hard": False,
             },
-            approach="dynabo",
+            approach="pibo",
             approach_parameters={
                 # Prior configurationz
                 "prior_kind_choices": ["good", "medium", "misleading", "deceiving"],

@@ -5,7 +5,7 @@ from typing import Dict, Optional, Tuple
 import gower
 import numpy as np
 import pandas as pd
-from ConfigSpace import ConfigurationSpace, Configuration, CategoricalHyperparameter
+from ConfigSpace import ConfigurationSpace, Configuration
 from py_experimenter.result_processor import ResultProcessor
 from scipy.stats import mannwhitneyu
 from smac.acquisition.function import LCB
@@ -87,7 +87,7 @@ class AbstractPriorCallback(Callback, ABC):
         prior_std_denominator: float,
         prior_decay_enumerator: int,
         prior_decay_denominator: int,
-        remove_old_prior:bool = False,
+        remove_old_prior: bool = False,
         result_processor: ResultProcessor = None,
         evaluator: YAHPOGymEvaluator = None,
     ):
@@ -148,21 +148,22 @@ class AbstractPriorCallback(Callback, ABC):
         if self.intervene(smbo):
             prior_configspace, origin_configpsace, cost, logging_config, superior_configuraiton = self.construct_prior(smbo)
 
-            self.sample_from_prior(smbo, prior_configspace)
+            if prior_configspace is not None:  # If a prior could be sampled
+                self.sample_from_prior(smbo, prior_configspace)
 
-            prior_accepted, prior_mean_acq_value, origin_mean_acq_value = self.accept_prior(smbo, prior_configspace, origin_configpsace)
+                prior_accepted, prior_mean_acq_value, origin_mean_acq_value = self.accept_prior(smbo, prior_configspace, origin_configpsace)
 
-            if prior_accepted:
-                self.set_prior(smbo, prior_configspace)
-            self.log_prior(
-                smbo=smbo,
-                cost=cost,
-                config=logging_config,
-                prior_accepted=prior_accepted,
-                prior_mean_acq_value=prior_mean_acq_value,
-                origin_mean_acq_value=origin_mean_acq_value,
-                superior_configuration=superior_configuraiton,
-            )
+                if prior_accepted:
+                    self.set_prior(smbo, prior_configspace)
+                self.log_prior(
+                    smbo=smbo,
+                    cost=cost,
+                    config=logging_config,
+                    prior_accepted=prior_accepted,
+                    prior_mean_acq_value=prior_mean_acq_value,
+                    origin_mean_acq_value=origin_mean_acq_value,
+                    superior_configuration=superior_configuraiton,
+                )
 
         return super().on_ask_start(smbo)
 
@@ -241,23 +242,25 @@ class AbstractPriorCallback(Callback, ABC):
         incumbent_cost = smbo.runhistory.get_cost(current_incumbent_config)
 
         sampled_config = self.sample_prior(smbo, current_incumbent_config, incumbent_cost)
-        prior_cost = sampled_config[COST_INDICATOR_COLUMN].values[0]
 
-        # Check if the sampled configuration is better than the incumbent
-        superior_configuration = bool(prior_cost < incumbent_cost)
+        # If no prior could be sampled, return None
+        if sampled_config is not None:
+            prior_cost = sampled_config[COST_INDICATOR_COLUMN].values[0]
 
-        if sampled_config is None:
-            raise ValueError("No prior configuration could be sampled.")
+            # Check if the sampled configuration is better than the incumbent
+            superior_configuration = bool(prior_cost < incumbent_cost)
 
-        cost = sampled_config[COST_INDICATOR_COLUMN].values[0]
-        hyperparameter_config = sampled_config[[col for col in sampled_config.columns if col.startswith("config_")]]
-        hyperparameter_config.columns = [col.replace("config_", "") for col in hyperparameter_config.columns]
-        hyperparameter_config = hyperparameter_config.iloc[0].to_dict()
+            cost = sampled_config[COST_INDICATOR_COLUMN].values[0]
+            hyperparameter_config = sampled_config[[col for col in sampled_config.columns if col.startswith("config_")]]
+            hyperparameter_config.columns = [col.replace("config_", "") for col in hyperparameter_config.columns]
+            hyperparameter_config = hyperparameter_config.iloc[0].to_dict()
 
-        origin_configspace = smbo._configspace
-        prior_configspace = build_prior_configuration_space(origin_configspace, hyperparameter_config, prior_std_denominator=self.prior_std_denominator * self.prior_number)
+            origin_configspace = smbo._configspace
+            prior_configspace = build_prior_configuration_space(origin_configspace, hyperparameter_config, prior_std_denominator=self.prior_std_denominator * self.prior_number)
 
-        return prior_configspace, origin_configspace, cost, hyperparameter_config, superior_configuration
+            return prior_configspace, origin_configspace, cost, hyperparameter_config, superior_configuration
+        else:
+            return None, None, None, None, False
 
     def set_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace):
         smbo.intensifier.config_selector._acquisition_maximizer.dynamic_init(prior_configspace, remove_old_prior=self.remove_old_prior)
@@ -331,10 +334,9 @@ class DynaBOAbstractPriorCallback(AbstractPriorCallback):
         self.prior_chance_theta = prior_chance_theta
         self.prior_at_start = prior_at_start
 
-
     def intervene(self, smbo: SMBO) -> bool:
         def _intervene_static_position():
-            return smbo.runhistory.finished >= self.initial_design_size + 1 and (smbo.runhistory.finished - self.initial_design_size - 1) % self.prior_every_n_trials == 0  and self.prior_number < 4
+            return smbo.runhistory.finished >= self.initial_design_size + 1 and (smbo.runhistory.finished - self.initial_design_size - 1) % self.prior_every_n_trials == 0 and self.prior_number < 4
 
         def _intervene_dynamic_position():
             if smbo.runhistory.finished < self.initial_design_size + 1:  # We do not intervene before the initial design is finished
@@ -342,7 +344,7 @@ class DynaBOAbstractPriorCallback(AbstractPriorCallback):
                 return False
             else:
                 if smbo.runhistory.finished == self.initial_design_size + 1:  # We use the prior at the start of the optimization
-                    if self.prior_at_start :
+                    if self.prior_at_start:
                         self.n_trials_since_last_prior = 0
                         return True
                 else:
@@ -385,19 +387,20 @@ class WellPerformingPriorCallback(AbstractPriorCallback):
         # Locate current cost in the prior data column median_cost
         relevant_configs = self.prior_data[self.prior_data["median_cost"] <= incumbent_cost]
 
-        min_cluster = relevant_configs["cluster"].min()
-        max_cluster = relevant_configs["cluster"].max()
+        if not relevant_configs.empty:
+            min_cluster = relevant_configs["cluster"].min()
+            max_cluster = relevant_configs["cluster"].max()
+            if min_cluster == max_cluster:
+                cluster = min_cluster
+            else:
+                cluster = self._sample_cluster(smbo, min_cluster, max_cluster, 0.1)
 
-        if relevant_configs.empty:
-            cluster = 0
-        elif min_cluster == max_cluster:
-            cluster = min_cluster
+            # Select lowest cost configuration in the cluster
+            relevant_configs = self.prior_data[self.prior_data["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)[:1]
+            return relevant_configs
+
         else:
-            cluster = self._sample_cluster(smbo, min_cluster, max_cluster, 0.1)
-
-        # Select lowest cost configuration in the cluster
-        relevant_configs = self.prior_data[self.prior_data["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)[:1]
-        return relevant_configs
+            return None
 
 
 class DynaBOWellPerformingPriorCallback(DynaBOAbstractPriorCallback, WellPerformingPriorCallback):
@@ -430,19 +433,19 @@ class MediumPerformingPriorCallback(AbstractPriorCallback):
         # Locate current cost in the prior data column median_cost
         relevant_configs = self.prior_data[self.prior_data["median_cost"] <= incumbent_cost]
 
-        min_cluster = relevant_configs["cluster"].min()
-        max_cluster = relevant_configs["cluster"].max()
+        if not relevant_configs.empty:
+            min_cluster = relevant_configs["cluster"].min()
+            max_cluster = relevant_configs["cluster"].max()
+            if min_cluster == max_cluster:
+                cluster = min_cluster
+            else:
+                cluster = self._sample_cluster(smbo, min_cluster, max_cluster, 0.15)
 
-        if relevant_configs.empty:
-            cluster = 0
-        elif min_cluster == max_cluster:
-            cluster = min_cluster
+            # Select lowest cost configuration in the cluster
+            relevant_configs = self.prior_data[self.prior_data["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)
+            return self.draw_sample(relevant_configs, smbo.intensifier._rng)
         else:
-            cluster = self._sample_cluster(smbo, min_cluster, max_cluster, 0.15)
-
-        # Select lowest cost configuration in the cluster
-        relevant_configs = self.prior_data[self.prior_data["cluster"] == cluster].sort_values(COST_INDICATOR_COLUMN)[:1]
-        return self.draw_sample(relevant_configs, smbo.intensifier._rng)
+            return None
 
 
 class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback, MediumPerformingPriorCallback):
@@ -457,18 +460,7 @@ class DynaBOMediumPriorCallback(DynaBOAbstractPriorCallback, MediumPerformingPri
         self.helpful_prior = None
 
     def _accept_prior_baseline_perfect(self) -> bool:
-        return self.helpful_prior
-
-    def sample_prior(self, smbo: SMBO, incumbent_config: Configuration, incumbent_cost: float) -> Optional[pd.DataFrame]:
-        prior = super().sample_prior(smbo, incumbent_config, incumbent_cost)
-        prior_cost = prior[COST_INDICATOR_COLUMN].values[0]
-
-        if prior_cost < incumbent_cost:
-            self.helpful_prior = True
-        else:
-            self.helpful_prior = False
-
-        return prior
+        return True
 
 
 class PiBOMediumPriorCallback(PiBOAbstractPriorCallback, MediumPerformingPriorCallback):
@@ -616,25 +608,6 @@ class MixedPriorsCallback(AbstractPriorCallback):
             *args,
             **kwargs,
         )
-
-        self.medium_performing_callback = DynaBOMediumPriorCallback(
-            no_incumbent_percentile=no_incumbent_percentile,
-            prior_static_position=None,
-            prior_every_n_trials=None,
-            prior_chance_theta=None,
-            prior_at_start=None,
-            *args,
-            **kwargs,
-        )
-
-        self.misleading_prior_callback = DynaBOMisleadingPriorCallback(
-            prior_static_position=None,
-            prior_every_n_trials=None,
-            prior_chance_theta=None,
-            prior_at_start=None,
-            *args,
-            **kwargs,
-        )
         self.deceiving_prior_callback = DynaBODeceivingPriorCallback(
             prior_static_position=None,
             prior_every_n_trials=None,
@@ -643,35 +616,25 @@ class MixedPriorsCallback(AbstractPriorCallback):
             *args,
             **kwargs,
         )
-        self.last_Was_helpful = None
+        self.last_was_helpfull = None
         self.good_prior = None
 
-
     def sample_prior(self, smbo: SMBO, incumbent_config: Configuration, incumbent_cost: float) -> Optional[pd.DataFrame]:
-        if self.last_Was_helpful is not None:
-            if self.last_Was_helpful:
+        if self.last_was_helpfull is not None:
+            if self.last_was_helpfull:
                 return self.deceiving_prior_callback.sample_prior(smbo, incumbent_config, incumbent_cost)
             else:
                 return self.misleading_prior_callback.sample_prior(smbo, incumbent_config, incumbent_cost)
-        
-        self.last_Was_helpful = True
-        chance = smbo.intensifier._rng.random()
-        if chance < 1/3:
-            self.good_prior = True
-            return self.well_performing_callback.sample_prior(smbo, incumbent_config, incumbent_cost)
-        elif chance < 2/3:
-            self.good_prior = False
-            return self.medium_performing_callback.sample_prior(smbo, incumbent_config, incumbent_cost)
-        else:
-            self.good_prior = False
-            return self.misleading_prior_callback.sample_prior(smbo, incumbent_config, incumbent_cost)
 
+        self.last_was_helpfull = True
+        self.good_prior = True
+        return self.well_performing_callback.sample_prior(smbo, incumbent_config, incumbent_cost)
 
     def intervene(self, smbo: SMBO) -> bool:
         if self.initial_design_size < smbo.runhistory.finished < self.initial_design_size + 3:
             return True
         return False
-        
+
     def _accept_prior_baseline_perfect(self) -> bool:
         if self.good_prior:
             return self.well_performing_callback._accept_prior_baseline_perfect()

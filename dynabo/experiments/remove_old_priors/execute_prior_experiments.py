@@ -118,7 +118,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         intensifier=intensifier,
         overwrite=True,
         runhistory_encoder=runhistory_encoder,
-        model =model,
+        model=model,
     )
 
     start_time = time.time()
@@ -183,7 +183,9 @@ if __name__ == "__main__":
                     5,
                 ],
                 "prior_decay_denominator": 1,
-                "prior_decay_choices": ["linear",],
+                "prior_decay_choices": [
+                    "linear",
+                ],
                 "remove_old_priors_choices": [False, True],
                 # Validation parameters
                 "validate_prior_choices": [False],
@@ -191,7 +193,9 @@ if __name__ == "__main__":
                 "n_prior_validation_samples": 500,
                 "n_prior_based_samples": 0,
                 "prior_validation_manwhitney_p_choices": [0.05],
-                "prior_validation_difference_threshold_choices": [-0.15,]
+                "prior_validation_difference_threshold_choices": [
+                    -0.15,
+                ],
             },
         )
     reset = False

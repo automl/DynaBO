@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -t 01:00:00
-#SBATCH --array=1-480
+#SBATCH --array=1-240
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu 6G
 #SBATCH -J dynabo-prior
@@ -18,4 +18,3 @@ source /mnt/home/lfehring/.bashrc
 conda activate DynaBO
 
 /mnt/home/lfehring/DynaBO/.venv/bin/python dynabo/experiments/remove_old_priors/execute_prior_experiments.py
-

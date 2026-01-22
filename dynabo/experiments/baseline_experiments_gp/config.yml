@@ -3,9 +3,9 @@ PY_EXPERIMENTER:
 
   Database:
     provider: mysql
-    database: dynabo_normal_scale
+    database: DynaBO_full_fidelity
     table:
-      name: baseline_deceiving_longer_gp
+      name: baseline_gp_longer
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)
