@@ -1,7 +1,7 @@
 # DynaBO
-This is the implementation of our ICLR 2025 submission titled **DynaBO: Dynamic Priors in Bayesian Optimization for Hyperparameter Optimization**. In the paper we propose a method to incorporate dynamic user feedback in the form of priors at runtime.
+This is the implementation of our ICML 2026 submission titled **DynaBO: Dynamic Priors in Bayesian Optimization for Hyperparameter Optimization**. In the paper we propose a method to incorporate dynamic user feedback in the form of priors at runtime.
 
-![DynaBO evaluation results on lcbench](plots/scenario_plots/yahpogym/regret/lcbench.png)
+![DynaBO evaluation results on lcbench](plots/pc_comparison/rf/mfpbench/regret/overall/legend.pdf)
 
 ## Install
 To install and run our method, you need to execute the following steps:
@@ -25,4 +25,10 @@ To replicate our experiments you need to execute the following steps
 1. Create gt_data needed for priors by running: ``dynabo/experiments/data_generation/execute_baseline.py`` for both ``mfbench`` and ``yahpogym``. 
 2. Create priors by running ``dynabo/data_processing/extract_gt_priors.py``
 3. Execute the baselines, dynabo, and πBO using the scripts located in ``dynabo/experiments``. In our experiments ran slurm jobs utilizing the scripts in ``cluster_scripts``.
-4. Create plots using ``dynabo/plotting/plotting.py``.
+4. Create plots in ``dynabo/plotting``.
+
+## Comparison to "Hyperparameter Optimization via Interacting with Probabilistic Circuits"
+
+For a comparison with [Probabilistic Circuits](https://github.com/ml-research/ibo-hpc) we utilize a forked version of their repository. You can find it here.
+#TODO add link to their repo
+After execution, you need to copy the results from their repository to `dynabo/plotting_data/pc_results`. 
