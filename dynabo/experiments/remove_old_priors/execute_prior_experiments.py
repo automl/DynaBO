@@ -149,7 +149,7 @@ if __name__ == "__main__":
         use_codecarbon=False,
     )
     benchmarklib = "mfpbench"
-    fill = False
+    fill = True
 
     if fill:
         fill_table(

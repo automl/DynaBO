@@ -3,9 +3,9 @@ PY_EXPERIMENTER:
 
   Database:
     provider: mysql
-    database: dynabo_sum
+    database: DynaBO_full_fidelity
     table: 
-      name: testing
+      name: prior_experiments
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)

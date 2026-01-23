@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: DynaBO_full_fidelity
     table: 
-      name: remove_old_priors
+      name: testing
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)

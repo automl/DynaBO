@@ -3,9 +3,9 @@ PY_EXPERIMENTER:
 
   Database:
     provider: mysql
-    database: dynabo_sum
+    database: DynaBO_full_fidelity
     table: 
-      name: iclr_rebuttal_prior_gp_longer
+      name: pd1_prior_gaussian
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)
