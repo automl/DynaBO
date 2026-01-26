@@ -608,7 +608,7 @@ def create_deceiving_longer_scenarios(
         min_ntrials = 1
         max_n_trials = 500
     for scenario in scenarios:
-        fig, ax = plt.subplots(1, 1, figsize=(8, 3), dpi=300)  # Wider and higher resolution
+        fig, ax = plt.subplots(1, 1, figsize=(12, 4.5), dpi=300)  # Wider and higher resolution
         axs = [ax]
         plot_number = 0
         for prior_kind in ["deceiving"]:
@@ -647,7 +647,7 @@ def create_overall_plot_longer(
     elif benchmarklib == "mfpbench":
         min_ntrials = 1
         max_n_trials = 500
-    fig, ax = plt.subplots(1, 1, figsize=(8, 3), dpi=300)
+    fig, ax = plt.subplots(1, 1, figsize=(10, 3.5), dpi=300)
     axs = [ax]
     plot_number = 0
     for prior_kind in ["deceiving"]:
@@ -772,7 +772,7 @@ def set_ax_style(ax, x_label, y_label, benchmarklib: str = "mfpbench"):
     if benchmarklib == "yahpogym":
         ax.set_xticks([0, 100, 200])
     elif benchmarklib == "mfpbench":
-        ax.set_xticks([0, 25, 50])
+        ax.set_xticks([0, 100, 200, 300, 400, 500])
     # Incraese line width
     for line in ax.get_lines():
         line.set_linewidth(3.5)
