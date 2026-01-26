@@ -18,7 +18,7 @@ make install
 ```
 
 ## Execution
-Our experiments rely on the library. They therefore require either using a mysql database. The process of using PyExperimenter is described in its [documentation](https://github.com/tornede/py_experimenter).
+Our experiments rely on the PyExperimenter library. They therefore require either using a mysql database. The process of using PyExperimenter is described in its [documentation](https://github.com/tornede/py_experimenter).
 To replicate our experiments you need to execute the following steps
 1. Create gt_data needed for priors by running: ``dynabo/experiments/data_generation/execute_baseline.py`` for both ``mfbench`` and ``yahpogym``. 
 2. Create priors by running ``dynabo/data_processing/extract_gt_priors.py``
