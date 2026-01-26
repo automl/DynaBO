@@ -7,7 +7,7 @@ This is the implementation of our ICML 2026 submission titled **DynaBO: Dynamic 
 To install and run our method, you need to execute the following steps:
 1. Clone the repository with all additional dependencies using:
 ```bash
-git clone --recursive https://github.com/automl/DynaBO.git 
+git clone --recursive https://github.com/OrgName/DynaBO.git 
 ```
 2. Create a `conda` environment and activate it using:
 ```bash
