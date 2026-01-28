@@ -1,5 +1,5 @@
 # DynaBO
-This is the implementation of our submission titled **DynaBO: Dynamic Priors in Bayesian Optimization for Hyperparameter Optimization**. In the paper we propose a method to incorporate dynamic user feedback in the form of priors at runtime.
+This is the implementation of our submission titled DynaBO: Dynamic Priors in Bayesian Optimization for Hyperparameter Optimization. In the paper, we propose a method to incorporate dynamic user feedback in the form of priors at runtime.
 
 ## Install
 To install and run our method, you need to execute the following steps:
@@ -7,32 +7,32 @@ To install and run our method, you need to execute the following steps:
 ```bash
 git clone --recursive https://github.com/OrgName/DynaBO.git 
 ```
-2. Create a `conda` environment and activate it using:
+2. Create a conda environment and activate it using:
 ```bash
 conda create -n DynaBO python=3.10
 conda activate DynaBO
 ```
-3. Install the repo and all dependencies:
+3. Install the repository and all dependencies:
 ```bash
 make install
 ```
 
 ## Execution
-Our experiments rely on the PyExperimenter library. You can run a local version with SQLite, buty for large scale experiments, reproducing the results we suggest setting up a mysql database server. 
+Our experiments rely on the PyExperimenter library. You can run a local version with SQLite, but for large-scale experiments and reproducing the results, we suggest setting up a MySQL database server.
 The process of using PyExperimenter is described in its [documentation](https://github.com/tornede/py_experimenter).
 
-To replicate our experiments you need to execute the following steps
+To replicate our experiments, you need to execute the following steps:
 1. Create gt_data needed for priors by running: ``dynabo/experiments/data_generation/execute_baseline.py`` for both ``mfbench`` and ``yahpogym``. 
     We did this with both expected improvement and confidence bound acquisition functions.
 2. Create priors by running ``dynabo/data_processing/extract_gt_priors.py``
-    This will extract the entries from the database, cluster them, and save the priors to disk. To replicate the pc results, you need to either copy the files over, or link the path.
-3. Execute the baselines, dynabo, and πBO using the scripts located in ``dynabo/experiments``. In our experiments ran slurm jobs utilizing the scripts in ``cluster_scripts`` bur parallelisation requires a mysql database server.
-    This will populate the database with entried, and continiously pull experiments and execute them.
+    This will extract the entries from the database, cluster them, and save the priors to disk. To replicate the PC results, you need to either copy the files over or link the path.
+3. Execute the baselines, DynaBO, and πBO using the scripts located in ``dynabo/experiments``. In our experiments, we ran Slurm jobs utilizing the scripts in ``cluster_scripts`` but parallelization requires a MySQL database server.
+    This will populate the database with entries and continuously pull and execute experiments.
 4. Download the results from the database using ``dynabo/data_processing/download_all_files.py``
-4. Create plots in ``dynabo/plotting``.
+5. Create plots in ``dynabo/plotting``.
 
 ### Structure of Experiemnts
-Every experiment is located in ``dynabo/experiments/``, and contains both a config and a python file. The structure of the config files is described in the [PyExperimenter documentation](https://github.com/tornede/py_experimenter).
+Every experiment is located in ``dynabo/experiments/``, and contains both a config file and a Python file. The structure of the config files is described in the [PyExperimenter documentation](https://github.com/tornede/py_experimenter).
 
 The python file is structured as follows 
 
@@ -41,7 +41,7 @@ The python file is structured as follows
 ...
 
 def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: dict):
-    # Some Taget function
+    # Some target function
 
     result = {
         "initial_design_size": initial_design_size,
@@ -58,28 +58,28 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
 
 if __name__ == "__main__":
     ...
-    experimenter = PyExperimenter( # Creation of the experimenter
-        experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,# Path to the config file
-        database_credential_file_path=DB_CRED_FILE_PATH, # Path to the database credentials - in case of sqlite this is not needed
+    experimenter = PyExperimenter(  # Creation of the experimenter
+        experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,  # Path to the config file
+        database_credential_file_path=DB_CRED_FILE_PATH,  # Path to the database credentials; not needed for SQLite
         use_codecarbon=False,
     )
 
-    #Information to fill the databse 
-    fill = True # Whether to fill the database with experiments
-    benchmarklib = "mfpbench" # Benchmakr library
+    # Information to fill the database
+    fill = True  # Whether to fill the database with experiments
+    benchmarklib = "mfbench"  # Benchmark library
     if fill:
         fill_table(
             py_experimenter=experimenter,
-            common_parameters={# Geenral Setup Parameters
-                "acquisition_function": ["expected_improvement"], 
+            common_parameters={  # General setup parameters
+                "acquisition_function": ["expected_improvement"],
                 "timeout_total": [3600],
                 "n_trials": [500],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
                 "seed": list(range(30)),
             },
-            benchmarklib=benchmarklib, # Benchmark library to use
-            benchmark_parameters={ # Benchmark specific parameters
+            benchmarklib=benchmarklib,  # Benchmark library to use
+            benchmark_parameters={  # Benchmark-specific parameters
                 "with_all_datasets": True,
                 "medium_and_hard": False,
             },
@@ -88,7 +88,7 @@ if __name__ == "__main__":
         )
 
     # Whether to reset experiments with status error or running
-    reset = False 
+    reset = False
     if reset:
         experimenter.reset_experiments("error", "running")
 
