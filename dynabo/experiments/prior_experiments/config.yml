@@ -2,7 +2,7 @@ PY_EXPERIMENTER:
   n_jobs: 1
 
   Database:
-    provider: mysql
+    provider: sqlite
     database: DynaBO_full_fidelity
     table: 
       name: prior_experiments
