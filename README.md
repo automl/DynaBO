@@ -1,5 +1,5 @@
 # DynaBO
-This is the implementation of our submission titled DynaBO: Dynamic Priors in Bayesian Optimization for Hyperparameter Optimization. In the paper, we propose a method to incorporate dynamic user feedback in the form of priors at runtime.
+This is the implementation of our submission titled "Dynamic Priors in Bayesian Optimization for Hyperparameter Optimization". In the paper, we propose a method to incorporate dynamic user feedback in the form of priors at runtime.
 
 ## Install
 To install and run our method, you need to execute the following steps:
@@ -31,7 +31,7 @@ To replicate our experiments, you need to execute the following steps:
 4. Download the results from the database using ``dynabo/data_processing/download_all_files.py``
 5. Create plots in ``dynabo/plotting``.
 
-### Structure of Experiemnts
+###  Experiemnts
 Every experiment is located in ``dynabo/experiments/``, and contains both a config file and a Python file. The structure of the config files is described in the [PyExperimenter documentation](https://github.com/tornede/py_experimenter).
 
 The python file is structured as follows 
