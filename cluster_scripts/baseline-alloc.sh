@@ -16,4 +16,4 @@ ml Miniforge3
 source /mnt/home/username/.bashrc
 conda activate DynaBO
 
-/mnt/home/lfehring/DynaBO/.venv/bin/python dynabo/experiments/baseline_experiments/execute_baseline.py
+/mnt/home/username/DynaBO/.venv/bin/python dynabo/experiments/baseline_experiments/execute_baseline.py
