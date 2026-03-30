@@ -164,6 +164,7 @@ def plot_final_run(
     min_ntrials=1,
     max_ntrials=200,
     error_bar_type: str = "se",
+    y_column: str = "regret",
 ):
     config_dict = copy.deepcopy(config_dict)
     prior_dict = copy.deepcopy(prior_dict)
@@ -187,7 +188,7 @@ def plot_final_run(
     for key, df in config_dict.items():
         sns.lineplot(
             x="after_n_evaluations",
-            y="regret",
+            y=y_column,
             drawstyle="steps-pre",
             data=df,
             label=key,
@@ -437,9 +438,11 @@ def extract_incumbent_steps(df_dict: Dict[str, pd.DataFrame], min_ntrials: int, 
                         merged_df = full_range.merge(df.loc[seed_mask], on="after_n_evaluations", how="left")
 
                         merged_df["regret"] = merged_df["regret"].ffill()
-                        merged_df_final = pd.DataFrame(columns=["scenario", "dataset", "seed", "after_n_evaluations", "regret"])
+                        merged_df["cost"] = merged_df["cost"].ffill()
+                        merged_df_final = pd.DataFrame(columns=["scenario", "dataset", "seed", "after_n_evaluations", "regret", "cost"])
                         merged_df_final["after_n_evaluations"] = merged_df["after_n_evaluations"]
                         merged_df_final["regret"] = merged_df["regret"]
+                        merged_df_final["cost"] = merged_df["cost"]
                         merged_df_final["scenario"] = scenario
                         merged_df_final["dataset"] = dataset
                         merged_df_final["seed"] = seed
@@ -454,9 +457,11 @@ def extract_incumbent_steps(df_dict: Dict[str, pd.DataFrame], min_ntrials: int, 
                     merged_df = full_range.merge(df.loc[seed_mask], on="after_n_evaluations", how="left")
 
                     merged_df["regret"] = merged_df["regret"].ffill()
-                    merged_df_final = pd.DataFrame(columns=["scenario", "dataset", "seed", "after_n_evaluations", "regret"])
+                    merged_df["cost"] = merged_df["cost"].ffill()
+                    merged_df_final = pd.DataFrame(columns=["scenario", "dataset", "seed", "after_n_evaluations", "regret", "cost"])
                     merged_df_final["after_n_evaluations"] = merged_df["after_n_evaluations"]
                     merged_df_final["regret"] = merged_df["regret"]
+                    merged_df_final["cost"] = merged_df["cost"]
                     merged_df_final["scenario"] = scenario
                     merged_df_final["dataset"] = None
                     merged_df_final["seed"] = seed
@@ -529,8 +534,10 @@ def remove_weird_datasets(
 
 
 def create_scenario_plots(
-    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, str], error_bar_type: str, scenarios: List[str], benchmarklib: str, base_path: str, ncol: int
+    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, str], error_bar_type: str, scenarios: List[str], benchmarklib: str, base_path: str, ncol: int, y_column: str = "regret"
 ):
+    y_label = "Cost" if y_column == "cost" else "Regret"
+    path_segment = y_column
     if benchmarklib == "yahpogym":
         min_ntrials = 1
         max_n_trials = 200
@@ -554,13 +561,54 @@ def create_scenario_plots(
                 min_ntrials=min_ntrials,
                 max_ntrials=max_n_trials,
                 error_bar_type=error_bar_type,
+                y_column=y_column,
             )
 
-            set_ax_style(ax, x_label="Number of Evaluations", y_label="Regret", benchmarklib=benchmarklib)
+            set_ax_style(ax, x_label="Number of Evaluations", y_label=y_label, benchmarklib=benchmarklib, auto_yticks=(y_column != "regret"))
 
-            set_fig_style(fig, [ax], "Overall Regret Across Different Priors", ncol=ncol)
-            os.makedirs(f"{base_path}/{benchmarklib}/regret/{scenario}", exist_ok=True)
-            save_fig(f"{base_path}/{benchmarklib}/regret/{scenario}/{prior_kind}.pdf")
+            set_fig_style(fig, [ax], f"Overall {y_label} Across Different Priors", ncol=ncol)
+            os.makedirs(f"{base_path}/{benchmarklib}/{path_segment}/{scenario}", exist_ok=True)
+            save_fig(f"{base_path}/{benchmarklib}/{path_segment}/{scenario}/{prior_kind}.pdf")
+
+
+def create_all_scenarios_plot(
+    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, str], error_bar_type: str, scenarios: List[str], benchmarklib: str, base_path: str, ncol: int, y_column: str = "regret"
+):
+    """One figure per scenario with 4 subplots, one per prior kind, subtitled by prior kind."""
+    y_label = "Cost" if y_column == "cost" else "Regret"
+    path_segment = y_column
+    prior_kinds = ["good", "medium", "misleading", "deceiving"]
+    if benchmarklib == "yahpogym":
+        min_ntrials = 1
+        max_n_trials = 200
+    elif benchmarklib == "mfpbench":
+        min_ntrials = 1
+        max_n_trials = 50
+
+    for scenario in scenarios:
+        fig, axs = plt.subplots(1, 4, figsize=(5.3 * 4, 4), dpi=300)
+
+        for ax, prior_kind in zip(axs, prior_kinds):
+            ax = plot_final_run(
+                config_dict,
+                prior_dict,
+                style_dict,
+                scenario,
+                None,
+                prior_kind,
+                ax=ax,
+                benchmarklib=benchmarklib,
+                min_ntrials=min_ntrials,
+                max_ntrials=max_n_trials,
+                error_bar_type=error_bar_type,
+                y_column=y_column,
+            )
+            set_ax_style(ax, x_label="Number of Evaluations", y_label=y_label, benchmarklib=benchmarklib, auto_yticks=(y_column != "regret"))
+            ax.set_title(prior_kind, fontsize=18, fontweight="bold")
+
+        set_fig_style(fig, list(axs), f"Overall {y_label} Across Different Priors", ncol=ncol)
+        os.makedirs(f"{base_path}/{benchmarklib}/{path_segment}/all_prior_kinds", exist_ok=True)
+        save_fig(f"{base_path}/{benchmarklib}/{path_segment}/all_prior_kinds/{scenario}.pdf")
 
 
 def create_pc_comparison(
@@ -599,8 +647,9 @@ def create_pc_comparison(
 
 
 def create_deceiving_longer_scenarios(
-    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, str], error_bar_type: str, scenarios: List[str], benchmarklib: str, base_path: str, ncol: int
+    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, str], error_bar_type: str, scenarios: List[str], benchmarklib: str, base_path: str, ncol: int, y_column: str = "regret"
 ):
+    y_label = "Cost" if y_column == "cost" else "Regret"
     if benchmarklib == "yahpogym":
         min_ntrials = 1
         max_n_trials = 500
@@ -625,22 +674,25 @@ def create_deceiving_longer_scenarios(
                 min_ntrials=min_ntrials,
                 max_ntrials=max_n_trials,
                 error_bar_type=error_bar_type,
+                y_column=y_column,
             )
             plot_number += 1
-            set_ax_style(ax, x_label="Number of Evaluations", y_label="Regret")
+            set_ax_style(ax, x_label="Number of Evaluations", y_label=y_label, auto_yticks=(y_column != "regret"), xticks=[0, 100, 200, 300, 400, 500])
         set_fig_style(
             fig,
             axs,
-            f"Average regret on {scenario}",
+            f"Average {y_label.lower()} on {scenario}",
             ncol=ncol,
         )
         save_fig(f"{base_path}/{scenario}.pdf")
 
 
 def create_overall_plot_longer(
-    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, Dict[str, str]], error_bar_type: str, benchmarklib: str, base_path: str, ncol: int
+    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, Dict[str, str]], error_bar_type: str, benchmarklib: str, base_path: str, ncol: int, y_column: str = "regret"
 ):
-    os.makedirs(f"plots/scenario_plots/{benchmarklib}/regret", exist_ok=True)
+    y_label = "Cost" if y_column == "cost" else "Regret"
+    path_segment = y_column
+    os.makedirs(f"plots/scenario_plots/{benchmarklib}/{path_segment}", exist_ok=True)
     if benchmarklib == "yahpogym":
         min_ntrials = 1
         max_n_trials = 200
@@ -666,20 +718,23 @@ def create_overall_plot_longer(
             min_ntrials=min_ntrials,
             max_ntrials=max_n_trials,
             error_bar_type=error_bar_type,
+            y_column=y_column,
         )
 
-        set_ax_style(ax, x_label="Number of Evaluations", y_label="Regret")
+        set_ax_style(ax, x_label="Number of Evaluations", y_label=y_label, auto_yticks=(y_column != "regret"), xticks=[0, 100, 200, 300, 400, 500])
 
         plot_number += 1
 
-    set_fig_style(fig, axs, "Overall Regret Across Different Priors", ncol=ncol)
+    set_fig_style(fig, axs, f"Overall {y_label} Across Different Priors", ncol=ncol)
 
     save_fig(f"{base_path}/overall.pdf")
 
 
 def create_overall_plot(
-    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, Dict[str, str]], error_bar_type: str, benchmarklib: str, base_path: str, ncol: int
+    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, Dict[str, str]], error_bar_type: str, benchmarklib: str, base_path: str, ncol: int, y_column: str = "regret"
 ):
+    y_label = "Cost" if y_column == "cost" else "Regret"
+    path_segment = y_column
     if benchmarklib == "yahpogym":
         min_ntrials = 1
         max_n_trials = 200
@@ -703,13 +758,14 @@ def create_overall_plot(
             min_ntrials=min_ntrials,
             max_ntrials=max_n_trials,
             error_bar_type=error_bar_type,
+            y_column=y_column,
         )
 
-        set_ax_style(ax, x_label="Number of Evaluations", y_label="Regret")
+        set_ax_style(ax, x_label="Number of Evaluations", y_label=y_label, auto_yticks=(y_column != "regret"))
 
-        set_fig_style(fig, [ax], "Overall Regret Across Different Priors", ncol=ncol)
-        os.makedirs(f"{base_path}/{benchmarklib}/regret/overall", exist_ok=True)
-        save_fig(f"{base_path}/{benchmarklib}/regret/overall/{prior_kind}.pdf")
+        set_fig_style(fig, [ax], f"Overall {y_label} Across Different Priors", ncol=ncol)
+        os.makedirs(f"{base_path}/{benchmarklib}/{path_segment}/overall", exist_ok=True)
+        save_fig(f"{base_path}/{benchmarklib}/{path_segment}/overall/{prior_kind}.pdf")
 
 
 def create_mixed_plot(
@@ -755,7 +811,7 @@ def create_mixed_plot(
             save_fig(f"{base_path}/{benchmarklib}/regret/overall/{scenario}.pdf")
 
 
-def set_ax_style(ax, x_label, y_label, benchmarklib: str = "mfpbench"):
+def set_ax_style(ax, x_label, y_label, benchmarklib: str = "mfpbench", auto_yticks: bool = False, xticks=None):
     # Remove ax legend
     ax.legend().remove()
 
@@ -767,12 +823,15 @@ def set_ax_style(ax, x_label, y_label, benchmarklib: str = "mfpbench"):
 
     # Increase tick label size
     ax.tick_params(axis="both", which="major", labelsize=25)
-    # set y ticks to 0.05, 0.1, 0.15, 0.2
-    ax.set_yticks([0.05, 0.1, 0.15])
-    if benchmarklib == "yahpogym":
+    if not auto_yticks:
+        # set y ticks to 0.05, 0.1, 0.15, 0.2
+        ax.set_yticks([0.05, 0.1, 0.15])
+    if xticks is not None:
+        ax.set_xticks(xticks)
+    elif benchmarklib == "yahpogym":
         ax.set_xticks([0, 100, 200])
     elif benchmarklib == "mfpbench":
-        ax.set_xticks([0, 100, 200, 300, 400, 500])
+        ax.set_xticks([0, 25, 50])
     # Incraese line width
     for line in ax.get_lines():
         line.set_linewidth(3.5)
@@ -784,7 +843,8 @@ def set_ax_style(ax, x_label, y_label, benchmarklib: str = "mfpbench"):
 
     # Remove x label entirely
     ax.set_xlabel(None)
-    ax.set_ylim(bottom=0.0, top=0.2)
+    if not auto_yticks:
+        ax.set_ylim(bottom=0.0, top=0.2)
 
 
 def create_final_cost_boxplot_rejection(config_dict, style_dict, benchmarklib, base_path):

@@ -552,6 +552,7 @@ class PiBOMisleadingPriorCallback(PiBOAbstractPriorCallback, MisleadingPriorCall
     pass
 
 
+
 class DeceivingPriorCallback(AbstractPriorCallback):
     relevant_cluster_lower_bound = 0.95
     relevant_cluster_upper_bound = 1

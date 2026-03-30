@@ -5,7 +5,7 @@ PY_EXPERIMENTER:
     provider: mysql
     database: DynaBO_full_fidelity
     table: 
-      name: prior_experiments
+      name: prior_experiments_yahpo_lcb
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)

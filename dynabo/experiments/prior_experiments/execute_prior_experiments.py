@@ -202,16 +202,16 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    benchmarklib = "mfpbench"
+    benchmarklib = "yahpogym"
     fill = False
 
     if fill:
         fill_table(
             py_experimenter=experimenter,
             common_parameters={
-                "acquisition_function": ["expected_improvement"],
+                "acquisition_function": ["confidence_bound"],
                 "timeout_total": [3600],
-                "n_trials": [50],
+                "n_trials": [200],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
                 "seed": list(range(30)),
@@ -229,20 +229,20 @@ if __name__ == "__main__":
                 "prior_std_denominator": 5,
                 # Dynabo when prior
                 "prior_static_position": True,
-                "prior_every_n_trials_choices": [10],
+                "prior_every_n_trials_choices": [40],
                 "prior_at_start_choices": [True],
                 "prior_chance_theta_choices": [0.015],
                 # Decay parameters
                 "prior_decay_enumerator_choices": [
-                    5,
+                    20,
                 ],
                 "prior_decay_denominator": 1,
-                "remove_old_priors_choices": [True, False],
+                "remove_old_priors_choices": [False],
                 "prior_decay_choices": [
                     "linear",
                 ],
                 # Validation parameters
-                "validate_prior_choices": [True, False],
+                "validate_prior_choices": [True],
                 "prior_validation_method_choices": ["difference"],
                 "n_prior_validation_samples": 500,
                 "n_prior_based_samples": 0,
