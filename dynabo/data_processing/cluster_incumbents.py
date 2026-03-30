@@ -164,8 +164,10 @@ def save_clusters(labels_agg, df: pd.DataFrame, scenario: str, dataset: Optional
 
     # Save to csv
     if dataset is not None:
+        os.makedirs(f"benchmark_data/prior_data/yahpogym/cluster/{scenario}", exist_ok=True)
         df.to_csv(f"benchmark_data/prior_data/yahpogym/cluster/{scenario}/{dataset}.csv", index=False)
     else:
+        os.makedirs(f"benchmark_data/prior_data/mfpbench/cluster", exist_ok=True)
         df.to_csv(f"benchmark_data/prior_data/mfpbench/cluster/{scenario}.csv", index=False)
 
 

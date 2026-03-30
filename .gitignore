@@ -142,7 +142,10 @@ plots_without_disregarding
 benchmark_data/gt_prior_data/yahpo/origin_table.csv
 benchmark_data/gt_prior_data/mfpbench/origin_table.csv
 benchmark_data/gt_prior_data/yahpogym/origin_table.csv
-plots
+iclr_submission/plots/
+/plots/**
+!/plots/**/
+!/plots/**/all_prior_kinds/**
 plots_product
 iclr_submission/plotting_data
 iclr_submission/benchmark_data

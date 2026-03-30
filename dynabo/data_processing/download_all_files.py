@@ -63,6 +63,13 @@ GP_PD1_PRIOR_TABLE_PATH = "plotting_data/pd1/gp/prior.csv"
 GP_PD1_PRIOR_INCUMBENT_PATH = "plotting_data/pd1/gp/prior_incumbent.csv"
 GP_PD1_PRIOR_PRIORS_PATH = "plotting_data/pd1/gp/prior_priors.csv"
 
+# LCB Data
+LCB_PD1_BASELINE_TABLE_PATH = "plotting_data/pd1/lcb/baseline.csv"
+LCB_PD1_BASELINE_INCUMBENT_PATH = "plotting_data/pd1/lcb/baseline_incumbent.csv"
+LCB_PD1_PRIOR_TABLE_PATH = "plotting_data/pd1/lcb/prior.csv"
+LCB_PD1_PRIOR_INCUMBENT_PATH = "plotting_data/pd1/lcb/prior_incumbent.csv"
+LCB_PD1_PRIOR_PRIORS_PATH = "plotting_data/pd1/lcb/prior_priors.csv"
+
 
 def download_yahpo_data():
     baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH, database_name="dynabo_normal_scale", table_name="baseline_yahpo")
@@ -146,6 +153,18 @@ def download_mixed_priors():
     ablation_experimenter.get_logtable("priors").to_csv(MIXED_PRIORS_PRIORS_PATH, index=False)
 
 
+def download_mfpbench_lcb_data():
+    baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH, database_name="DynaBO_full_fidelity", table_name="baseline_pd1_lcb")
+    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="DynaBO_full_fidelity", table_name="prior_experiments_lcb")
+
+    baseline_experimenter.get_table().to_csv(LCB_PD1_BASELINE_TABLE_PATH, index=False)
+    baseline_experimenter.get_logtable("configs").to_csv(LCB_PD1_BASELINE_INCUMBENT_PATH, index=False)
+
+    prior_experimenter.get_table().to_csv(LCB_PD1_PRIOR_TABLE_PATH, index=False)
+    prior_experimenter.get_logtable("configs", condition="incumbent = 1").to_csv(LCB_PD1_PRIOR_INCUMBENT_PATH, index=False)
+    prior_experimenter.get_logtable("priors").to_csv(LCB_PD1_PRIOR_PRIORS_PATH, index=False)
+
+
 def download_prior_decay_ablation():
     ablation_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="DynaBO_full_fidelity", table_name="prior_decay_ablation")
 
@@ -160,6 +179,7 @@ if __name__ == "__main__":
     # download_mfpbench_misleading_longer_data()
     # download_yahpo_data()
     # download_dynamic_priors_data()
-    download_remove_priors_ablation()
+    # download_remove_priors_ablation()
     # download_mixed_priors()
     # download_prior_decay_ablation()
+    download_mfpbench_lcb_data()

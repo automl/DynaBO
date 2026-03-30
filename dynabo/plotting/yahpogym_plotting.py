@@ -7,7 +7,7 @@ from dynabo.data_processing.download_all_files import (
     YAHPO_PRIOR_INCUMBENT_PATH,
     YAHPO_PRIOR_PRIORS_PATH,
 )
-from dynabo.plotting.plotting_utils import add_regret, create_scenario_plots, filter_prior_approach, get_min_costs, merge_df
+from dynabo.plotting.plotting_utils import add_regret, create_scenario_plots, create_all_scenarios_plot, filter_prior_approach, get_min_costs, merge_df
 
 
 def load_cost_data_yahpogym(surrogate: str):
@@ -131,6 +131,39 @@ def plot_final_results_yahpogym(surrogate: str):
         benchmarklib="yahpogym",
         base_path=f"plots/final_result_plots/{surrogate}",
         ncol=4,
+    )
+    create_all_scenarios_plot(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="yahpogym",
+        base_path=f"plots/final_result_plots/{surrogate}",
+        ncol=4,
+    )
+    # Cost plots
+    create_scenario_plots(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="yahpogym",
+        base_path=f"plots/final_result_plots/{surrogate}",
+        ncol=4,
+        y_column="cost",
+    )
+    create_all_scenarios_plot(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="yahpogym",
+        base_path=f"plots/final_result_plots/{surrogate}",
+        ncol=4,
+        y_column="cost",
     )
     # create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="yahpogym", base_path=f"plots/final_result_plots/{surrogate}", ncol=len(style_dict))
 

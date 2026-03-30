@@ -33,6 +33,11 @@ from dynabo.data_processing.download_all_files import (
     MIXED_PRIORS_TABLE_PATH,
     MIXED_PRIORS_INCUMBENT_PATH,
     MIXED_PRIORS_PRIORS_PATH,
+    LCB_PD1_BASELINE_TABLE_PATH,
+    LCB_PD1_BASELINE_INCUMBENT_PATH,
+    LCB_PD1_PRIOR_TABLE_PATH,
+    LCB_PD1_PRIOR_INCUMBENT_PATH,
+    LCB_PD1_PRIOR_PRIORS_PATH,
 )
 from dynabo.plotting.plotting_utils import (
     add_regret,
@@ -40,6 +45,7 @@ from dynabo.plotting.plotting_utils import (
     create_overall_plot,
     create_overall_plot_longer,
     create_scenario_plots,
+    create_all_scenarios_plot,
     filter_prior_approach,
     get_min_costs,
     merge_df,
@@ -81,172 +87,6 @@ def load_cost_data_mfpbench(surrogate: str):
     baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], min_costs, benchmarklib="mfpbench")
 
     return baseline_config_df, prior_config_df, prior_priors_df
-
-
-def plot_final_results_mfpbench(surrogate: str):
-    baseline_config_df, prior_config_df, prior_prior_df = load_cost_data_mfpbench(surrogate=surrogate)
-    accept_all_priors_configs, accept_all_priors_priors = filter_prior_approach(
-        incumbent_df=prior_config_df,
-        prior_df=prior_prior_df,
-        select_dynabo=True,
-        select_pibo=False,
-        prior_decay_enumerator=5,
-        prior_std_denominator=5,
-        prior_static_position=True,
-        prior_every_n_trials=10,
-        validate_prior=False,
-        n_prior_based_samples=0,
-        prior_validation_method=None,
-        prior_validation_manwhitney_p=None,
-        prior_validation_difference_threshold=None,
-        remove_old_priors=False,
-    )
-    threshold_incumbent_df, threshold_prior_df = filter_prior_approach(
-        incumbent_df=prior_config_df,
-        prior_df=prior_prior_df,
-        select_dynabo=True,
-        select_pibo=False,
-        prior_decay_enumerator=5,
-        prior_std_denominator=5,
-        prior_static_position=True,
-        prior_every_n_trials=10,
-        validate_prior=True,
-        n_prior_based_samples=0,
-        prior_validation_method="difference",
-        prior_validation_manwhitney_p=None,
-        prior_validation_difference_threshold=-0.15,
-        remove_old_priors=False,
-    )
-    pibo_incumbent_df, pibo_prior_df = filter_prior_approach(
-        incumbent_df=prior_config_df,
-        prior_df=prior_prior_df,
-        select_dynabo=False,
-        select_pibo=True,
-        prior_decay_enumerator=5,
-        prior_std_denominator=5,
-        prior_static_position=None,
-        prior_every_n_trials=None,
-        n_prior_based_samples=None,
-        validate_prior=None,
-        prior_validation_method=None,
-        prior_validation_manwhitney_p=None,
-        prior_validation_difference_threshold=None,
-    )
-
-    config_dict = {
-        "Vanilla BO": baseline_config_df,
-        # "DynaBO, accept all priors": accept_all_priors_configs,
-        r"$\pi$BO": pibo_incumbent_df,
-        "DynaBO": threshold_incumbent_df,
-    }
-    prior_dict = {
-        # "DynaBO, accept all priors": accept_all_priors_priors,
-        r"$\pi$BO": pibo_prior_df,
-        "DynaBO": threshold_prior_df,
-    }
-
-    style_dict = {
-        "Vanilla BO": {"color": "#000000", "marker": "o", "linestyle": (0, ())},  # Black, solid
-        "DynaBO, accept all priors": {"color": "#E69F00", "marker": "s", "linestyle": (0, (1, 1))},  # Sky Blue, densely dotted
-        "DynaBO, accept all priors (removed)": {"color": "#2EA9A7", "marker": "s", "linestyle": (0, (3, 5, 1, 5))},  # Sky Blue, densely dotted
-        r"$\pi$BO": {"color": "#009E73", "marker": "d", "linestyle": (0, (3, 5, 1, 5))},  # Green, dash-dot
-        "DynaBO": {"color": "#D55E00", "marker": "v", "linestyle": (0, (1, 1))},  # Pink, dash-dot dense
-        "DynaBO (removed)": {"color": "#CC79A7", "marker": "v", "linestyle": (0, (3, 5, 1, 5))},  # Pink, dash-dot dense
-    }
-    create_scenario_plots(
-        config_dict,
-        prior_dict,
-        style_dict,
-        error_bar_type="se",
-        scenarios=baseline_config_df["scenario"].unique(),
-        benchmarklib="mfpbench",
-        base_path=f"plots/final_result_plots/{surrogate}",
-        ncol=4,
-    )
-    create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="mfpbench", base_path=f"plots/final_result_plots/{surrogate}", ncol=len(style_dict))
-
-
-def plot_final_results_mfpbench(surrogate: str):
-    baseline_config_df, prior_config_df, prior_prior_df = load_cost_data_mfpbench(surrogate=surrogate)
-    accept_all_priors_configs, accept_all_priors_priors = filter_prior_approach(
-        incumbent_df=prior_config_df,
-        prior_df=prior_prior_df,
-        select_dynabo=True,
-        select_pibo=False,
-        prior_decay_enumerator=5,
-        prior_std_denominator=5,
-        prior_static_position=True,
-        prior_every_n_trials=10,
-        validate_prior=False,
-        n_prior_based_samples=0,
-        prior_validation_method=None,
-        prior_validation_manwhitney_p=None,
-        prior_validation_difference_threshold=None,
-        remove_old_priors=False,
-    )
-    threshold_incumbent_df, threshold_prior_df = filter_prior_approach(
-        incumbent_df=prior_config_df,
-        prior_df=prior_prior_df,
-        select_dynabo=True,
-        select_pibo=False,
-        prior_decay_enumerator=5,
-        prior_std_denominator=5,
-        prior_static_position=True,
-        prior_every_n_trials=10,
-        validate_prior=True,
-        n_prior_based_samples=0,
-        prior_validation_method="difference",
-        prior_validation_manwhitney_p=None,
-        prior_validation_difference_threshold=-0.15,
-        remove_old_priors=False,
-    )
-    pibo_incumbent_df, pibo_prior_df = filter_prior_approach(
-        incumbent_df=prior_config_df,
-        prior_df=prior_prior_df,
-        select_dynabo=False,
-        select_pibo=True,
-        prior_decay_enumerator=5,
-        prior_std_denominator=5,
-        prior_static_position=None,
-        prior_every_n_trials=None,
-        n_prior_based_samples=None,
-        validate_prior=None,
-        prior_validation_method=None,
-        prior_validation_manwhitney_p=None,
-        prior_validation_difference_threshold=None,
-    )
-
-    config_dict = {
-        "Vanilla BO": baseline_config_df,
-        # "DynaBO, accept all priors": accept_all_priors_configs,
-        r"$\pi$BO": pibo_incumbent_df,
-        "DynaBO": threshold_incumbent_df,
-    }
-    prior_dict = {
-        # "DynaBO, accept all priors": accept_all_priors_priors,
-        r"$\pi$BO": pibo_prior_df,
-        "DynaBO": threshold_prior_df,
-    }
-
-    style_dict = {
-        "Vanilla BO": {"color": "#000000", "marker": "o", "linestyle": (0, ())},  # Black, solid
-        "DynaBO, accept all priors": {"color": "#E69F00", "marker": "s", "linestyle": (0, (1, 1))},  # Sky Blue, densely dotted
-        "DynaBO, accept all priors (removed)": {"color": "#2EA9A7", "marker": "s", "linestyle": (0, (3, 5, 1, 5))},  # Sky Blue, densely dotted
-        r"$\pi$BO": {"color": "#009E73", "marker": "d", "linestyle": (0, (3, 5, 1, 5))},  # Green, dash-dot
-        "DynaBO": {"color": "#D55E00", "marker": "v", "linestyle": (0, (1, 1))},  # Pink, dash-dot dense
-        "DynaBO (removed)": {"color": "#CC79A7", "marker": "v", "linestyle": (0, (3, 5, 1, 5))},  # Pink, dash-dot dense
-    }
-    create_scenario_plots(
-        config_dict,
-        prior_dict,
-        style_dict,
-        error_bar_type="se",
-        scenarios=baseline_config_df["scenario"].unique(),
-        benchmarklib="mfpbench",
-        base_path=f"plots/final_result_plots/{surrogate}",
-        ncol=4,
-    )
-    create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="mfpbench", base_path=f"plots/final_result_plots/{surrogate}", ncol=len(style_dict))
 
 
 def plot_misleading_longer_results_mfpbench(surrogate: str):
@@ -363,6 +203,20 @@ def plot_misleading_longer_results_mfpbench(surrogate: str):
         ncol=4,
     )
     create_overall_plot_longer(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="mfpbench", base_path=f"plots/deceiving_longer_results/{surrogate}", ncol=4)
+
+    # Cost plots
+    create_deceiving_longer_scenarios(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=prior_config_df["scenario"].unique(),
+        benchmarklib="mfpbench",
+        base_path=f"plots/deceiving_longer_results/{surrogate}_cost",
+        ncol=4,
+        y_column="cost",
+    )
+    create_overall_plot_longer(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="mfpbench", base_path=f"plots/deceiving_longer_results/{surrogate}_cost", ncol=4, y_column="cost")
 
 
 def plot_prior_rejection_ablation(surrogate: str):
@@ -628,6 +482,20 @@ def plot_dynamic_prior_location(surrogate: str):
     )
     create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="mfpbench", base_path=f"plots/dynamic_prior_location/{surrogate}", ncol=len(style_dict))
 
+    # Cost plots
+    create_scenario_plots(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="mfpbench",
+        base_path=f"plots/dynamic_prior_location/{surrogate}",
+        ncol=2,
+        y_column="cost",
+    )
+    create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="mfpbench", base_path=f"plots/dynamic_prior_location/{surrogate}", ncol=len(style_dict), y_column="cost")
+
 
 def plot_final_results_mfpbench(surrogate: str):
     baseline_config_df, prior_config_df, prior_prior_df = load_cost_data_mfpbench(surrogate=surrogate)
@@ -710,6 +578,41 @@ def plot_final_results_mfpbench(surrogate: str):
         ncol=4,
     )
     create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="mfpbench", base_path=f"plots/final_result_plots/{surrogate}", ncol=len(style_dict))
+    create_all_scenarios_plot(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="mfpbench",
+        base_path=f"plots/final_result_plots/{surrogate}",
+        ncol=4,
+    )
+
+    # Cost plots
+    create_scenario_plots(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="mfpbench",
+        base_path=f"plots/final_result_plots/{surrogate}",
+        ncol=4,
+        y_column="cost",
+    )
+    create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="mfpbench", base_path=f"plots/final_result_plots/{surrogate}", ncol=len(style_dict), y_column="cost")
+    create_all_scenarios_plot(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="mfpbench",
+        base_path=f"plots/final_result_plots/{surrogate}",
+        ncol=4,
+        y_column="cost",
+    )
 
 
 def load_prior_decay_ablation(surrogate: str):
@@ -1045,12 +948,129 @@ def plot_mixed_priors():
     )
 
 
+def load_cost_data_mfpbench_lcb():
+    """
+    Load the cost data for pd1 LCB experiments, saved in the filesystem.
+    """
+    baseline_table = pd.read_csv(LCB_PD1_BASELINE_TABLE_PATH)
+    baseline_config_df = pd.read_csv(LCB_PD1_BASELINE_INCUMBENT_PATH)
+    baseline_config_df, _ = merge_df(baseline_table, baseline_config_df, None)
+
+    prior_table = pd.read_csv(LCB_PD1_PRIOR_TABLE_PATH)
+    prior_configs = pd.read_csv(LCB_PD1_PRIOR_INCUMBENT_PATH)
+    prior_priors = pd.read_csv(LCB_PD1_PRIOR_PRIORS_PATH)
+    prior_config_df, prior_priors_df = merge_df(prior_table, prior_configs, prior_priors)
+
+    min_costs = get_min_costs(benchmarklib="mfpbench")
+    baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], min_costs, benchmarklib="mfpbench")
+
+    return baseline_config_df, prior_config_df, prior_priors_df
+
+
+def plot_final_results_mfpbench_lcb():
+    baseline_config_df, prior_config_df, prior_prior_df = load_cost_data_mfpbench_lcb()
+    threshold_incumbent_df, threshold_prior_df = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=True,
+        n_prior_based_samples=0,
+        prior_validation_method="difference",
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=-0.15,
+        remove_old_priors=False,
+    )
+    pibo_incumbent_df, pibo_prior_df = filter_prior_approach(
+        incumbent_df=prior_config_df,
+        prior_df=prior_prior_df,
+        select_dynabo=False,
+        select_pibo=True,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=None,
+        prior_every_n_trials=None,
+        n_prior_based_samples=None,
+        validate_prior=None,
+        prior_validation_method=None,
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=None,
+    )
+
+    config_dict = {
+        "Vanilla BO": baseline_config_df,
+        r"$\pi$BO": pibo_incumbent_df,
+        "DynaBO": threshold_incumbent_df,
+    }
+    prior_dict = {
+        r"$\pi$BO": pibo_prior_df,
+        "DynaBO": threshold_prior_df,
+    }
+
+    style_dict = {
+        "Vanilla BO": {"color": "#000000", "marker": "o", "linestyle": (0, ())},  # Black, solid
+        r"$\pi$BO": {"color": "#009E73", "marker": "d", "linestyle": (0, (3, 5, 1, 5))},  # Green, dash-dot
+        "DynaBO": {"color": "#D55E00", "marker": "v", "linestyle": (0, (1, 1))},  # Pink, dash-dot dense
+    }
+    create_scenario_plots(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="mfpbench",
+        base_path="plots/final_result_plots/lcb",
+        ncol=4,
+    )
+    create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="mfpbench", base_path="plots/final_result_plots/lcb", ncol=len(style_dict))
+    create_all_scenarios_plot(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="mfpbench",
+        base_path="plots/final_result_plots/lcb",
+        ncol=4,
+    )
+
+    # Cost plots
+    create_scenario_plots(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="mfpbench",
+        base_path="plots/final_result_plots/lcb",
+        ncol=4,
+        y_column="cost",
+    )
+    create_overall_plot(config_dict, prior_dict, style_dict, error_bar_type="se", benchmarklib="mfpbench", base_path="plots/final_result_plots/lcb", ncol=len(style_dict), y_column="cost")
+    create_all_scenarios_plot(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="mfpbench",
+        base_path="plots/final_result_plots/lcb",
+        ncol=4,
+        y_column="cost",
+    )
+
+
 if __name__ == "__main__":
     # plot_dynamic_prior_location("rf")
-    # plot_final_results_mfpbench("gp")
+    # plot_final_results_mfpbench("rf")
     # plot_prior_rejection_ablation_barplot("rf")
-    plot_misleading_longer_results_mfpbench("gp")
-    plot_misleading_longer_results_mfpbench("rf")
+    # plot_misleading_longer_results_mfpbench("gp")
+    # plot_misleading_longer_results_mfpbench("rf")
     # plot_decay_ablation("rf")
     # remove_old_priros_ablation()
     # plot_mixed_priors()
+    plot_final_results_mfpbench_lcb()
