@@ -578,6 +578,7 @@ def create_all_scenarios_plot(
     y_label = "Cost" if y_column == "cost" else "Regret"
     path_segment = y_column
     prior_kinds = ["good", "medium", "misleading", "deceiving"]
+    prior_kind_titles = {"good": "Expert", "medium": "Advanced", "misleading": "Misleading", "deceiving": "Deceiving"}
     if benchmarklib == "yahpogym":
         min_ntrials = 1
         max_n_trials = 200
@@ -604,7 +605,7 @@ def create_all_scenarios_plot(
                 y_column=y_column,
             )
             set_ax_style(ax, x_label="Number of Evaluations", y_label=y_label, benchmarklib=benchmarklib, auto_yticks=(y_column != "regret"))
-            ax.set_title(prior_kind, fontsize=18, fontweight="bold")
+            ax.set_title(prior_kind_titles[prior_kind], fontsize=18, fontweight="bold")
 
         set_fig_style(fig, list(axs), f"Overall {y_label} Across Different Priors", ncol=ncol)
         os.makedirs(f"{base_path}/{benchmarklib}/{path_segment}/all_prior_kinds", exist_ok=True)
