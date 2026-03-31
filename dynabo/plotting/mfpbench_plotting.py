@@ -1066,7 +1066,7 @@ def plot_final_results_mfpbench_lcb():
 
 if __name__ == "__main__":
     # plot_dynamic_prior_location("rf")
-    # plot_final_results_mfpbench("rf")
+    plot_final_results_mfpbench("rf")
     # plot_prior_rejection_ablation_barplot("rf")
     # plot_misleading_longer_results_mfpbench("gp")
     # plot_misleading_longer_results_mfpbench("rf")
