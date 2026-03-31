@@ -28,6 +28,7 @@ def gaussian(x, mu, sigma):
 _g1_scale = 0.45 / gaussian(lambda_values, mu=1.2, sigma=1.2).max()
 _g2_scale = 0.60 / gaussian(lambda_values, mu=6.8, sigma=1.1).max()
 
+
 def true_func_eval(x):
     return gaussian(x, mu=1.2, sigma=1.2) * _g1_scale + gaussian(x, mu=6.8, sigma=1.1) * _g2_scale
 
@@ -78,8 +79,8 @@ acq_prior_mul_argmax = lambda_values[np.argmax(acq_prior_mul)]
 acq_prior_sum_argmax = lambda_values[np.argmax(acq_prior_sum)]
 
 # --- Plot ---
-fig, axes = plt.subplots(6, 1, figsize=(5, 11), sharex=True, gridspec_kw={"height_ratios": [2, 1, 1, 1, 1, 1], "hspace": 0.08})
-ax_top, ax_af, ax_p1, ax_p2, ax_mul, ax_sum = axes
+fig, axes = plt.subplots(7, 1, figsize=(5, 13), sharex=True, gridspec_kw={"height_ratios": [2, 1, 1, 1, 1, 1, 1], "hspace": 0.08})
+ax_top, ax_af, ax_p1, ax_p2, ax_mul, ax_mul_ds, ax_sum = axes
 
 # Top: true function + observations + priors
 ax_top.plot(lambda_values, true_func, linewidth=1.5, color="steelblue", label=r"Target function: $f(\lambda)$")
@@ -124,6 +125,14 @@ ax_mul.set_ylabel(r"$\alpha \cdot \pi_1 \cdot \pi_2$", fontsize=12)
 ax_mul.legend(fontsize=9, framealpha=0.8)
 ax_mul.grid(linestyle="--", linewidth=0.5, alpha=0.5)
 
+# AF × π1 × π2 — different scale
+ax_mul_ds.fill_between(lambda_values, acq_prior_mul, alpha=0.25, color="mediumpurple")
+ax_mul_ds.plot(lambda_values, acq_prior_mul, linewidth=1.5, color="mediumpurple", label=r"$\alpha \cdot \pi_1 \cdot \pi_2$ - different scale")
+ax_mul_ds.axvline(acq_prior_mul_argmax, color="mediumpurple", linestyle="--", linewidth=1.0, alpha=0.9)
+ax_mul_ds.set_ylabel(r"$\alpha \cdot \pi_1 \cdot \pi_2$", fontsize=12)
+ax_mul_ds.legend(fontsize=9, framealpha=0.8)
+ax_mul_ds.grid(linestyle="--", linewidth=0.5, alpha=0.5)
+
 # AF × (π1 + π2)
 ax_sum.fill_between(lambda_values, acq_prior_sum, alpha=0.25, color="steelblue")
 ax_sum.plot(lambda_values, acq_prior_sum, linewidth=1.5, color="steelblue", label=r"$\alpha \cdot (\pi_1 + \pi_2)$")
@@ -133,6 +142,15 @@ ax_sum.set_ylabel(r"$\alpha \cdot (\pi_1+\pi_2)$", fontsize=12)
 ax_sum.legend(fontsize=9, framealpha=0.8)
 ax_sum.grid(linestyle="--", linewidth=0.5, alpha=0.5)
 
-plt.savefig("lambda_alpha_plot.pdf", bbox_inches="tight")
+# Shared y-scale for top two AF panels
+af_ymax = max(acq_func.max(), acq_prior1.max())
+for ax in [ax_af, ax_p1]:
+    ax.set_ylim(0, af_ymax * 1.05)
+
+# Fixed y-scale for lower three AF panels
+for ax in [ax_p2, ax_mul, ax_sum]:
+    ax.set_ylim(0, 0.3)
+
+plt.savefig("acquisition_function_comparison.pdf", bbox_inches="tight")
 plt.show()
-print("Saved lambda_alpha_plot.pdf")
+print("Saved acquisition_function_comparison.pdf")
