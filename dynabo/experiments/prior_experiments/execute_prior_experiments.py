@@ -202,7 +202,7 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    benchmarklib = "yahpogym"
+    benchmarklib = "mfpbench"
     fill = False
 
     if fill:
@@ -211,7 +211,7 @@ if __name__ == "__main__":
             common_parameters={
                 "acquisition_function": ["confidence_bound"],
                 "timeout_total": [3600],
-                "n_trials": [200],
+                "n_trials": [50],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
                 "seed": list(range(30)),
@@ -229,12 +229,12 @@ if __name__ == "__main__":
                 "prior_std_denominator": 5,
                 # Dynabo when prior
                 "prior_static_position": True,
-                "prior_every_n_trials_choices": [40],
+                "prior_every_n_trials_choices": [1],
                 "prior_at_start_choices": [True],
                 "prior_chance_theta_choices": [0.015],
                 # Decay parameters
                 "prior_decay_enumerator_choices": [
-                    20,
+                    5,
                 ],
                 "prior_decay_denominator": 1,
                 "remove_old_priors_choices": [False],
@@ -244,7 +244,7 @@ if __name__ == "__main__":
                 # Validation parameters
                 "validate_prior_choices": [True],
                 "prior_validation_method_choices": ["difference"],
-                "n_prior_validation_samples": 500,
+                "n_prior_validation_samples": 100,
                 "n_prior_based_samples": 0,
                 "prior_validation_manwhitney_p_choices": [0.05],
                 "prior_validation_difference_threshold_choices": [-0.15],
@@ -255,4 +255,4 @@ if __name__ == "__main__":
         experimenter.reset_experiments("running", "error")
     execute = True
     if execute:
-        experimenter.execute(run_experiment, max_experiments=30, random_order=True)
+        experimenter.execute(run_experiment, max_experiments=1, random_order=True)

@@ -38,11 +38,11 @@ def get_min_costs(benchmarklib: str) -> Dict[Tuple[str, int], float]:
     Compute the minimum cost.
     """
     if benchmarklib == "yahpogym":
-        data_generation_runs = pd.read_csv("benchmark_data/gt_prior_data/yahpogym/origin_table.csv")
+        data_generation_runs = pd.read_csv("benchmark_data/gt_prior_data/yahpogym/origin_table.csv", usecols=["scenario", "dataset", "cost"])
         index = ["scenario", "dataset"]
         data_generation_runs.loc[data_generation_runs["scenario"] == "lcbench", "cost"] /= 100
     elif benchmarklib == "mfpbench":
-        data_generation_runs = pd.read_csv("benchmark_data/gt_prior_data/mfpbench/origin_table.csv")
+        data_generation_runs = pd.read_csv("benchmark_data/gt_prior_data/mfpbench/origin_table.csv", usecols=["scenario", "cost"])
         index = ["scenario"]
     min_costs = data_generation_runs.groupby(index)["cost"].min()
     return min_costs.to_dict()
@@ -658,7 +658,7 @@ def create_deceiving_longer_scenarios(
         min_ntrials = 1
         max_n_trials = 500
     for scenario in scenarios:
-        fig, ax = plt.subplots(1, 1, figsize=(12, 4.5), dpi=300)  # Wider and higher resolution
+        fig, ax = plt.subplots(1, 1, figsize=(12, 3.5), dpi=300)  # Wider and higher resolution
         axs = [ax]
         plot_number = 0
         for prior_kind in ["deceiving"]:
@@ -679,6 +679,8 @@ def create_deceiving_longer_scenarios(
             )
             plot_number += 1
             set_ax_style(ax, x_label="Number of Evaluations", y_label=y_label, auto_yticks=(y_column != "regret"), xticks=[0, 100, 200, 300, 400, 500])
+            if y_column == "regret":
+                ax.set_ylim(bottom=0.028, top=0.12)
         set_fig_style(
             fig,
             axs,
@@ -700,7 +702,7 @@ def create_overall_plot_longer(
     elif benchmarklib == "mfpbench":
         min_ntrials = 1
         max_n_trials = 500
-    fig, ax = plt.subplots(1, 1, figsize=(10, 3.5), dpi=300)
+    fig, ax = plt.subplots(1, 1, figsize=(10, 2.8), dpi=300)
     axs = [ax]
     plot_number = 0
     for prior_kind in ["deceiving"]:
@@ -723,6 +725,8 @@ def create_overall_plot_longer(
         )
 
         set_ax_style(ax, x_label="Number of Evaluations", y_label=y_label, auto_yticks=(y_column != "regret"), xticks=[0, 100, 200, 300, 400, 500])
+        if y_column == "regret":
+            ax.set_ylim(bottom=0.028, top=0.12)
 
         plot_number += 1
 
