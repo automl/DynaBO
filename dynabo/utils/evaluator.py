@@ -46,7 +46,7 @@ class AbstractEvaluator:
 
     @abstractmethod
     def get_configuration_space(self) -> ConfigurationSpace:
-        pass  # TODO update this to get the correct data
+        pass
 
     def get_metadata(self):
         return {
@@ -133,7 +133,6 @@ class YAHPOGymEvaluator(AbstractEvaluator):
         self.runtime_metric_name = runtime_metric_name
 
         local_config._config = {"data_path": str("benchmark_data/yahpo_data")}
-        # TODO set this properly
         self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario, multithread=False)
         self.benchmark.set_instance(value=self.dataset)
         self.default_fidelity_config = self.benchmark.get_fidelity_space().get_default_configuration()
@@ -553,10 +552,10 @@ def get_dynabo_dict(
         for remove_old_priors in remove_old_priors_choices:
             for prior_decay in prior_decay_choices:
                 for config in preliminary_configs:
-                    conifg_copy = deepcopy(config)
-                    conifg_copy["remove_old_priors"] = remove_old_priors
-                    conifg_copy["prior_decay"] = prior_decay
-                    final_configs.append(conifg_copy)
+                    config_copy = deepcopy(config)
+                    config_copy["remove_old_priors"] = remove_old_priors
+                    config_copy["prior_decay"] = prior_decay
+                    final_configs.append(config_copy)
 
         return final_configs
 

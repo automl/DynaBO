@@ -5,7 +5,7 @@ This is the implementation of our submission titled "Dynamic Priors in Bayesian 
 To install and run our method, you need to execute the following steps:
 1. Clone the repository with all additional dependencies using:
 ```bash
-git clone --recursive https://github.com/OrgName/DynaBO.git 
+git clone --recursive https://github.com/OrgName/DynaBO.git
 ```
 2. Create a conda environment and activate it using:
 ```bash
@@ -22,16 +22,16 @@ Our experiments rely on the PyExperimenter library. You can run a local version 
 The process of using PyExperimenter is described in its [documentation](https://github.com/tornede/py_experimenter).
 
 To replicate our experiments, you need to execute the following steps:
-1. Create gt_data needed for priors by running: ``dynabo/experiments/data_generation/execute_baseline.py`` for both ``mfbench`` and ``yahpogym``. 
+1. Create gt_data needed for priors by running: ``dynabo/experiments/data_generation/execute_baseline.py`` for both ``mfpbench`` and ``yahpogym``. 
     We did this with both expected improvement and confidence bound acquisition functions.
-2. Create priors by running ``dynabo/data_processing/extract_gt_priors.py``
+2. Create priors by running ``dynabo/data_processing/cluster_incumbents.py``
     This will extract the entries from the database, cluster them, and save the priors to disk. To replicate the PC results, you need to either copy the files over or link the path.
 3. Execute the baselines, DynaBO, and πBO using the scripts located in ``dynabo/experiments``. In our experiments, we ran Slurm jobs utilizing the scripts in ``cluster_scripts`` but parallelization requires a MySQL database server.
     This will populate the database with entries and continuously pull and execute experiments.
 4. Download the results from the database using ``dynabo/data_processing/download_all_files.py``
 5. Create plots in ``dynabo/plotting``.
 
-###  Experiemnts
+### Experiments
 Every experiment is located in ``dynabo/experiments/``, and contains both a config file and a Python file. The structure of the config files is described in the [PyExperimenter documentation](https://github.com/tornede/py_experimenter).
 
 The python file is structured as follows 

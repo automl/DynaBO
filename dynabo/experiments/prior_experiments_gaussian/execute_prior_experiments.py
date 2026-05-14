@@ -17,7 +17,7 @@ from dynabo.smac_additions.dynamic_prior_callback import (
     PiBOMisleadingPriorCallback,
     PiBOWellPerformingPriorCallback,
 )
-from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
+from dynabo.smac_additions.dynamic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 from dynabo.utils.cluster_utils import initialise_experiments
 from dynabo.utils.configuration_data_classes import (
@@ -79,7 +79,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
     local_and_prior_search = LocalAndPriorSearch(
         configspace=configuration_space,
         acquisition_function=acquisition_function,
-        max_steps=500,  # TODO wie viele local search steps sind reasonable?
+        max_steps=500,
     )
     config_selector = ConfigSelector(scenario=smac_scenario, retries=100, retrain_after=1)
 
@@ -225,7 +225,7 @@ if __name__ == "__main__":
             },
             approach="pibo",
             approach_parameters={
-                # Prior configurationz
+                # Prior configuration
                 "prior_kind_choices": ["good", "medium", "misleading", "deceiving"],
                 "no_incumbent_percentile": 0.01,
                 "prior_std_denominator": 5,

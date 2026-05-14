@@ -17,7 +17,7 @@ from dynabo.smac_additions.dynamic_prior_callback import (
     PiBOMisleadingPriorCallback,
     PiBOWellPerformingPriorCallback,
 )
-from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
+from dynabo.smac_additions.dynamic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.smac_additions.local_and_prior_search import LocalAndPriorSearch
 from dynabo.utils.cluster_utils import initialise_experiments
 from dynabo.utils.configuration_data_classes import (

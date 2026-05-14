@@ -92,7 +92,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         local_and_prior_search = LocalAndSortedRandomSearch(
             configspace=configuration_space,
             acquisition_function=acquisition_function,
-            max_steps=500,  # TODO wie viele local search steps sind reasonable?
+            max_steps=500,
         )
 
         intensifier = HyperparameterOptimizationFacade.get_intensifier(
