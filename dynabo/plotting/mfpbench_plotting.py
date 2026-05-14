@@ -38,6 +38,9 @@ from dynabo.data_processing.download_all_files import (
     LCB_PD1_PRIOR_TABLE_PATH,
     LCB_PD1_PRIOR_INCUMBENT_PATH,
     LCB_PD1_PRIOR_PRIORS_PATH,
+    PRIOR_COMBINATION_ABLATION_TABLE_PATH,
+    PRIOR_COMBINATION_ABLATION_INCUMBENT_PATH,
+    PRIOR_COMBINATION_ABLATION_PRIOR_PATH,
 )
 from dynabo.plotting.plotting_utils import (
     add_regret,
@@ -869,6 +872,112 @@ def remove_old_priros_ablation():
     )
 
 
+def plot_prior_combination_ablation():
+    baseline_table = pd.read_csv(RF_PD1_BASELINE_TABLE_PATH)
+    baseline_config_df = pd.read_csv(RF_PD1_BASELINE_INCUMBENT_PATH)
+    baseline_config_df, _ = merge_df(baseline_table, baseline_config_df, None)
+
+    sum_table = pd.read_csv(RF_PD1_PRIOR_TABLE_PATH)
+    sum_configs = pd.read_csv(RF_PD1_PRIOR_INCUMBENT_PATH)
+    sum_priors = pd.read_csv(RF_PD1_PRIOR_PRIORS_PATH)
+    sum_config_df, sum_priors_df = merge_df(sum_table, sum_configs, sum_priors)
+
+    product_table = pd.read_csv(PRIOR_COMBINATION_ABLATION_TABLE_PATH)
+    product_configs = pd.read_csv(PRIOR_COMBINATION_ABLATION_INCUMBENT_PATH)
+    product_priors = pd.read_csv(PRIOR_COMBINATION_ABLATION_PRIOR_PATH)
+    product_config_df, product_priors_df = merge_df(product_table, product_configs, product_priors)
+
+    min_costs = get_min_costs(benchmarklib="mfpbench")
+    baseline_config_df, sum_config_df, sum_priors_df, product_config_df, product_priors_df = add_regret(
+        [baseline_config_df, sum_config_df, sum_priors_df, product_config_df, product_priors_df],
+        min_costs,
+        benchmarklib="mfpbench",
+    )
+
+    sum_dynabo_configs, sum_dynabo_priors = filter_prior_approach(
+        incumbent_df=sum_config_df,
+        prior_df=sum_priors_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=True,
+        n_prior_based_samples=0,
+        prior_validation_method="difference",
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=-0.15,
+        remove_old_priors=False,
+        prior_decay="linear",
+    )
+
+    product_dynabo_configs, product_dynabo_priors = filter_prior_approach(
+        incumbent_df=product_config_df,
+        prior_df=product_priors_df,
+        select_dynabo=True,
+        select_pibo=False,
+        prior_decay_enumerator=5,
+        prior_std_denominator=5,
+        prior_static_position=True,
+        prior_every_n_trials=10,
+        validate_prior=True,
+        n_prior_based_samples=0,
+        prior_validation_method="difference",
+        prior_validation_manwhitney_p=None,
+        prior_validation_difference_threshold=-0.15,
+        remove_old_priors=False,
+        prior_decay="linear",
+    )
+
+    config_dict = {
+        "Vanilla BO": baseline_config_df,
+        "DynaBO (sum)": sum_dynabo_configs,
+        "DynaBO (product)": product_dynabo_configs,
+    }
+    prior_dict = {
+        "DynaBO (sum)": sum_dynabo_priors,
+        "DynaBO (product)": product_dynabo_priors,
+    }
+    style_dict = {
+        "Vanilla BO": {"color": "#000000", "marker": "o", "linestyle": (0, ())},
+        "DynaBO (sum)": {"color": "#D55E00", "marker": "v", "linestyle": (0, (1, 1))},
+        "DynaBO (product)": {"color": "#0072B2", "marker": "s", "linestyle": (0, (3, 5, 1, 5))},
+    }
+
+    create_scenario_plots(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        scenarios=baseline_config_df["scenario"].unique(),
+        benchmarklib="mfpbench",
+        base_path="plots/prior_combination_ablation/rf",
+        ncol=3,
+    )
+    create_overall_plot(
+        config_dict,
+        prior_dict,
+        style_dict,
+        error_bar_type="se",
+        benchmarklib="mfpbench",
+        base_path="plots/prior_combination_ablation/rf",
+        ncol=3,
+    )
+
+    # Standalone legend figure
+    handles = [
+        plt.Line2D([0], [0], color=style_dict[k]["color"], linestyle=style_dict[k]["linestyle"], label=k)
+        for k in style_dict
+    ]
+    fig_legend, ax_legend = plt.subplots(figsize=(6, 0.4))
+    ax_legend.axis("off")
+    ax_legend.legend(handles=handles, loc="center", ncol=len(style_dict), frameon=False, fontsize=10)
+    os.makedirs("plots/prior_combination_ablation/rf", exist_ok=True)
+    fig_legend.savefig("plots/prior_combination_ablation/rf/legend.pdf", dpi=300, bbox_inches="tight")
+    plt.close(fig_legend)
+
+
 def load_mixed_priors(surrogate):
     """
     Load the cost data for pd1, saved in the filesystem. Do some data cleaning for lcbench and add regret.
@@ -1237,4 +1346,5 @@ if __name__ == "__main__":
     # remove_old_priros_ablation()
     # plot_mixed_priors()
     # plot_final_results_mfpbench_lcb()
-    plot_cover_page_mfpbench("rf")
+    plot_prior_combination_ablation()
+    # plot_cover_page_mfpbench("rf")

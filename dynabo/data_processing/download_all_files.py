@@ -29,6 +29,10 @@ N_REJECTION_SAMPLES_ABLATION_TABLE_PATH = "plotting_data/yahpogym/n_rejection_sa
 N_REJECTION_SAMPLES_ABLATION_INCUMBENT_PATH = "plotting_data/yahpogym/n_rejection_samples_ablation_incumbent.csv"
 N_REJECTION_SAMPLES_ABLATION_PRIOR_PATH = "plotting_data/yahpogym/n_rejection_samples_ablation_priors.csv"
 
+PRIOR_COMBINATION_ABLATION_TABLE_PATH = "plotting_data/pd1/prior_combination_ablation.csv"
+PRIOR_COMBINATION_ABLATION_INCUMBENT_PATH = "plotting_data/pd1/prior_combination_ablation_incumbent.csv"
+PRIOR_COMBINATION_ABLATION_PRIOR_PATH = "plotting_data/pd1/prior_combination_ablation_priors.csv"
+
 PRIOR_DECAY_ABLATION_TABLE_PATH = "plotting_data/pd1/decay_ablation.csv"
 PRIOR_DECAY_ABLATION_INCUMBENT_PATH = "plotting_data/pd1/decay_ablation_incumbent.csv"
 PRIOR_DECAY_ABLATION_PRIOR_PATH = "plotting_data/pd1/decay_ablation_priors.csv"
@@ -208,6 +212,19 @@ def download_n_rejection_samples_ablation():
     ablation_experimenter.get_logtable("priors").to_csv(N_REJECTION_SAMPLES_ABLATION_PRIOR_PATH, index=False)
 
 
+def download_prior_combination_ablation():
+    ablation_experimenter = PyExperimenter(
+        "dynabo/experiments/prior_combination_ablation/config.yml",
+        CREDENTIALS_PATH,
+        database_name="DynaBO_full_fidelity",
+        table_name="prior_combination_ablation",
+    )
+
+    ablation_experimenter.get_table().to_csv(PRIOR_COMBINATION_ABLATION_TABLE_PATH, index=False)
+    ablation_experimenter.get_logtable("configs", condition="incumbent = 1").to_csv(PRIOR_COMBINATION_ABLATION_INCUMBENT_PATH, index=False)
+    ablation_experimenter.get_logtable("priors").to_csv(PRIOR_COMBINATION_ABLATION_PRIOR_PATH, index=False)
+
+
 def download_prior_decay_ablation_yahpo():
     ablation_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="DynaBO_full_fidelity", table_name="prior_decay_ablation_yahpogym")
 
@@ -228,4 +245,5 @@ if __name__ == "__main__":
     # download_mfpbench_lcb_data()
     # download_prior_decay_ablation_yahpo()
     # download_n_rejection_samples_ablation()
-    download_yahpo_lcb_data()
+    download_prior_combination_ablation()
+    # download_yahpo_lcb_data()

@@ -102,6 +102,7 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
         prior_decay="quadratic",
         discretize=False,
         discrete_bins_factor=10,
+        prior_combination="sum",
     ):
         self._acquisition_function: AbstractAcquisitionFunction = acquisition_function
         self._initial_design_size = initial_design_size
@@ -109,6 +110,7 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
         self._prior_decay = prior_decay
         self._discretize = discretize
         self._discrete_bins_factor = discrete_bins_factor
+        self._prior_combination = prior_combination
 
         self._eta: float | None = None
         self._decay_beta = None
@@ -197,6 +199,8 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
             }
         if not self._prior_configspaces:
             return acq_values
+        elif self._prior_combination == "product":
+            result = acq_values * np.prod(np.array(prior_values), axis=0)
         else:
             result = acq_values * np.sum(np.array(prior_values), axis=0)
         return result
