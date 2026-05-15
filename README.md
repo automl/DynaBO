@@ -102,6 +102,30 @@ if __name__ == "__main__":
 
 
 
+## Minimal Examples
+
+Two self-contained examples are provided in `examples/`. Both use MFPBench (`lm1b_transformer_2048`) and log results to a local SQLite database — no MySQL server or credentials file required.
+
+| Example | Script | Config | SQLite database |
+|---|---|---|---|
+| Baseline (plain SMAC) | `examples/baseline/example.py` | `examples/baseline/config.yml` | `examples/baseline/baseline.db` |
+| DynaBO (dynamic priors) | `examples/dynabo/example.py` | `examples/dynabo/config.yml` | `examples/dynabo/dynabo.db` |
+
+Run from the repository root:
+
+```bash
+python examples/baseline/example.py
+python examples/dynabo/example.py
+```
+
+Each script fills the database with one experiment configuration and executes it. Results (final cost, runtime) are written to the SQLite database on completion. The DynaBO example additionally logs per-trial incumbent trajectories and prior injection events to the `configs` and `priors` logtables. Results from previous runs are already stored in the respective `.db` files and can be inspected with any SQLite client, e.g.:
+
+```bash
+sqlite3 examples/dynabo/dynabo.db "SELECT * FROM dynabo_runs;"
+sqlite3 examples/dynabo/dynabo.db "SELECT * FROM dynabo_runs__configs;"
+sqlite3 examples/dynabo/dynabo.db "SELECT * FROM dynabo_runs__priors;"
+```
+
 ## Comparison to "Hyperparameter Optimization via Interacting with Probabilistic Circuits"
 
 For a comparison with [Probabilistic Circuits](https://github.com/ml-research/ibo-hpc) we utilize a forked version of their repository. You can find it https://anonymous.4open.science/r/ibo-hpc-7C28/README.md

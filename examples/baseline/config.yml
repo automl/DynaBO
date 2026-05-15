@@ -1,0 +1,19 @@
+PY_EXPERIMENTER:
+  n_jobs: 1
+
+  Database:
+    provider: sqlite
+    database: examples/baseline/baseline
+    table:
+      name: baseline_runs
+      keyfields:
+        scenario:
+          type: VARCHAR(255)
+        seed:
+          type: INT
+        n_trials:
+          type: INT
+      result_timestamps: False
+      resultfields:
+        final_cost: FLOAT
+        runtime: FLOAT
