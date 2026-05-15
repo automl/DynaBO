@@ -118,7 +118,11 @@ python examples/baseline/example.py
 python examples/dynabo/example.py
 ```
 
-Each script fills the database with one experiment configuration and executes it. Results (final cost, runtime) are written to the SQLite database on completion. The DynaBO example additionally logs per-trial incumbent trajectories and prior injection events to the `configs` and `priors` logtables. Results from previous runs are already stored in the respective `.db` files and can be inspected with any SQLite client, e.g.:
+Each script fills the database with one experiment configuration and executes it. Results (final cost, runtime) are written to the SQLite database on completion. The DynaBO example additionally logs per-trial incumbent trajectories and prior injection events to the `configs` and `priors` logtables.
+
+> **Note:** The DynaBO example requires prior data to be present under `benchmark_data/prior_data/` (generated via step 2 of the Execution instructions above). Because this data may not be available in all setups, the result of one completed run is already stored in `examples/dynabo/dynabo.db` so the output format can be inspected without re-running the experiment.
+
+Results can be inspected with any SQLite client, e.g.:
 
 ```bash
 sqlite3 examples/dynabo/dynabo.db "SELECT * FROM dynabo_runs;"
