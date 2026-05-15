@@ -21,6 +21,18 @@ YAHPO_ABLATION_TABLE_PATH = "plotting_data/yahpogym/yahpo_ablation.csv"
 YAHPO_ABLATION_INCUMBENT_PATH = "plotting_data/yahpogym/yahpo_ablation_incumbent.csv"
 YAHPO_ABLATION_PRIOR_PATH = "plotting_data/yahpogym/yahpo_ablation_priors.csv"
 
+YAHPO_PRIOR_DECAY_ABLATION_TABLE_PATH = "plotting_data/yahpogym/decay_ablation.csv"
+YAHPO_PRIOR_DECAY_ABLATION_INCUMBENT_PATH = "plotting_data/yahpogym/decay_ablation_incumbent.csv"
+YAHPO_PRIOR_DECAY_ABLATION_PRIOR_PATH = "plotting_data/yahpogym/decay_ablation_priors.csv"
+
+N_REJECTION_SAMPLES_ABLATION_TABLE_PATH = "plotting_data/yahpogym/n_rejection_samples_ablation.csv"
+N_REJECTION_SAMPLES_ABLATION_INCUMBENT_PATH = "plotting_data/yahpogym/n_rejection_samples_ablation_incumbent.csv"
+N_REJECTION_SAMPLES_ABLATION_PRIOR_PATH = "plotting_data/yahpogym/n_rejection_samples_ablation_priors.csv"
+
+PRIOR_COMBINATION_ABLATION_TABLE_PATH = "plotting_data/pd1/prior_combination_ablation.csv"
+PRIOR_COMBINATION_ABLATION_INCUMBENT_PATH = "plotting_data/pd1/prior_combination_ablation_incumbent.csv"
+PRIOR_COMBINATION_ABLATION_PRIOR_PATH = "plotting_data/pd1/prior_combination_ablation_priors.csv"
+
 PRIOR_DECAY_ABLATION_TABLE_PATH = "plotting_data/pd1/decay_ablation.csv"
 PRIOR_DECAY_ABLATION_INCUMBENT_PATH = "plotting_data/pd1/decay_ablation_incumbent.csv"
 PRIOR_DECAY_ABLATION_PRIOR_PATH = "plotting_data/pd1/decay_ablation_priors.csv"
@@ -69,6 +81,13 @@ LCB_PD1_BASELINE_INCUMBENT_PATH = "plotting_data/pd1/lcb/baseline_incumbent.csv"
 LCB_PD1_PRIOR_TABLE_PATH = "plotting_data/pd1/lcb/prior.csv"
 LCB_PD1_PRIOR_INCUMBENT_PATH = "plotting_data/pd1/lcb/prior_incumbent.csv"
 LCB_PD1_PRIOR_PRIORS_PATH = "plotting_data/pd1/lcb/prior_priors.csv"
+
+# LCB Yahpo Data
+LCB_YAHPO_BASELINE_TABLE_PATH = "plotting_data/yahpogym/lcb/baseline.csv"
+LCB_YAHPO_BASELINE_INCUMBENT_PATH = "plotting_data/yahpogym/lcb/baseline_incumbent.csv"
+LCB_YAHPO_PRIOR_TABLE_PATH = "plotting_data/yahpogym/lcb/prior.csv"
+LCB_YAHPO_PRIOR_INCUMBENT_PATH = "plotting_data/yahpogym/lcb/prior_incumbent.csv"
+LCB_YAHPO_PRIOR_PRIORS_PATH = "plotting_data/yahpogym/lcb/prior_priors.csv"
 
 
 def download_yahpo_data():
@@ -165,12 +184,53 @@ def download_mfpbench_lcb_data():
     prior_experimenter.get_logtable("priors").to_csv(LCB_PD1_PRIOR_PRIORS_PATH, index=False)
 
 
+def download_yahpo_lcb_data():
+    baseline_experimenter = PyExperimenter(BASELINE_CONFIG_PATH, CREDENTIALS_PATH, database_name="DynaBO_full_fidelity", table_name="baseline_yahpo_lcb")
+    prior_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="DynaBO_full_fidelity", table_name="prior_experiments_yahpo_lcb")
+
+    baseline_experimenter.get_table().to_csv(LCB_YAHPO_BASELINE_TABLE_PATH, index=False)
+    baseline_experimenter.get_logtable("configs").to_csv(LCB_YAHPO_BASELINE_INCUMBENT_PATH, index=False)
+
+    prior_experimenter.get_table().to_csv(LCB_YAHPO_PRIOR_TABLE_PATH, index=False)
+    prior_experimenter.get_logtable("configs", condition="incumbent = 1").to_csv(LCB_YAHPO_PRIOR_INCUMBENT_PATH, index=False)
+    prior_experimenter.get_logtable("priors").to_csv(LCB_YAHPO_PRIOR_PRIORS_PATH, index=False)
+
+
 def download_prior_decay_ablation():
     ablation_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="DynaBO_full_fidelity", table_name="prior_decay_ablation")
 
     ablation_experimenter.get_table().to_csv(PRIOR_DECAY_ABLATION_TABLE_PATH, index=False)
     ablation_experimenter.get_logtable("configs", condition="incumbent = 1").to_csv(PRIOR_DECAY_ABLATION_INCUMBENT_PATH, index=False)
     ablation_experimenter.get_logtable("priors").to_csv(PRIOR_DECAY_ABLATION_PRIOR_PATH, index=False)
+
+
+def download_n_rejection_samples_ablation():
+    ablation_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="DynaBO_full_fidelity", table_name="prior_decay_n_rejection_sabmples_ablation")
+
+    ablation_experimenter.get_table().to_csv(N_REJECTION_SAMPLES_ABLATION_TABLE_PATH, index=False)
+    ablation_experimenter.get_logtable("configs", condition="incumbent = 1").to_csv(N_REJECTION_SAMPLES_ABLATION_INCUMBENT_PATH, index=False)
+    ablation_experimenter.get_logtable("priors").to_csv(N_REJECTION_SAMPLES_ABLATION_PRIOR_PATH, index=False)
+
+
+def download_prior_combination_ablation():
+    ablation_experimenter = PyExperimenter(
+        "dynabo/experiments/prior_combination_ablation/config.yml",
+        CREDENTIALS_PATH,
+        database_name="DynaBO_full_fidelity",
+        table_name="prior_combination_ablation",
+    )
+
+    ablation_experimenter.get_table().to_csv(PRIOR_COMBINATION_ABLATION_TABLE_PATH, index=False)
+    ablation_experimenter.get_logtable("configs", condition="incumbent = 1").to_csv(PRIOR_COMBINATION_ABLATION_INCUMBENT_PATH, index=False)
+    ablation_experimenter.get_logtable("priors").to_csv(PRIOR_COMBINATION_ABLATION_PRIOR_PATH, index=False)
+
+
+def download_prior_decay_ablation_yahpo():
+    ablation_experimenter = PyExperimenter(PRIOR_EXPERIMENTS_PATH, CREDENTIALS_PATH, database_name="DynaBO_full_fidelity", table_name="prior_decay_ablation_yahpogym")
+
+    ablation_experimenter.get_table().to_csv(YAHPO_PRIOR_DECAY_ABLATION_TABLE_PATH, index=False)
+    ablation_experimenter.get_logtable("configs", condition="incumbent = 1").to_csv(YAHPO_PRIOR_DECAY_ABLATION_INCUMBENT_PATH, index=False)
+    ablation_experimenter.get_logtable("priors").to_csv(YAHPO_PRIOR_DECAY_ABLATION_PRIOR_PATH, index=False)
 
 
 if __name__ == "__main__":
@@ -182,4 +242,8 @@ if __name__ == "__main__":
     # download_remove_priors_ablation()
     # download_mixed_priors()
     # download_prior_decay_ablation()
-    download_mfpbench_lcb_data()
+    # download_mfpbench_lcb_data()
+    # download_prior_decay_ablation_yahpo()
+    # download_n_rejection_samples_ablation()
+    download_prior_combination_ablation()
+    # download_yahpo_lcb_data()

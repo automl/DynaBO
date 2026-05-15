@@ -27,6 +27,7 @@ dependencies = [
     "deap>=1.4.3",
     "syne-tune==0.10.0",
     "rtpt>=0.0.4",
+    "tabulate>=0.10.0",
 ]
 
 [tool.hatch.metadata]

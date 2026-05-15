@@ -31,8 +31,10 @@ from dynabo.utils.configuration_data_classes import (
 )
 from dynabo.utils.evaluator import MFPBenchEvaluator, YAHPOGymEvaluator, ask_tell_opt, fill_table
 
-EXP_CONFIG_FILE_PATH = "dynabo/experiments/prior_experiments/config.yml"
+EXP_CONFIG_FILE_PATH = "dynabo/experiments/prior_combination_ablation/config.yml"
 DB_CRED_FILE_PATH = "config/database_credentials.yml"
+
+PRIOR_COMBINATION = "product"
 
 
 def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: dict):
@@ -74,6 +76,7 @@ def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: 
         initial_design_size=initial_design._n_configs,
         dynabo=dynabo,
         prior_decay=config["prior_decay"],
+        prior_combination=PRIOR_COMBINATION,
     )
 
     local_and_prior_search = LocalAndPriorSearch(
@@ -202,7 +205,7 @@ if __name__ == "__main__":
         database_credential_file_path=DB_CRED_FILE_PATH,
         use_codecarbon=False,
     )
-    benchmarklib = "yahpogym"
+    benchmarklib = "mfpbench"
     fill = False
 
     if fill:
@@ -211,7 +214,7 @@ if __name__ == "__main__":
             common_parameters={
                 "acquisition_function": ["confidence_bound"],
                 "timeout_total": [3600],
-                "n_trials": [200],
+                "n_trials": [50],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
                 "seed": list(range(30)),
@@ -229,18 +232,14 @@ if __name__ == "__main__":
                 "prior_std_denominator": 5,
                 # Dynabo when prior
                 "prior_static_position": True,
-                "prior_every_n_trials_choices": [1],
+                "prior_every_n_trials_choices": [10],
                 "prior_at_start_choices": [True],
                 "prior_chance_theta_choices": [0.015],
                 # Decay parameters
-                "prior_decay_enumerator_choices": [
-                    20,
-                ],
+                "prior_decay_enumerator_choices": [5],
                 "prior_decay_denominator": 1,
                 "remove_old_priors_choices": [False],
-                "prior_decay_choices": [
-                    "linear",
-                ],
+                "prior_decay_choices": ["linear"],
                 # Validation parameters
                 "validate_prior_choices": [True],
                 "prior_validation_method_choices": ["difference"],

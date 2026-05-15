@@ -73,6 +73,9 @@ def load_cost_data_pc():
     point_prior_df = pd.concat(point_prior_files, ignore_index=True)
     baseline_df = pd.concat(baseline_files, ignore_index=True)
     dist_prior_df = pd.concat(dist_prior_files, ignore_index=True)
+
+    for df in [point_prior_df, baseline_df, dist_prior_df]:
+        df["after_n_evaluations"] += 1
     min_costs = get_min_costs(benchmarklib="mfpbench")
 
     baseline_df["regret"] = baseline_df.apply(lambda row: row["val_performance"] - min_costs[row["scenario"]], axis=1)

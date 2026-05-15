@@ -13,7 +13,7 @@ from smac.callback import Callback
 from smac.main.smbo import SMBO
 from smac.runhistory import TrialInfo, TrialValue
 
-from dynabo.smac_additions.dynmaic_prior_acquisition_function import DynamicPriorAcquisitionFunction
+from dynabo.smac_additions.dynamic_prior_acquisition_function import DynamicPriorAcquisitionFunction
 from dynabo.utils.configspace_utils import build_prior_configuration_space
 from dynabo.utils.evaluator import YAHPOGymEvaluator
 from copy import deepcopy
@@ -128,7 +128,6 @@ class AbstractPriorCallback(Callback, ABC):
         """
         Returns the path to the prior data.
         """
-        # TODO adapt
         path = os.path.join(base_path, benchmarklib)
         if benchmarklib == "yahpogym":
             path = os.path.join(path, "cluster", scenario, f"{dataset}.csv")
@@ -143,7 +142,7 @@ class AbstractPriorCallback(Callback, ABC):
 
     def on_ask_start(self, smbo: SMBO):
         "We add prior information, before the next iteration is started."
-        smbo.intensifier.config_selector._acquisition_function.current_config_nuber = smbo.runhistory.finished
+        smbo.intensifier.config_selector._acquisition_function.current_config_number = smbo.runhistory.finished
 
         if self.intervene(smbo):
             prior_configspace, origin_configpsace, cost, logging_config, superior_configuraiton = self.construct_prior(smbo)
@@ -183,7 +182,7 @@ class AbstractPriorCallback(Callback, ABC):
                 trial_value = TrialValue(cost=performance, time=runtime)
                 smbo.tell(trial_info, trial_value)
 
-            smbo.intensifier.config_selector._acquisition_function.current_config_nuber = smbo.runhistory.finished
+            smbo.intensifier.config_selector._acquisition_function.current_config_number = smbo.runhistory.finished
 
     def accept_prior(self, smbo: SMBO, prior_configspace: ConfigurationSpace, origin_configspace: ConfigurationSpace) -> bool:
         if self.validate_prior:
@@ -201,17 +200,7 @@ class AbstractPriorCallback(Callback, ABC):
             lcb_prior_values = self.lcb(prior_samples).squeeze()
             lcb_incumbent_values = self.lcb(incumbent_samples).squeeze()
             if self.prior_validation_method == PriorValidationMethod.MANN_WHITNEY_U.value:
-                raise ValueError("Mann-Whitney U test is depreceated.")
-                result = mannwhitneyu(
-                    lcb_prior_values,
-                    lcb_incumbent_values,
-                    alternative="less",
-                )
-
-                if result.pvalue < self.prior_validation_manwhitney_p:
-                    return False, lcb_prior_values.mean(), lcb_incumbent_values.mean()
-                else:
-                    return True, lcb_prior_values.mean(), lcb_incumbent_values.mean()
+                raise ValueError("Mann-Whitney U test is deprecated.")
             elif self.prior_validation_method == PriorValidationMethod.DIFFERENCE.value:
                 result = lcb_prior_values.mean() - lcb_incumbent_values.mean()
                 if result > self.prior_validation_difference_threshold:
@@ -617,17 +606,17 @@ class MixedPriorsCallback(AbstractPriorCallback):
             *args,
             **kwargs,
         )
-        self.last_was_helpfull = None
+        self.last_was_helpful = None
         self.good_prior = None
 
     def sample_prior(self, smbo: SMBO, incumbent_config: Configuration, incumbent_cost: float) -> Optional[pd.DataFrame]:
-        if self.last_was_helpfull is not None:
-            if self.last_was_helpfull:
+        if self.last_was_helpful is not None:
+            if self.last_was_helpful:
                 return self.deceiving_prior_callback.sample_prior(smbo, incumbent_config, incumbent_cost)
             else:
                 return self.misleading_prior_callback.sample_prior(smbo, incumbent_config, incumbent_cost)
 
-        self.last_was_helpfull = True
+        self.last_was_helpful = True
         self.good_prior = True
         return self.well_performing_callback.sample_prior(smbo, incumbent_config, incumbent_cost)
 

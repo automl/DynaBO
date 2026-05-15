@@ -38,8 +38,6 @@ class ConfigSpacePdfWrapper:
         # in the same order
         for parameter, X_col in zip(self.configspace.values(), X.T):
             prior_values *= parameter._pdf(X_col[:, np.newaxis]) + self.prior_floor
-        #if self.iteration_number(n) >= 50:
-        #    return np.ones((len(X), 1))
         if self.dynabo:
             if self.prior_decay == "logarithmic":
                 return np.power(prior_values, self.decay_beta / np.log(self.iteration_number(n) + 1))
@@ -90,8 +88,8 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
     """
     Adapt the PriorAcquisitionFunction to enable weighting the prior at any point of the optimization process.
 
-    The existing implemenation is adapted by adding a second configpsace, which contains prior information and adding
-    a `dynamic_init` method to set the prior information, just as the intiial prior.
+    The existing implementation is adapted by adding a second configspace, which contains prior information and adding
+    a `dynamic_init` method to set the prior information, just as the initial prior.
     """
 
     def __init__(
@@ -102,6 +100,7 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
         prior_decay="quadratic",
         discretize=False,
         discrete_bins_factor=10,
+        prior_combination="sum",
     ):
         self._acquisition_function: AbstractAcquisitionFunction = acquisition_function
         self._initial_design_size = initial_design_size
@@ -109,6 +108,7 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
         self._prior_decay = prior_decay
         self._discretize = discretize
         self._discrete_bins_factor = discrete_bins_factor
+        self._prior_combination = prior_combination
 
         self._eta: float | None = None
         self._decay_beta = None
@@ -125,7 +125,7 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
         self._rescale = isinstance(acquisition_type, (LCB, TS))
 
         # Tracker for config number
-        self.current_config_nuber = None
+        self.current_config_number = None
         self._average_acquisition_function_impact: Dict[str, float] = None
         self._incumbent_acquisition_function_impact: Dict[str, float] = None
 
@@ -176,8 +176,7 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
         else:
             acq_values = self._acquisition_function._compute(X)
 
-        # Problem i previously did not consider that we are evaluting 5000 points here
-        prior_values = [prior.compute_prior(X, self.current_config_nuber) for prior in self._prior_configspaces]
+        prior_values = [prior.compute_prior(X, self.current_config_number) for prior in self._prior_configspaces]
 
         if self._prior_configspaces:
             af_impact = np.mean(acq_values)
@@ -197,6 +196,8 @@ class DynamicPriorAcquisitionFunction(PriorAcquisitionFunction):
             }
         if not self._prior_configspaces:
             return acq_values
+        elif self._prior_combination == "product":
+            result = acq_values * np.prod(np.array(prior_values), axis=0)
         else:
             result = acq_values * np.sum(np.array(prior_values), axis=0)
         return result

@@ -104,6 +104,9 @@ ENV/
 .vscode/
 .idea/
 
+# Claude Code local settings
+.claude/
+
 # SMAC3 output
 smac3_output
 

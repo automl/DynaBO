@@ -2,10 +2,10 @@ PY_EXPERIMENTER:
   n_jobs: 1
 
   Database:
-    provider: sqlite
+    provider: mysql
     database: DynaBO_full_fidelity
-    table: 
-      name: testing
+    table:
+      name: prior_combination_ablation
       keyfields:
         acquisition_function: # Common
           type: VARCHAR(255)
@@ -75,7 +75,7 @@ PY_EXPERIMENTER:
         initial_design_size: INT
         final_cost: FLOAT
         runtime: FLOAT
-        virtual_runtime: FLOAT 
+        virtual_runtime: FLOAT
         reasoning_runtime: FLOAT
         n_evaluations_computed: INT
         experiment_finished: BOOLEAN
@@ -85,7 +85,7 @@ PY_EXPERIMENTER:
         incumbent: BOOLEAN
         configuration: TEXT
         after_n_evaluations: INT
-        after_runtime: FLOAT  
+        after_runtime: FLOAT
         after_virtual_runtime: FLOAT
         after_reasoning_runtime: FLOAT
         average_acquisition_function_impact: LONGTEXT

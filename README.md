@@ -1,34 +1,136 @@
 # DynaBO
-This is the implementation of our ICML 2026 submission titled **DynaBO: Dynamic Priors in Bayesian Optimization for Hyperparameter Optimization**. In the paper we propose a method to incorporate dynamic user feedback in the form of priors at runtime.
-
-![DynaBO evaluation results on lcbench](plots/pc_comparison/rf/mfpbench/regret/overall/legend.pdf)
+This is the implementation of our submission titled "Dynamic Priors in Bayesian Optimization for Hyperparameter Optimization". In the paper, we propose a method to incorporate dynamic user feedback in the form of priors at runtime.
 
 ## Install
 To install and run our method, you need to execute the following steps:
 1. Clone the repository with all additional dependencies using:
 ```bash
-git clone --recursive https://github.com/automl/DynaBO.git 
+git clone --recursive https://github.com/OrgName/DynaBO.git
 ```
-2. Create a `conda` environment and activate it using:
+2. Create a conda environment and activate it using:
 ```bash
 conda create -n DynaBO python=3.10
 conda activate DynaBO
 ```
-3. Install the repo and all dependencies:
+3. Install the repository and all dependencies:
 ```bash
 make install
 ```
 
 ## Execution
-Our experiments rely on the library. They therefore require either using a mysql database. The process of using PyExperimenter is described in its [documentation](https://github.com/tornede/py_experimenter).
-To replicate our experiments you need to execute the following steps
-1. Create gt_data needed for priors by running: ``dynabo/experiments/data_generation/execute_baseline.py`` for both ``mfbench`` and ``yahpogym``. 
-2. Create priors by running ``dynabo/data_processing/extract_gt_priors.py``
-3. Execute the baselines, dynabo, and πBO using the scripts located in ``dynabo/experiments``. In our experiments ran slurm jobs utilizing the scripts in ``cluster_scripts``.
-4. Create plots in ``dynabo/plotting``.
+Our experiments rely on the PyExperimenter library. You can run a local version with SQLite, but for large-scale experiments and reproducing the results, we suggest setting up a MySQL database server.
+The process of using PyExperimenter is described in its [documentation](https://github.com/tornede/py_experimenter).
+
+To replicate our experiments, you need to execute the following steps:
+1. Create gt_data needed for priors by running: ``dynabo/experiments/data_generation/execute_baseline.py`` for both ``mfpbench`` and ``yahpogym``. 
+    We did this with both expected improvement and confidence bound acquisition functions.
+2. Create priors by running ``dynabo/data_processing/cluster_incumbents.py``
+    This will extract the entries from the database, cluster them, and save the priors to disk. To replicate the PC results, you need to either copy the files over or link the path.
+3. Execute the baselines, DynaBO, and πBO using the scripts located in ``dynabo/experiments``. In our experiments, we ran Slurm jobs utilizing the scripts in ``cluster_scripts`` but parallelization requires a MySQL database server.
+    This will populate the database with entries and continuously pull and execute experiments.
+4. Download the results from the database using ``dynabo/data_processing/download_all_files.py``
+5. Create plots in ``dynabo/plotting``.
+
+### Experiments
+Every experiment is located in ``dynabo/experiments/``, and contains both a config file and a Python file. The structure of the config files is described in the [PyExperimenter documentation](https://github.com/tornede/py_experimenter).
+
+The python file is structured as follows 
+
+```python
+
+...
+
+def run_experiment(config: dict, result_processor: ResultProcessor, custom_cfg: dict):
+    # Some target function
+
+    result = {
+        "initial_design_size": initial_design_size,
+        "final_cost": optimization_data["final_cost"],
+        "runtime": round(end_time - start_time, 3),
+        "virtual_runtime": optimization_data["virtual_runtime"],
+        "reasoning_runtime": round(evaluator.reasoning_runtime, 3),
+        "n_evaluations_computed": optimization_data["n_evaluations_computed"],
+        "experiment_finished": True,
+    }
+
+    result_processor.process_results(results=result)
+
+
+if __name__ == "__main__":
+    ...
+    experimenter = PyExperimenter(  # Creation of the experimenter
+        experiment_configuration_file_path=EXP_CONFIG_FILE_PATH,  # Path to the config file
+        database_credential_file_path=DB_CRED_FILE_PATH,  # Path to the database credentials; not needed for SQLite
+        use_codecarbon=False,
+    )
+
+    # Information to fill the database
+    fill = True  # Whether to fill the database with experiments
+    benchmarklib = "mfbench"  # Benchmark library
+    if fill:
+        fill_table(
+            py_experimenter=experimenter,
+            common_parameters={  # General setup parameters
+                "acquisition_function": ["expected_improvement"],
+                "timeout_total": [3600],
+                "n_trials": [500],
+                "initial_design__n_configs_per_hyperparameter": [10],
+                "initial_design__max_ratio": [0.25],
+                "seed": list(range(30)),
+            },
+            benchmarklib=benchmarklib,  # Benchmark library to use
+            benchmark_parameters={  # Benchmark-specific parameters
+                "with_all_datasets": True,
+                "medium_and_hard": False,
+            },
+            approach="baseline",
+            approach_parameters=None,
+        )
+
+    # Whether to reset experiments with status error or running
+    reset = False
+    if reset:
+        experimenter.reset_experiments("error", "running")
+
+    # Execute experiments
+    execute = True
+    if execute:
+        experimenter.execute(run_experiment, max_experiments=1, random_order=True)
+
+```
+
+
+
+
+## Minimal Examples
+
+Two self-contained examples are provided in `examples/`. Both use MFPBench (`lm1b_transformer_2048`) and log results to a local SQLite database — no MySQL server or credentials file required.
+
+| Example | Script | Config | SQLite database |
+|---|---|---|---|
+| Baseline (plain SMAC) | `examples/baseline/example.py` | `examples/baseline/config.yml` | `examples/baseline/baseline.db` |
+| DynaBO (dynamic priors) | `examples/dynabo/example.py` | `examples/dynabo/config.yml` | `examples/dynabo/dynabo.db` |
+
+Run from the repository root:
+
+```bash
+python examples/baseline/example.py
+python examples/dynabo/example.py
+```
+
+Each script fills the database with one experiment configuration and executes it. Results (final cost, runtime) are written to the SQLite database on completion. The DynaBO example additionally logs per-trial incumbent trajectories and prior injection events to the `configs` and `priors` logtables.
+
+> **Note:** The DynaBO example requires prior data to be present under `benchmark_data/prior_data/` (generated via step 2 of the Execution instructions above). Because this data may not be available in all setups, the result of one completed run is already stored in `examples/dynabo/dynabo.db` so the output format can be inspected without re-running the experiment.
+
+Results can be inspected with any SQLite client, e.g.:
+
+```bash
+sqlite3 examples/dynabo/dynabo.db "SELECT * FROM dynabo_runs;"
+sqlite3 examples/dynabo/dynabo.db "SELECT * FROM dynabo_runs__configs;"
+sqlite3 examples/dynabo/dynabo.db "SELECT * FROM dynabo_runs__priors;"
+```
 
 ## Comparison to "Hyperparameter Optimization via Interacting with Probabilistic Circuits"
 
-For a comparison with [Probabilistic Circuits](https://github.com/ml-research/ibo-hpc) we utilize a forked version of their repository. You can find it here.
-#TODO add link to their repo
+For a comparison with [Probabilistic Circuits](https://github.com/ml-research/ibo-hpc) we utilize a forked version of their repository. You can find it https://anonymous.4open.science/r/ibo-hpc-7C28/README.md
 After execution, you need to copy the results from their repository to `dynabo/plotting_data/pc_results`. 
