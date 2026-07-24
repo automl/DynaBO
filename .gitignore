@@ -155,3 +155,6 @@ iclr_submission/benchmark_data
 
 # SpFlow library
 lib/SPFlow/
+# Generated PNG figures (not versioned)
+*.png
+pibo_prior_frames/

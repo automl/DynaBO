@@ -16,5 +16,5 @@ ml Miniforge3
 source /mnt/home/username/.bashrc
 conda activate DynaBO
 
-/mnt/home/username/DynaBO/.venv/bin/python dynabo/experiments/prior_experiments/execute_prior_experiments.py
+/mnt/home/lfehring/DynaBO/.venv/bin/python dynabo/experiments/prior_experiments/execute_prior_experiments.py
 

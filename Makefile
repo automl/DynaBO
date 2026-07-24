@@ -43,13 +43,12 @@ isort:
 
 test: ## run tests quickly with the default Python
 	python -m pytest tests
-install: clean ## install the package to the active Python's site-packages
+install: clean ## install the package and all dependencies into a uv-managed environment
 	uv sync
 	uv run python scripts/patch_yahpo_configspace.py
-	cd CARP-S/
-	uv sync
-	make benchmark_mfpbench
-	cd ..
+	uv run python -m mfpbench download --benchmark pd1 \
+		--data-dir "$$(uv run python -c 'from carps.objective_functions.mfpbench import MFPBENCH_TASK_DATA_DIR; print(MFPBENCH_TASK_DATA_DIR)')"
+
 check:
 	pre-commit run --all-files
 

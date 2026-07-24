@@ -1,21 +1,64 @@
 # DynaBO
-This is the implementation of our submission titled "Dynamic Priors in Bayesian Optimization for Hyperparameter Optimization". In the paper, we propose a method to incorporate dynamic user feedback in the form of priors at runtime.
+This is the implementation accompanying our paper "Dynamic Priors in Bayesian Optimization for Hyperparameter Optimization", **accepted at the AutoML Conference 2026**. In the paper, we propose a method to incorporate dynamic user feedback in the form of priors at runtime.
+
+## Prerequisites
+
+The project is built and installed entirely with [**uv**](https://docs.astral.sh/uv/), a fast Python package and environment manager. Our setup is firmly based on `uv`: it creates and manages the virtual environment and installs the correct Python interpreter for you.
+
+You need the following on your system before installing:
+
+| Requirement | Purpose | Install |
+|---|---|---|
+| `uv` (>= 0.4) | Creates the environment and resolves all dependencies from `uv.lock` | `curl -LsSf https://astral.sh/uv/install.sh \| sh` (see the [uv install docs](https://docs.astral.sh/uv/getting-started/installation/) for other platforms) |
+| `git` | Cloning the repository and its submodules | system package manager |
+| `make` | Runs the install target | system package manager (`build-essential` on Debian/Ubuntu) |
+| A C/C++ toolchain | Building some transitive dependencies (e.g. `swig`) | `build-essential` (Linux) / Xcode CLT (macOS) |
+
+`uv` installs the correct Python interpreter (3.10) automatically, so no separate Python installation is required.
+
+### Bundled dependencies (git submodules)
+
+DynaBO depends on four repositories that are vendored as git submodules and pulled automatically during a recursive clone:
+
+| Submodule | Path | Provides | Pinned commit |
+|---|---|---|---|
+| [CARP-S](https://github.com/automl/CARP-S) (`development` branch) | `CARP-S/` | Benchmark runner and the MFPBench benchmark integration | `b861cfc0483fc9bb8d9ad1779cf90ca6f1165531` |
+| [SMAC3](https://github.com/automl/SMAC3) | `lib/SMAC3/` | The Bayesian optimization backend | `7f1ce0d1ba8536a052636b2f30929edcbca49e04` |
+| [yahpo_gym](https://github.com/slds-lmu/yahpo_gym) | `lib/yahpo_gym/` | The YAHPO Gym benchmark library | `93f5b151d4e2f44daa5314cd10533aafec37d630` |
+| [yahpo_data](https://github.com/slds-lmu/yahpo_data) | `benchmark_data/yahpo_data/` | Surrogate model data for YAHPO Gym | `efdab9072f63bd680396cd4b78b927c4a0caaad3` |
+
+All submodule URLs are HTTPS, so no SSH key or GitHub account is required. A recursive clone checks out each submodule at the pinned commit listed above; if you obtain the submodules manually, check out these exact commits to reproduce our results.
 
 ## Install
-To install and run our method, you need to execute the following steps:
-1. Clone the repository with all additional dependencies using:
+
+1. Clone the repository **with all submodules**:
 ```bash
-git clone --recursive https://github.com/OrgName/DynaBO.git
+git clone --recursive https://github.com/automl/DynaBO.git
+cd DynaBO
 ```
-2. Create a conda environment and activate it using:
+If you already cloned without `--recursive`, fetch the submodules with:
 ```bash
-conda create -n DynaBO python=3.10
-conda activate DynaBO
+git submodule update --init --recursive
 ```
-3. Install the repository and all dependencies:
+2. Install DynaBO and all dependencies into a uv-managed environment:
 ```bash
 make install
 ```
+This runs `uv sync` (resolving everything from `uv.lock`), patches the YAHPO Gym config-space files in `benchmark_data/yahpo_data`, and downloads the MFPBench (PD1) surrogate data into the environment. YAHPO Gym itself needs no additional download — its surrogate data is provided by the `benchmark_data/yahpo_data` submodule.
+
+> **Reproducibility.** Exact dependency versions are not pinned in `pyproject.toml` (which only specifies compatible ranges); they are pinned in the committed `uv.lock`. Reproducing our environment therefore requires installing from the lockfile — `make install` does this via `uv sync`, which installs the exact locked versions (with hashes) rather than re-resolving. Do not run `uv sync --upgrade` or delete `uv.lock` if you want to match the versions we used.
+
+3. Activate the environment that `uv` created, then run commands with plain `python`:
+```bash
+source .venv/bin/activate
+python examples/baseline/example.py
+```
+
+> **Run from the repository root.** YAHPO Gym is located via the relative path `benchmark_data/yahpo_data`, so all scripts and experiments must be launched from the repository root.
+
+## Quick start: run the minimal examples
+
+If you only want to confirm the code runs end-to-end (the fastest path to a partial reproduction), use the self-contained examples in [`examples/`](examples/). They use MFPBench and log to a local SQLite database — **no MySQL server or database credentials are needed**. See the [Minimal Examples](#minimal-examples) section below.
 
 ## Execution
 Our experiments rely on the PyExperimenter library. You can run a local version with SQLite, but for large-scale experiments and reproducing the results, we suggest setting up a MySQL database server.
@@ -104,21 +147,23 @@ if __name__ == "__main__":
 
 ## Minimal Examples
 
-Two self-contained examples are provided in `examples/`. Both use MFPBench (`lm1b_transformer_2048`) and log results to a local SQLite database — no MySQL server or credentials file required.
+Three self-contained examples are provided in `examples/`. Each logs results to a local SQLite database — no MySQL server or credentials file required. The baseline and DynaBO examples use MFPBench (`lm1b_transformer_2048`); the YAHPO example uses YAHPO Gym (`lcbench`), whose surrogate data comes from the `benchmark_data/yahpo_data` submodule (no additional download).
 
 | Example | Script | Config | SQLite database |
 |---|---|---|---|
-| Baseline (plain SMAC) | `examples/baseline/example.py` | `examples/baseline/config.yml` | `examples/baseline/baseline.db` |
+| Baseline on MFPBench (plain SMAC) | `examples/baseline/example.py` | `examples/baseline/config.yml` | `examples/baseline/baseline.db` |
+| Baseline on YAHPO Gym (plain SMAC) | `examples/yahpo/example.py` | `examples/yahpo/config.yml` | `examples/yahpo/yahpo.db` |
 | DynaBO (dynamic priors) | `examples/dynabo/example.py` | `examples/dynabo/config.yml` | `examples/dynabo/dynabo.db` |
 
-Run from the repository root:
+Run from the repository root with the environment activated (`source .venv/bin/activate`):
 
 ```bash
 python examples/baseline/example.py
+python examples/yahpo/example.py
 python examples/dynabo/example.py
 ```
 
-Each script fills the database with one experiment configuration and executes it. Results (final cost, runtime) are written to the SQLite database on completion. The DynaBO example additionally logs per-trial incumbent trajectories and prior injection events to the `configs` and `priors` logtables.
+Each script fills the database with one experiment configuration and executes it. Results (final cost, runtime) are written to the SQLite database on completion. For the YAHPO example the objective is validation accuracy, so `final_cost` is stored as its negation (SMAC minimizes). The DynaBO example additionally logs per-trial incumbent trajectories and prior injection events to the `configs` and `priors` logtables.
 
 > **Note:** The DynaBO example requires prior data to be present under `benchmark_data/prior_data/` (generated via step 2 of the Execution instructions above). Because this data may not be available in all setups, the result of one completed run is already stored in `examples/dynabo/dynabo.db` so the output format can be inspected without re-running the experiment.
 
@@ -132,5 +177,5 @@ sqlite3 examples/dynabo/dynabo.db "SELECT * FROM dynabo_runs__priors;"
 
 ## Comparison to "Hyperparameter Optimization via Interacting with Probabilistic Circuits"
 
-For a comparison with [Probabilistic Circuits](https://github.com/ml-research/ibo-hpc) we utilize a forked version of their repository. You can find it https://anonymous.4open.science/r/ibo-hpc-7C28/README.md
+For a comparison with [Probabilistic Circuits](https://github.com/ml-research/ibo-hpc) we utilize a [forked version of their repository](https://github.com/LUH-AI/ibo-hpc).
 After execution, you need to copy the results from their repository to `dynabo/plotting_data/pc_results`. 

@@ -478,6 +478,7 @@ def set_fig_style(
     axs,
     title: str,
     ncol,
+    show_legend: bool = False,
 ):
     # fig.suptitle(title, fontsize=25, fontweight="bold", y=1)
 
@@ -493,17 +494,20 @@ def set_fig_style(
         final_labels.append(label)
         final_lines.append(line)
 
-    # fig.legend(
-    #    final_lines,
-    #    final_labels,
-    #    loc="upper center",
-    #    ncol=ncol,
-    #    fontsize=20,
-    #    bbox_to_anchor=(0.5, 0.0),
-    # )
-
     # Adjust layout for better spacing
     fig.tight_layout()
+
+    if show_legend:
+        fig.legend(
+            final_lines,
+            final_labels,
+            loc="upper center",
+            ncol=ncol,
+            fontsize=10,
+            bbox_to_anchor=(0.5, 0.0),
+            frameon=False,
+        )
+        fig.subplots_adjust(bottom=0.2)
 
 
 def save_fig(path: str):
@@ -648,7 +652,7 @@ def create_pc_comparison(
 
 
 def create_deceiving_longer_scenarios(
-    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, str], error_bar_type: str, scenarios: List[str], benchmarklib: str, base_path: str, ncol: int, y_column: str = "regret"
+    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, str], error_bar_type: str, scenarios: List[str], benchmarklib: str, base_path: str, ncol: int, y_column: str = "regret", figsize: tuple = (12, 3.5), show_legend: bool = False, fmt: str = "pdf"
 ):
     y_label = "Cost" if y_column == "cost" else "Regret"
     if benchmarklib == "yahpogym":
@@ -658,7 +662,7 @@ def create_deceiving_longer_scenarios(
         min_ntrials = 1
         max_n_trials = 500
     for scenario in scenarios:
-        fig, ax = plt.subplots(1, 1, figsize=(12, 3.5), dpi=300)  # Wider and higher resolution
+        fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=300)
         axs = [ax]
         plot_number = 0
         for prior_kind in ["deceiving"]:
@@ -686,12 +690,13 @@ def create_deceiving_longer_scenarios(
             axs,
             f"Average {y_label.lower()} on {scenario}",
             ncol=ncol,
+            show_legend=show_legend,
         )
-        save_fig(f"{base_path}/{scenario}.pdf")
+        save_fig(f"{base_path}/{scenario}.{fmt}")
 
 
 def create_overall_plot_longer(
-    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, Dict[str, str]], error_bar_type: str, benchmarklib: str, base_path: str, ncol: int, y_column: str = "regret"
+    config_dict: Dict[str, pd.DataFrame], prior_dict: Dict[str, pd.DataFrame], style_dict: Dict[str, Dict[str, str]], error_bar_type: str, benchmarklib: str, base_path: str, ncol: int, y_column: str = "regret", figsize: tuple = (10, 2.8), show_legend: bool = False, fmt: str = "pdf"
 ):
     y_label = "Cost" if y_column == "cost" else "Regret"
     path_segment = y_column
@@ -702,7 +707,7 @@ def create_overall_plot_longer(
     elif benchmarklib == "mfpbench":
         min_ntrials = 1
         max_n_trials = 500
-    fig, ax = plt.subplots(1, 1, figsize=(10, 2.8), dpi=300)
+    fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=300)
     axs = [ax]
     plot_number = 0
     for prior_kind in ["deceiving"]:
@@ -730,9 +735,9 @@ def create_overall_plot_longer(
 
         plot_number += 1
 
-    set_fig_style(fig, axs, f"Overall {y_label} Across Different Priors", ncol=ncol)
+    set_fig_style(fig, axs, f"Overall {y_label} Across Different Priors", ncol=ncol, show_legend=show_legend)
 
-    save_fig(f"{base_path}/overall.pdf")
+    save_fig(f"{base_path}/overall.{fmt}")
 
 
 def create_overall_plot(
@@ -850,6 +855,81 @@ def set_ax_style(ax, x_label, y_label, benchmarklib: str = "mfpbench", auto_ytic
     ax.set_xlabel(None)
     if not auto_yticks:
         ax.set_ylim(bottom=0.0, top=0.2)
+
+
+PRIOR_KIND_ORDER = ["good", "medium", "misleading", "deceiving"]
+PRIOR_KIND_TITLES = {"good": "Expert", "medium": "Advanced", "misleading": "Local", "deceiving": "Adversarial"}
+
+
+def create_prior_acceptance_grid(
+    prior_df: pd.DataFrame,
+    run_keys: List[str],
+    base_path: str,
+    scenarios: Optional[List[str]] = None,
+    scenario_titles: Optional[Dict[str, str]] = None,
+    fname: str = "grid",
+    fmt: str = "pdf",
+):
+    """
+    Grid of subplots (rows = scenarios, columns = the 4 prior kinds). For each subplot the x-axis
+    holds the successively provided priors (position 1..4 within a run) and three point-series are
+    drawn, each aggregated as a percentage across all runs of that (scenario, prior_kind, position):
+
+    - "Accepted":         share of priors DynaBO actually accepted (prior_accepted).
+    - "Should accept":    share of priors that were genuinely superior to the incumbent
+                          (superior_configuration) -- the ground-truth ideal decision.
+    - "Correct decision": share where the taken decision matched the ideal
+                          (prior_accepted == superior_configuration).
+
+    ``run_keys`` identifies a single optimization run so prior positions can be ranked within it
+    (e.g. ["scenario", "prior_kind", "seed"] for mfpbench, plus "dataset" for yahpogym).
+    """
+    df = prior_df.copy()
+    if scenarios is None:
+        scenarios = [s for s in df["scenario"].unique()]
+
+    # Rank the priors within each run by the evaluation at which they were provided (1..4).
+    df["prior_position"] = df.groupby(run_keys)["after_n_evaluations"].rank(method="first").astype(int)
+    df["correct"] = (df["prior_accepted"] == df["superior_configuration"]).astype(int)
+
+    # label -> (column, color, marker, linestyle). Distinct line styles keep overlapping lines readable.
+    series = {
+        "Accepted": ("prior_accepted", "#D55E00", "o", "-"),
+        "Should accept": ("superior_configuration", "#0072B2", "s", "--"),
+        "Correct decision": ("correct", "#009E73", "^", ":"),
+    }
+
+    # Rows = prior kinds, columns = scenarios.
+    nrows, ncols = len(PRIOR_KIND_ORDER), len(scenarios)
+    fig, axs = plt.subplots(nrows, ncols, figsize=(3.2 * ncols, 2.6 * nrows), dpi=300, sharex=True, sharey=True, squeeze=False)
+
+    for r, prior_kind in enumerate(PRIOR_KIND_ORDER):
+        for c, scenario in enumerate(scenarios):
+            ax = axs[r][c]
+            sub = df[(df["scenario"] == scenario) & (df["prior_kind"] == prior_kind)]
+            for label, (col, color, marker, linestyle) in series.items():
+                agg = sub.groupby("prior_position")[col].mean().mul(100).sort_index()
+                ax.plot(agg.index, agg.values, marker=marker, color=color, linestyle=linestyle, label=label, linewidth=1.8, markersize=6)
+
+            ax.set_ylim(-5, 105)
+            positions = sorted(sub["prior_position"].unique())
+            ax.set_xticks(positions if positions else [1, 2, 3, 4])
+            ax.grid(True, linestyle="--", alpha=0.5)
+            if r == 0:
+                title = scenario_titles.get(scenario, scenario) if scenario_titles else scenario
+                ax.set_title(title, fontsize=13, fontweight="bold")
+            if c == 0:
+                ax.set_ylabel(f"{PRIOR_KIND_TITLES[prior_kind]}\n% of runs", fontsize=10)
+            if r == nrows - 1:
+                ax.set_xlabel("Prior position", fontsize=10)
+
+    handles, labels = axs[0][0].get_legend_handles_labels()
+    fig.tight_layout(rect=[0, 0.04, 1, 1])
+    fig.legend(handles, labels, loc="lower center", ncol=len(series), fontsize=11, frameon=False, bbox_to_anchor=(0.5, 0.0))
+
+    os.makedirs(base_path, exist_ok=True)
+    fig.savefig(f"{base_path}/{fname}.{fmt}", dpi=300, bbox_inches="tight")
+    plt.close(fig)
 
 
 def create_final_cost_boxplot_rejection(config_dict, style_dict, benchmarklib, base_path):

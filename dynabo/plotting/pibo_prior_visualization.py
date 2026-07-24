@@ -1,17 +1,22 @@
 """
-4-panel illustration of how a helpful prior works in PiBO.
+5-panel illustration of how a helpful prior works in PiBO, one figure per
+iteration t.  The prior weight decays as π(λ)^(5/t) for t in {1,10,20,30,40,50}.
 
   Panel 1: Target function f(λ) + sparse observations
   Panel 2: f(λ) + observations + GP surrogate belief (mean ± 95 % CI)
-  Panel 3: Helpful prior π(λ)
-  Panel 4: Adapted acquisition α(λ) · π(λ) with argmax marked
+  Panel 3: Plain acquisition α(λ) with argmax marked
+  Panel 4: Tempered prior π(λ)^(5/t)
+  Panel 5: Adapted acquisition α(λ) · π(λ)^(5/t) with argmax marked
 """
 
+from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Matern
 from scipy.stats import norm
+
+plt.rcParams.update({"xtick.labelsize": 17, "ytick.labelsize": 17})
 
 
 rng = np.random.default_rng(42)
@@ -53,6 +58,7 @@ gp = GaussianProcessRegressor(
     n_restarts_optimizer=10,
     normalize_y=True,
     alpha=1e-4,
+    random_state=42,
 )
 gp.fit(obs_x.reshape(-1, 1), obs_y)
 
@@ -71,15 +77,10 @@ acq = np.clip(acq, 0, None)
 acq_norm = acq / (acq.max() + 1e-12)
 
 # ---------------------------------------------------------------------------
-# Helpful prior — peaked near the true global optimum (expert knowledge)
+# Base prior — peaked near the true global optimum (expert knowledge)
 # ---------------------------------------------------------------------------
-prior = _gauss(x, mu=7.0, sigma=2.0)   # centred slightly off the true peak
+prior_base = _gauss(x, mu=7.0, sigma=2.0)  # centred slightly off the true peak
 
-# ---------------------------------------------------------------------------
-# Adapted acquisition α · π
-# ---------------------------------------------------------------------------
-acq_adapted = acq_norm * prior
-acq_adapted_argmax = x[np.argmax(acq_adapted)]
 acq_argmax = x[np.argmax(acq_norm)]
 
 # ---------------------------------------------------------------------------
@@ -93,67 +94,83 @@ C_PRIOR  = "#27AE60"        # green      — helpful prior
 C_ACQ    = "#E74C3C"        # red        — acquisition function
 C_ADAPT  = "#8E44AD"        # purple     — adapted acquisition
 
-# ---------------------------------------------------------------------------
-# Figure
-# ---------------------------------------------------------------------------
-fig, axes = plt.subplots(
-    4, 1,
-    figsize=(5.5, 11),
-    sharex=True,
-    gridspec_kw={"height_ratios": [2, 2, 1.5, 1.5], "hspace": 0.06},
-)
-ax_f, ax_gp, ax_pi, ax_ad = axes
-
 
 def _grid(ax):
     ax.grid(linestyle="--", linewidth=0.5, alpha=0.45)
     ax.set_xlim(x[0], x[-1])
 
 
-# ── Panel 1: target function + observations ──────────────────────────────────
-ax_f.plot(x, f, color=C_TRUE, linewidth=1.8, linestyle="--", label=r"Target $f(\lambda)$")
-ax_f.scatter(obs_x, obs_y, color=C_OBS, s=45, zorder=4, label="Observations")
-ax_f.set_ylabel(r"$f(\lambda)$", fontsize=12)
-ax_f.legend(fontsize=9, framealpha=0.85, loc="upper left")
-_grid(ax_f)
+# ---------------------------------------------------------------------------
+# One figure per iteration t
+# ---------------------------------------------------------------------------
+for t in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
+    exponent = 5 / t
+    prior_t = prior_base ** exponent
 
-# ── Panel 2: target + observations + GP surrogate ───────────────────────────
-ax_gp.fill_between(x, ci_lo, ci_hi, color=C_CI, alpha=0.55, label="95 % CI")
-ax_gp.plot(x, mu, color=C_SURRG, linewidth=1.8, label=r"Surrogate $\hat{f}(\lambda)$")
-ax_gp.plot(x, f, color=C_TRUE, linewidth=1.2, linestyle="--", alpha=0.45, label=r"True $f(\lambda)$")
-ax_gp.scatter(obs_x, obs_y, color=C_OBS, s=45, zorder=4, label="Observations")
-ax_gp.set_ylabel(r"$\hat{f}(\lambda)$", fontsize=12)
-ax_gp.legend(fontsize=9, framealpha=0.85, loc="upper left", ncol=2)
-_grid(ax_gp)
+    acq_adapted = acq_norm * prior_t
+    acq_adapted_argmax = x[np.argmax(acq_adapted)]
 
-# ── Panel 3: helpful prior ───────────────────────────────────────────────────
-ax_pi.fill_between(x, prior, alpha=0.25, color=C_PRIOR)
-ax_pi.plot(x, prior, color=C_PRIOR, linewidth=1.8, label=r"Prior $\pi(\lambda)$")
-ax_pi.set_ylabel(r"$\pi(\lambda)$", fontsize=12)
-ax_pi.legend(fontsize=9, framealpha=0.85, loc="upper left")
-_grid(ax_pi)
+    fig, axes = plt.subplots(
+        5, 1,
+        figsize=(11, 13),
+        sharex=True,
+        gridspec_kw={"height_ratios": [2, 2, 1.5, 1.5, 1.5], "hspace": 0.06},
+    )
+    ax_f, ax_gp, ax_acq_ax, ax_pi, ax_ad = axes
 
-# ── Panel 4: adapted acquisition α · π ──────────────────────────────────────
-# Show plain α in faint red for reference
-ax_ad.fill_between(x, acq_norm, alpha=0.12, color=C_ACQ)
-ax_ad.plot(x, acq_norm, color=C_ACQ, linewidth=1.2, linestyle="--", alpha=0.6,
-           label=r"$\alpha(\lambda)$")
-# Adapted (normalised to same scale for readability)
-ad_norm = acq_adapted / (acq_adapted.max() + 1e-12)
-ax_ad.fill_between(x, ad_norm, alpha=0.25, color=C_ADAPT)
-ax_ad.plot(x, ad_norm, color=C_ADAPT, linewidth=1.8,
-           label=r"$\alpha(\lambda)\cdot\pi(\lambda)$")
-ax_ad.axvline(acq_argmax, color=C_ACQ, linestyle=":", linewidth=1.4, alpha=0.9)
-ax_ad.axvline(acq_adapted_argmax, color=C_ADAPT, linestyle=":", linewidth=1.4, alpha=0.9)
-ax_ad.set_ylabel(r"$\alpha \cdot \pi$", fontsize=12)
-ax_ad.set_xlabel(r"$\lambda$", fontsize=12)
-ax_ad.legend(fontsize=9, framealpha=0.85, loc="upper left")
-_grid(ax_ad)
+    # ── Panel 1: target function + observations ───────────────────────────────
+    ax_f.plot(x, f, color=C_TRUE, linewidth=1.8, linestyle="--", label=r"Target $f(\lambda)$")
+    ax_f.scatter(obs_x, obs_y, color=C_OBS, s=45, zorder=4, label="Observations")
+    ax_f.set_ylabel(r"$f(\lambda)$", fontsize=20)
+    ax_f.legend(fontsize=17, framealpha=0.85, loc="upper left")
+    _grid(ax_f)
 
-# Shared y-lower bound at 0 for non-GP panels
-for ax in [ax_f, ax_pi, ax_ad]:
-    ax.set_ylim(bottom=0)
+    # ── Panel 2: target + observations + GP surrogate ────────────────────────
+    ax_gp.fill_between(x, ci_lo, ci_hi, color=C_CI, alpha=0.55, label="95 % CI")
+    ax_gp.plot(x, mu, color=C_SURRG, linewidth=1.8, label=r"Surrogate $\hat{f}(\lambda)$")
+    ax_gp.plot(x, f, color=C_TRUE, linewidth=1.2, linestyle="--", alpha=0.45, label=r"True $f(\lambda)$")
+    ax_gp.scatter(obs_x, obs_y, color=C_OBS, s=45, zorder=4, label="Observations")
+    ax_gp.set_ylabel(r"$\hat{f}(\lambda)$", fontsize=20)
+    ax_gp.legend(fontsize=17, framealpha=0.85, loc="upper left", ncol=2)
+    _grid(ax_gp)
 
-plt.savefig("pibo_prior_visualization.png", bbox_inches="tight", dpi=600)
-plt.show()
-print("Saved pibo_prior_visualization.png")
+    # ── Panel 3: plain acquisition α(λ) ──────────────────────────────────────
+    ax_acq_ax.fill_between(x, acq_norm, alpha=0.20, color=C_ACQ)
+    ax_acq_ax.plot(x, acq_norm, color=C_ACQ, linewidth=1.8, label=r"$\alpha(\lambda)$")
+    ax_acq_ax.axvline(acq_argmax, color=C_ACQ, linestyle=":", linewidth=1.4, alpha=0.9)
+    ax_acq_ax.set_ylabel(r"$\alpha(\lambda)$", fontsize=20)
+    ax_acq_ax.legend(fontsize=17, framealpha=0.85, loc="upper left")
+    _grid(ax_acq_ax)
+
+    # ── Panel 4: tempered prior π(λ)^(β/t) ───────────────────────────────────
+    ax_pi.fill_between(x, prior_t, alpha=0.25, color=C_PRIOR)
+    ax_pi.plot(x, prior_t, color=C_PRIOR, linewidth=1.8,
+               label=rf"$\pi(\lambda)^{{\beta/t}}$  ($t={t}$)")
+    ax_pi.set_ylabel(r"$\pi(\lambda)^{\beta/t}$", fontsize=20)
+    ax_pi.legend(fontsize=17, framealpha=0.85, loc="upper left")
+    _grid(ax_pi)
+
+    # ── Panel 5: adapted acquisition α · π^(β/t) ─────────────────────────────
+    ax_ad.fill_between(x, acq_norm, alpha=0.12, color=C_ACQ)
+    ax_ad.plot(x, acq_norm, color=C_ACQ, linewidth=1.2, linestyle="--", alpha=0.6,
+               label=r"$\alpha(\lambda)$")
+    ad_norm = acq_adapted / (acq_adapted.max() + 1e-12)
+    ax_ad.fill_between(x, ad_norm, alpha=0.25, color=C_ADAPT)
+    ax_ad.plot(x, ad_norm, color=C_ADAPT, linewidth=1.8,
+               label=r"$\alpha(\lambda)\cdot\pi(\lambda)^{\beta/t}$")
+    ax_ad.axvline(acq_argmax, color=C_ACQ, linestyle=":", linewidth=1.4, alpha=0.9)
+    ax_ad.axvline(acq_adapted_argmax, color=C_ADAPT, linestyle=":", linewidth=1.4, alpha=0.9)
+    ax_ad.set_ylabel(r"$\alpha \cdot \pi^{\beta/t}$", fontsize=20)
+    ax_ad.set_xlabel(r"$\lambda$", fontsize=20)
+    ax_ad.legend(fontsize=17, framealpha=0.85, loc="upper left")
+    _grid(ax_ad)
+
+    for ax in [ax_f, ax_acq_ax, ax_pi, ax_ad]:
+        ax.set_ylim(bottom=0)
+
+    out_dir = Path("pibo_prior_frames")
+    out_dir.mkdir(exist_ok=True)
+    fname = out_dir / f"pibo_prior_visualization_t{t:02d}.png"
+    plt.savefig(fname, bbox_inches="tight", dpi=600)
+    plt.close(fig)
+    print(f"Saved {fname}")

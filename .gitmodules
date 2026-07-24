@@ -1,6 +1,6 @@
 [submodule "CARP-S"]
 	path = CARP-S
-	url = git@github.com:automl/CARP-S.git
+	url = https://github.com/automl/CARP-S.git
 	branch = development
 
 [submodule "benchmark_data/yahpo_data"]
