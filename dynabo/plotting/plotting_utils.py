@@ -861,9 +861,21 @@ PRIOR_KIND_ORDER = ["good", "medium", "misleading", "deceiving"]
 PRIOR_KIND_TITLES = {"good": "Expert", "medium": "Advanced", "misleading": "Local", "deceiving": "Adversarial"}
 
 
+def add_prior_position(prior_df: pd.DataFrame, run_keys: List[str]) -> pd.DataFrame:
+    """
+    Add a ``prior_position`` column (1..4) ranking the priors within each run by the evaluation at
+    which they were provided, and a ``correct`` column (decision matched the oracle). Use this to
+    pre-rank data with its own run keys before combining several benchmarks into one grid.
+    """
+    df = prior_df.copy()
+    df["prior_position"] = df.groupby(run_keys)["after_n_evaluations"].rank(method="first").astype(int)
+    df["correct"] = (df["prior_accepted"] == df["superior_configuration"]).astype(int)
+    return df
+
+
 def create_prior_acceptance_grid(
     prior_df: pd.DataFrame,
-    run_keys: List[str],
+    run_keys: Optional[List[str]],
     base_path: str,
     scenarios: Optional[List[str]] = None,
     scenario_titles: Optional[Dict[str, str]] = None,
@@ -882,15 +894,17 @@ def create_prior_acceptance_grid(
                           (prior_accepted == superior_configuration).
 
     ``run_keys`` identifies a single optimization run so prior positions can be ranked within it
-    (e.g. ["scenario", "prior_kind", "seed"] for mfpbench, plus "dataset" for yahpogym).
+    (e.g. ["scenario", "prior_kind", "seed"] for mfpbench, plus "dataset" for yahpogym). Pass
+    ``run_keys=None`` when ``prior_df`` already carries a ``prior_position`` column (e.g. when
+    several benchmarks were pre-ranked via :func:`add_prior_position` and concatenated).
     """
     df = prior_df.copy()
     if scenarios is None:
         scenarios = [s for s in df["scenario"].unique()]
 
     # Rank the priors within each run by the evaluation at which they were provided (1..4).
-    df["prior_position"] = df.groupby(run_keys)["after_n_evaluations"].rank(method="first").astype(int)
-    df["correct"] = (df["prior_accepted"] == df["superior_configuration"]).astype(int)
+    if run_keys is not None:
+        df = add_prior_position(df, run_keys)
 
     # label -> (column, color, marker, linestyle). Distinct line styles keep overlapping lines readable.
     series = {
