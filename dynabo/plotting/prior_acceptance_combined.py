@@ -21,16 +21,16 @@ SCENARIO_ORDER = [
     "imagenet_resnet_512",
     "lm1b_transformer_2048",
     "translatewmt_xformer_64",
-    "rbv2_xgboost",
     "lcbench",
+    "rbv2_xgboost",
 ]
 SCENARIO_TITLES = {
-    "cifar100_wideresnet_2048": "CIFAR-100",
-    "imagenet_resnet_512": "ImageNet",
-    "lm1b_transformer_2048": "LM1B",
-    "translatewmt_xformer_64": "TranslateWMT",
-    "rbv2_xgboost": "rbv2 XGBoost",
-    "lcbench": "LCBench",
+    "cifar100_wideresnet_2048": "widernet",
+    "imagenet_resnet_512": "resnet",
+    "lm1b_transformer_2048": "transf",
+    "translatewmt_xformer_64": "xformer",
+    "lcbench": "lcbench",
+    "rbv2_xgboost": "xgboost",
 }
 
 # Columns needed for the grid (dataset differs between benchmarks, so it is dropped after ranking).

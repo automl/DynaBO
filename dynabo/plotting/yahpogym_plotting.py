@@ -40,9 +40,6 @@ def load_prior_decay_ablation_yahpogym(surrogate: str) -> str:
     prior_config_df = prior_config_df[prior_config_df["benchmarklib"] == "yahpogym"]
     prior_priors_df = prior_priors_df[prior_priors_df["benchmarklib"] == "yahpogym"]
 
-    baseline_config_df.loc[baseline_config_df["scenario"] == "lcbench", "cost"] /= 100
-    prior_config_df.loc[prior_config_df["scenario"] == "lcbench", "cost"] /= 100
-
     min_costs = get_min_costs(benchmarklib="yahpogym")
     baseline_config_df, prior_config_df, prior_priors_df = add_regret([baseline_config_df, prior_config_df, prior_priors_df], min_costs, benchmarklib="yahpogym")
 
@@ -96,9 +93,6 @@ def load_cost_data_yahpogym(surrogate: str):
         prior_config_df = prior_config_df[prior_config_df["benchmarklib"] == "yahpogym"]
         prior_priors_df = prior_priors_df[prior_priors_df["benchmarklib"] == "yahpogym"]
 
-        baseline_config_df.loc[baseline_config_df["scenario"] == "lcbench", "cost"] /= 100
-        prior_config_df.loc[prior_config_df["scenario"] == "lcbench", "cost"] /= 100
-
     else:
         raise ValueError("GP nto used for Yahpo.")
 
@@ -111,23 +105,6 @@ def load_cost_data_yahpogym(surrogate: str):
 def plot_final_results_yahpogym(surrogate: str):
     baseline_config_df, prior_config_df, prior_prior_df = load_cost_data_yahpogym(surrogate=surrogate)
 
-    accept_all_priors_configs, accept_all_priors_priors = filter_prior_approach(
-        incumbent_df=prior_config_df,
-        prior_df=prior_prior_df,
-        select_dynabo=True,
-        select_pibo=False,
-        prior_decay_enumerator=20,
-        prior_std_denominator=5,
-        prior_static_position=True,
-        prior_every_n_trials=40,
-        validate_prior=False,
-        n_prior_based_samples=0,
-        prior_validation_method=None,
-        prior_validation_manwhitney_p=None,
-        prior_validation_difference_threshold=None,
-        remove_old_priors=False,
-        prior_decay="linear",
-    )
     threshold_incumbent_df, threshold_prior_df = filter_prior_approach(
         incumbent_df=prior_config_df,
         prior_df=prior_prior_df,
@@ -356,7 +333,7 @@ def plot_final_results_yahpogym_lcb():
 
 
 if __name__ == "__main__":
-    # plot_final_results_yahpogym("rf")
+    plot_final_results_yahpogym("rf")
     # plot_final_results_yahpogym_lcb()
     # load_prior_decay_ablation_yahpogym("rf")
-    plot_final_results_yahpogym_lcb()
+    # plot_final_results_yahpogym_lcb()
