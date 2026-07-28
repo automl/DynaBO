@@ -26,9 +26,6 @@ def load_n_rejection_samples_ablation():
     for benchmarklib in config_df["benchmarklib"].unique():
         bench_df = config_df[config_df["benchmarklib"] == benchmarklib].copy()
 
-        if benchmarklib == "yahpogym":
-            bench_df.loc[bench_df["scenario"] == "lcbench", "cost"] /= 100
-
         min_costs = get_min_costs(benchmarklib=benchmarklib)
         (bench_df,) = add_regret([bench_df], min_costs, benchmarklib=benchmarklib)
 

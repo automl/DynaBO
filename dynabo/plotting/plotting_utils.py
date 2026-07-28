@@ -931,7 +931,7 @@ def create_prior_acceptance_grid(
             ax.grid(True, linestyle="--", alpha=0.5)
             if r == 0:
                 title = scenario_titles.get(scenario, scenario) if scenario_titles else scenario
-                ax.set_title(title, fontsize=13, fontweight="bold")
+                ax.set_title(title, fontsize=13, fontweight="bold", fontfamily="monospace")
             if c == 0:
                 ax.set_ylabel(f"{PRIOR_KIND_TITLES[prior_kind]}\n% of runs", fontsize=10)
             if r == nrows - 1:

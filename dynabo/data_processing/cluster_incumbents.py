@@ -6,6 +6,7 @@ from typing import Optional
 import numpy as np
 import os
 from dynabo.utils.data_utils import extract_dataframe_from_column_and_after_n_evaluations, load_df, save_base_table
+from dynabo.utils.evaluator import yahpo_objective_normalizer
 
 
 def execute_clustering_mfpbench(benchmark_name: str, table_name: str):
@@ -83,6 +84,7 @@ def prepare_data_yahpogym(benchmark_name: str, table_name: str, only_incumbent: 
     print("Downloaded data")
     base_df = load_df(benchmark_name="yahpogym")
     print("Loaded data")
+    base_df = normalize_yahpo_costs(base_df)
     scenario_dfs = {}
     for scenario in base_df.scenario.unique():
         dataset_dfs = {}
@@ -93,6 +95,24 @@ def prepare_data_yahpogym(benchmark_name: str, table_name: str, only_incumbent: 
         scenario_dfs[scenario] = dataset_dfs
 
     return scenario_dfs
+
+def normalize_yahpo_costs(base_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Put the costs of the ground-truth runs on the same 0..1 scale the evaluator now reports.
+
+    The ground-truth table was recorded before `YAHPOGymEvaluator` normalized `val_accuracy`, so
+    lcbench costs are still on the 0..100 percentage scale. The prior callbacks compare the
+    `cost`/`median_cost` of the resulting clusters against the incumbent cost of a live run, so
+    both have to use the same scale. Clustering itself is unaffected -- it runs on the config
+    columns only, and the cluster labels are ordered by median cost, which a positive rescale
+    preserves.
+    """
+    base_df = base_df.copy()
+    for metric, normalizer in ((m, yahpo_objective_normalizer(m)) for m in base_df["metric"].unique()):
+        if normalizer != 1.0:
+            base_df.loc[base_df["metric"] == metric, "cost"] /= normalizer
+    return base_df
+
 
 def extract_relevant_data(base_df: pd.DataFrame, scenario: str, dataset: Optional[str] = None):
         relevant_df = base_df[base_df.scenario == scenario]

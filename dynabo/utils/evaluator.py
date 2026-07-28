@@ -113,6 +113,19 @@ class AbstractEvaluator:
         return configs
 
 
+# yahpo reports the ``val_accuracy`` metric on a 0..100 percentage scale (lcbench, nb301),
+# whereas the ``acc``-based scenarios report on 0..1. We normalize the former to 0..1 at the
+# source so the whole optimization (surrogate, LCB, acquisition) and the absolute acceptance
+# threshold tau in AbstractPriorCallback.accept_prior see the same objective scale everywhere.
+# Keyed on the metric name rather than the scenario name so it generalizes beyond lcbench.
+PERCENTAGE_SCALE_METRICS = {"val_accuracy"}
+
+
+def yahpo_objective_normalizer(metric: str) -> float:
+    """Divisor that maps a yahpo metric onto a 0..1 objective scale."""
+    return 100.0 if metric in PERCENTAGE_SCALE_METRICS else 1.0
+
+
 YAHPOGYM_SCENARIO_OPTIONS = [
     # "rbv2_ranger",
     "rbv2_xgboost",
@@ -131,6 +144,7 @@ class YAHPOGymEvaluator(AbstractEvaluator):
         super().__init__(scenario=scenario, dataset=dataset)
         self.metric = metric
         self.runtime_metric_name = runtime_metric_name
+        self.objective_normalizer = yahpo_objective_normalizer(metric)
 
         local_config._config = {"data_path": str("benchmark_data/yahpo_data")}
         self.benchmark = benchmark_set.BenchmarkSet(scenario=scenario, multithread=False)
@@ -145,7 +159,7 @@ class YAHPOGymEvaluator(AbstractEvaluator):
         final_config["task_id"] = self.dataset
 
         res = self.benchmark.objective_function(configuration=final_config)
-        performance = round((-1) * res[0][self.metric], 6)
+        performance = round((-1) * res[0][self.metric] / self.objective_normalizer, 6)
 
         runtime = round(res[0][self.runtime_metric_name], 3)
         return performance, runtime
