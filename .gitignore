@@ -158,3 +158,4 @@ lib/SPFlow/
 # Generated PNG figures (not versioned)
 *.png
 pibo_prior_frames/
+plots/final_result_plots/
