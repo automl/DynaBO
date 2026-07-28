@@ -209,12 +209,12 @@ if __name__ == "__main__":
         fill_table(
             py_experimenter=experimenter,
             common_parameters={
-                "acquisition_function": ["confidence_bound"],
+                "acquisition_function": ["expected_improvement"],
                 "timeout_total": [3600],
                 "n_trials": [200],
                 "initial_design__n_configs_per_hyperparameter": [10],
                 "initial_design__max_ratio": [0.25],
-                "seed": list(range(30)),
+                "seed": list(range(3)),
             },
             benchmarklib=benchmarklib,
             benchmark_parameters={
@@ -226,7 +226,7 @@ if __name__ == "__main__":
                 # Prior configuration
                 "prior_kind_choices": ["good", "medium", "misleading", "deceiving"],
                 "no_incumbent_percentile": 0.01,
-                "prior_std_denominator": 5,
+                "prior_std_denominator": 10,
                 # Dynabo when prior
                 "prior_static_position": True,
                 "prior_every_n_trials_choices": [1],
@@ -238,11 +238,9 @@ if __name__ == "__main__":
                 ],
                 "prior_decay_denominator": 1,
                 "remove_old_priors_choices": [False],
-                "prior_decay_choices": [
-                    "linear",
-                ],
+                "prior_decay_choices": ["logarithmic", "linear", "quadratic", "cubic", "^4", "^5"],
                 # Validation parameters
-                "validate_prior_choices": [True],
+                "validate_prior_choices": [False],
                 "prior_validation_method_choices": ["difference"],
                 "n_prior_validation_samples": 100,
                 "n_prior_based_samples": 0,

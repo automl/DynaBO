@@ -333,7 +333,7 @@ def plot_final_results_yahpogym_lcb():
 
 
 if __name__ == "__main__":
-    plot_final_results_yahpogym("rf")
+    # plot_final_results_yahpogym("rf")
     # plot_final_results_yahpogym_lcb()
-    # load_prior_decay_ablation_yahpogym("rf")
+    load_prior_decay_ablation_yahpogym("rf")
     # plot_final_results_yahpogym_lcb()
